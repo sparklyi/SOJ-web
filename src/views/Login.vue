@@ -2,10 +2,13 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { setToken } from '../utils/auth'
-import { login, register, sendVerifyCode, getCaptcha } from '../api/user'
+import { loginByEmail, loginByPassword, register, sendVerifyCode, getCaptcha, getUserInfo } from '../api/user'
+import { message } from 'ant-design-vue'
+import { useUserStore } from '../store/user'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 const isLogin = ref(true)
 const loading = ref(false)
 const countdown = ref(0)
@@ -17,7 +20,7 @@ const formData = ref({
   password: '',
   verifyCode: '',
   captcha: '',
-  captchaKey: ''
+  captcha_id: ''
 })
 
 // 表单验证
@@ -48,7 +51,7 @@ const toggleMode = () => {
     email: '',
     password: '',
     verifyCode: '',
-    captchaKey: '',
+    captcha_id: '',
     captcha: ''
   }
   // 清空错误信息
@@ -83,7 +86,7 @@ const getCaptchaImage = async () => {
     const res = await getCaptcha()
     if (res.code === 200) {
       captchaImg.value = res.data.captcha_base64
-      formData.value.captchaKey = res.data.captcha_id
+      formData.value.captcha_id = res.data.captcha_id
     } else {
       captchaError.value = res.message || '获取验证码失败，请点击重试'
     }
@@ -118,7 +121,7 @@ const verifyCaptchaAndSendCode = async () => {
   try {
     const res = await sendVerifyCode({
       email: formData.value.email,
-      captcha_id: formData.value.captchaKey,
+      captcha_id: formData.value.captcha_id,
       captcha: modalCaptcha.value
     })
     
@@ -133,10 +136,14 @@ const verifyCaptchaAndSendCode = async () => {
       }, 1000)
     } else {
       modalCaptchaError.value = res.message || '验证失败，请重试'
+      // 验证失败时刷新验证码
+      getCaptchaImage()
     }
   } catch (error) {
     console.error('发送验证码失败:', error)
     modalCaptchaError.value = '发送验证码失败，请稍后重试'
+    // 发生错误时也刷新验证码
+    getCaptchaImage()
   }
 }
 
@@ -191,10 +198,36 @@ const handleSubmit = async () => {
   try {
     if (isLogin.value) {
       // 登录
-      const res = await login(formData.value)
+      const loginData = loginMode.value === 'code' 
+        ? {
+            email: formData.value.email,
+            code: formData.value.verifyCode
+          }
+        : {
+            email: formData.value.email,
+            password: formData.value.password,
+            captcha_id: formData.value.captcha_id,
+            captcha: formData.value.captcha
+          }
+
+      const res = await (loginMode.value === 'code' ? loginByEmail(loginData) : loginByPassword(loginData))
       if (res.code === 200) {
-        setToken(res.data.token)
-        const redirect = route.query.redirect || '/dashboard'
+        setToken(res.data)
+        // 登录成功后获取用户信息
+        try {
+          const userRes = await getUserInfo(res.data.id)
+          if (userRes.code === 200) {
+            // 更新全局状态
+            userStore.setUserInfo(userRes.data)
+          }
+        } catch (error) {
+          console.error('获取用户信息失败:', error)
+        }
+        
+        message.success('登录成功')
+        
+        // 重定向到之前的页面或默认页面
+        const redirect = route.query.redirect || '/'
         router.push(redirect)
       } else {
         // 根据登录方式显示不同的错误信息
@@ -202,6 +235,8 @@ const handleSubmit = async () => {
           verifyCodeError.value = res.message
         } else {
           passwordError.value = res.message
+          // 密码登录失败时刷新验证码
+          getCaptchaImage()
         }
       }
     } else {

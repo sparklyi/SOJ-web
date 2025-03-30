@@ -16,6 +16,6 @@
     <circle cx="500" cy="200" r="120"/>
   </g>
   <text x="400" y="300" font-family="Arial" font-size="48" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">
-    Welcome
+    欢迎来到OJ
   </text>
 </svg> 
