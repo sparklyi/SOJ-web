@@ -91,4 +91,13 @@ export function refreshUserToken() {
     url: '/api/v1/user/refresh_token',
     method: 'post'
   })
+}
+
+// 修改密码
+export function updatePassword(data) {
+  return request({
+    url: '/api/v1/user/update_password',
+    method: 'put',
+    data
+  })
 } 
