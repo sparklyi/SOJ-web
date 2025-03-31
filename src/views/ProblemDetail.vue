@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { getProblemDetail, getLanguages, runCode, submitCode as submitCodeAPI, getSubmissionList, getSubmissionDetail } from '../api/problem'
 import { message } from 'ant-design-vue'
+import { marked } from 'marked'
 
 const route = useRoute()
 const problem = ref(null)
@@ -49,6 +50,37 @@ const fetchProblemDetail = async () => {
     loading.value = false
   }
 }
+
+// 转换Markdown内容为HTML
+const parseMarkdown = (content) => {
+  if (!content) return ''
+  try {
+    return marked(content)
+  } catch (error) {
+    console.error('Markdown解析错误:', error)
+    return content
+  }
+}
+
+// 计算属性：解析后的题目描述
+const parsedDescription = computed(() => {
+  return parseMarkdown(problem.value?.description || '')
+})
+
+// 计算属性：解析后的输入格式
+const parsedInputFormat = computed(() => {
+  return parseMarkdown(problem.value?.input_description || problem.value?.input_format || '')
+})
+
+// 计算属性：解析后的输出格式
+const parsedOutputFormat = computed(() => {
+  return parseMarkdown(problem.value?.output_description || problem.value?.output_format || '')
+})
+
+// 计算属性：解析后的备注
+const parsedRemark = computed(() => {
+  return parseMarkdown(problem.value?.remark || '')
+})
 
 // 获取支持的编程语言列表
 const fetchLanguages = async () => {
@@ -395,6 +427,31 @@ onMounted(() => {
 
 <template>
   <div class="problem-detail-container">
+    <!-- 将标签栏移到最顶层 -->
+    <div v-if="!loading && problem" class="problem-tabs">
+      <div 
+        class="tab-item" 
+        :class="{ active: activeTab === 'problem' }"
+        @click="switchTab('problem')"
+      >
+        题目描述
+      </div>
+      <div 
+        class="tab-item" 
+        :class="{ active: activeTab === 'solution' }"
+        @click="switchTab('solution')"
+      >
+        题解
+      </div>
+      <div 
+        class="tab-item" 
+        :class="{ active: activeTab === 'submissions' }"
+        @click="switchTab('submissions')"
+      >
+        提交记录
+      </div>
+    </div>
+    
     <div v-if="loading" class="loading">
       加载中...
     </div>
@@ -402,31 +459,6 @@ onMounted(() => {
       题目不存在
     </div>
     <div v-else class="problem-detail">
-      <!-- 题目导航栏 -->
-      <div class="problem-tabs">
-        <div 
-          class="tab-item" 
-          :class="{ active: activeTab === 'problem' }"
-          @click="switchTab('problem')"
-        >
-          题目描述
-        </div>
-        <div 
-          class="tab-item" 
-          :class="{ active: activeTab === 'solution' }"
-          @click="switchTab('solution')"
-        >
-          题解
-        </div>
-        <div 
-          class="tab-item" 
-          :class="{ active: activeTab === 'submissions' }"
-          @click="switchTab('submissions')"
-        >
-          提交记录
-        </div>
-      </div>
-      
       <!-- 移动端切换按钮 -->
       <div class="mobile-toggle">
         <button @click="toggleEditor" class="toggle-btn">
@@ -453,30 +485,22 @@ onMounted(() => {
           <div class="problem-content">
             <div class="section">
               <h2>题目描述</h2>
-              <div class="description">
-                {{ problem.description }}
-              </div>
+              <div class="description markdown-body" v-html="parsedDescription"></div>
             </div>
 
             <div class="section">
               <h2>输入格式</h2>
-              <div class="input-format">
-                {{ problem.input_description || problem.input_format }}
-              </div>
+              <div class="input-format markdown-body" v-html="parsedInputFormat"></div>
             </div>
 
             <div class="section">
               <h2>输出格式</h2>
-              <div class="output-format">
-                {{ problem.output_description || problem.output_format }}
-              </div>
+              <div class="output-format markdown-body" v-html="parsedOutputFormat"></div>
             </div>
 
             <div class="section" v-if="problem.remark">
               <h2>备注</h2>
-              <div class="remark">
-                {{ problem.remark }}
-              </div>
+              <div class="remark markdown-body" v-html="parsedRemark"></div>
             </div>
 
             <div class="section">
@@ -757,6 +781,57 @@ onMounted(() => {
   max-width: 100%;
   margin: 0 auto;
   padding: 20px;
+  background-color: #f6f8fa;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.problem-tabs {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: white;
+  min-height: 50px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin-bottom: 20px;
+}
+
+.tab-item {
+  padding: 14px 20px;
+  cursor: pointer;
+  color: #595959;
+  font-size: 16px;
+  transition: all 0.3s;
+  position: relative;
+  text-align: center;
+  flex: 1;
+}
+
+.tab-item.active {
+  color: #1890ff;
+  font-weight: 500;
+  background-color: #e6f7ff;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: #1890ff;
+  border-radius: 2px 2px 0 0;
+}
+
+.tab-item:hover:not(.active) {
+  color: #40a9ff;
+  background-color: #f5f5f5;
 }
 
 .loading,
@@ -765,40 +840,67 @@ onMounted(() => {
   padding: 40px;
   color: #666;
   font-size: 16px;
-}
-
-.problem-detail {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+  margin: auto;
+}
+
+.problem-detail {
+  border-radius: 8px;
+  padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .split-layout {
   display: flex;
   gap: 20px;
-  height: calc(100vh - 150px);
-  min-height: 600px;
+  flex: 1;
+  overflow: hidden;
 }
 
 .problem-info {
   flex: 1;
   overflow-y: auto;
   padding-right: 15px;
+  height: 100%;
 }
 
 .code-editor {
   flex: 1;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid #eee;
-  padding-left: 15px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  height: 100%;
+}
+
+/* 修复在移动端上的样式 */
+@media (max-width: 768px) {
+  .problem-detail-container {
+    padding: 10px;
+    height: 100vh;
+  }
+  
+  .problem-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-radius: 8px;
+  }
 }
 
 .problem-header {
   margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
+  padding: 20px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .problem-header h1 {
@@ -841,13 +943,24 @@ onMounted(() => {
 }
 
 .section {
-  margin-bottom: 25px;
+  margin-bottom: 20px;
+  padding: 20px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s;
+}
+
+.section:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .section h2 {
-  margin: 0 0 12px 0;
+  margin: 0 0 15px 0;
   color: #333;
   font-size: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
 }
 
 .description,
@@ -864,9 +977,16 @@ onMounted(() => {
 }
 
 .sample {
-  background: #f5f5f5;
-  border-radius: 4px;
+  background: #f9f9f9;
+  border-radius: 6px;
   padding: 12px;
+  border: 1px solid #eaeaea;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.sample:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
 .sample-header {
@@ -889,43 +1009,50 @@ onMounted(() => {
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
+  transition: all 0.3s;
 }
 
 .use-example-btn:hover {
   background: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .sample-content {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .sample-input,
 .sample-output {
   display: flex;
+  flex-direction: column;
   gap: 8px;
+  border: 1px solid #eaeaea;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .label {
   color: #666;
   font-size: 14px;
-  min-width: 60px;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #eaeaea;
 }
 
 pre {
-  flex: 1;
   margin: 0;
-  padding: 8px;
+  padding: 12px;
   background: white;
-  border-radius: 4px;
   font-family: monospace;
   white-space: pre-wrap;
   word-break: break-all;
 }
 
 .editor-header {
-  padding: 12px 0;
-  margin-bottom: 15px;
+  padding: 12px 16px;
+  background: #fafafa;
   border-bottom: 1px solid #eaeaea;
 }
 
@@ -980,7 +1107,7 @@ pre {
   background: #f5f5f5;
   border-radius: 4px;
   overflow: hidden;
-  margin-bottom: 15px;
+  margin: 0;
 }
 
 .code-textarea {
@@ -998,22 +1125,23 @@ pre {
 
 /* 自测面板 */
 .test-panel {
-  background: #f5f5f5;
-  border-radius: 4px;
-  padding: 12px;
-  margin-bottom: 15px;
+  background: white;
+  border-radius: 0;
+  padding: 16px;
+  margin: 0;
+  border-top: 1px solid #eaeaea;
 }
 
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .panel-header h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: 16px;
   color: #333;
 }
 
@@ -1027,7 +1155,7 @@ pre {
 }
 
 .input-area, .output-area {
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 .test-input-textarea {
@@ -1041,6 +1169,13 @@ pre {
   font-size: 14px;
   line-height: 1.4;
   background: white;
+  transition: border-color 0.3s;
+}
+
+.test-input-textarea:focus {
+  border-color: #40a9ff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
 }
 
 .run-output {
@@ -1073,18 +1208,24 @@ pre {
 
 .run-test-btn:hover {
   background: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
 }
 
 .run-test-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .editor-footer {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding: 10px 0;
+  padding: 12px 16px;
+  background: #fafafa;
+  border-top: 1px solid #eaeaea;
 }
 
 .run-btn,
@@ -1105,6 +1246,8 @@ pre {
 
 .run-btn:hover {
   background: #e0e0e0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .submit-btn {
@@ -1114,6 +1257,8 @@ pre {
 
 .submit-btn:hover {
   background: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
 }
 
 .remark {
@@ -1121,7 +1266,7 @@ pre {
   line-height: 1.6;
   white-space: pre-wrap;
   background-color: #fff8e1;
-  padding: 12px;
+  padding: 15px;
   border-radius: 4px;
   border-left: 4px solid #ffc107;
 }
@@ -1134,25 +1279,34 @@ pre {
 @media (max-width: 768px) {
   .problem-detail-container {
     padding: 10px;
+    height: 100vh;
   }
   
-  .problem-detail {
-    padding: 15px;
+  .problem-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-radius: 8px 8px 0 0;
+    margin-bottom: 0;
   }
   
   .split-layout {
     flex-direction: column;
-    height: auto;
-    min-height: auto;
+    overflow-y: auto;
   }
   
   .problem-info,
   .code-editor {
-    flex: none;
-    width: 100%;
-    border-left: none;
-    padding-right: 0;
-    padding-left: 0;
+    height: auto;
+    min-height: 400px;
+  }
+  
+  .code-editor {
+    flex: 0 0 auto;
+  }
+  
+  .hidden-mobile {
+    display: none;
   }
   
   .mobile-toggle {
@@ -1162,16 +1316,15 @@ pre {
   }
   
   .toggle-btn {
-    padding: 8px 16px;
+    width: 100%;
+    padding: 10px 16px;
     background: #4CAF50;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-  }
-  
-  .hidden-mobile {
-    display: none;
+    font-size: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   }
   
   .problem-header h1 {
@@ -1217,6 +1370,10 @@ pre {
     padding: 10px 16px;
     font-size: 14px;
   }
+  
+  .section {
+    padding: 15px;
+  }
 }
 
 .output-label {
@@ -1248,55 +1405,14 @@ pre {
   border: 1px dashed #d9d9d9;
 }
 
-.problem-tabs {
-  display: flex;
-  border-bottom: 1px solid #e8e8e8;
-  margin-bottom: 16px;
-}
-
-.tab-item {
-  padding: 12px 20px;
-  cursor: pointer;
-  color: #595959;
-  font-size: 16px;
-  transition: all 0.3s;
-  position: relative;
-}
-
-.tab-item.active {
-  color: #1890ff;
-  font-weight: 500;
-}
-
-.tab-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: #1890ff;
-  border-radius: 2px 2px 0 0;
-}
-
-.tab-item:hover {
-  color: #40a9ff;
-}
-
 .tab-content {
+  flex: 1;
   min-height: 400px;
-}
-
-.editor-header {
-  padding: 12px 0;
-  margin-bottom: 15px;
-  border-bottom: 1px solid #eaeaea;
-}
-
-.editor-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .format-btn {
@@ -1316,6 +1432,8 @@ pre {
   color: #1890ff;
   border-color: #1890ff;
   background: #e6f7ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.1);
 }
 
 .empty-placeholder {
@@ -1645,5 +1763,190 @@ pre {
     width: 95%;
     max-height: 80vh;
   }
+}
+
+/* Markdown内容样式 */
+.markdown-body {
+  color: #333;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3),
+.markdown-body :deep(h4),
+.markdown-body :deep(h5),
+.markdown-body :deep(h6) {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown-body :deep(h1) {
+  font-size: 2em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #eaecef;
+}
+
+.markdown-body :deep(h2) {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #eaecef;
+}
+
+.markdown-body :deep(h3) {
+  font-size: 1.25em;
+}
+
+.markdown-body :deep(p) {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-body :deep(a) {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+.markdown-body :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+  padding-left: 2em;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-body :deep(li) {
+  margin-top: 0.25em;
+}
+
+.markdown-body :deep(pre) {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #f6f8fa;
+  border-radius: 3px;
+  margin-bottom: 16px;
+}
+
+.markdown-body :deep(code) {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(27, 31, 35, 0.05);
+  border-radius: 3px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.markdown-body :deep(pre code) {
+  padding: 0;
+  margin: 0;
+  background-color: transparent;
+  border: 0;
+  word-break: normal;
+  white-space: pre;
+}
+
+.markdown-body :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 16px;
+  overflow: auto;
+}
+
+.markdown-body :deep(table th),
+.markdown-body :deep(table td) {
+  padding: 6px 13px;
+  border: 1px solid #dfe2e5;
+}
+
+.markdown-body :deep(table tr) {
+  background-color: #fff;
+  border-top: 1px solid #c6cbd1;
+}
+
+.markdown-body :deep(table tr:nth-child(2n)) {
+  background-color: #f6f8fa;
+}
+
+.markdown-body :deep(img) {
+  max-width: 100%;
+  box-sizing: content-box;
+}
+
+.markdown-body :deep(hr) {
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  background-color: #e1e4e8;
+  border: 0;
+}
+
+.markdown-body :deep(blockquote) {
+  padding: 0 1em;
+  color: #6a737d;
+  border-left: 0.25em solid #dfe2e5;
+  margin: 0 0 16px 0;
+}
+
+/* 更新备注样式，保持与markdown兼容 */
+.remark {
+  color: #666;
+  line-height: 1.6;
+  background-color: #fff8e1;
+  padding: 16px;
+  border-radius: 4px;
+  border-left: 4px solid #ffc107;
+}
+
+/* 实现代码高亮 */
+.markdown-body :deep(.hljs) {
+  display: block;
+  overflow-x: auto;
+  padding: 0.5em;
+  color: #333;
+  background: #f8f8f8;
+}
+
+.markdown-body :deep(.hljs-comment),
+.markdown-body :deep(.hljs-quote) {
+  color: #998;
+  font-style: italic;
+}
+
+.markdown-body :deep(.hljs-keyword),
+.markdown-body :deep(.hljs-selector-tag),
+.markdown-body :deep(.hljs-subst) {
+  color: #333;
+  font-weight: bold;
+}
+
+.markdown-body :deep(.hljs-number),
+.markdown-body :deep(.hljs-literal) {
+  color: #008080;
+}
+
+.markdown-body :deep(.hljs-variable),
+.markdown-body :deep(.hljs-template-variable),
+.markdown-body :deep(.hljs-tag .hljs-attr) {
+  color: #008080;
+}
+
+.markdown-body :deep(.hljs-string),
+.markdown-body :deep(.hljs-doctag) {
+  color: #d14;
+}
+
+.markdown-body :deep(.hljs-title),
+.markdown-body :deep(.hljs-section),
+.markdown-body :deep(.hljs-selector-id) {
+  color: #900;
+  font-weight: bold;
 }
 </style> 
