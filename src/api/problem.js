@@ -23,4 +23,50 @@ export function getProblemDetail(id) {
     url: `/api/v1/problem/${Number(id)}`,
     method: 'get'
   })
+}
+
+// 获取支持的编程语言列表
+export function getLanguages() {
+  return request({
+    url: '/api/v1/language',
+    method: 'post',
+    data: {
+      status: true
+    }
+  })
+}
+
+// 自测运行代码
+export function runCode(data) {
+  return request({
+    url: '/api/v1/submission/run',
+    method: 'post',
+    data
+  })
+}
+
+// 提交代码
+export function submitCode(data) {
+  return request({
+    url: '/api/v1/submission/submit',
+    method: 'post',
+    data
+  })
+}
+
+// 获取提交记录列表
+export function getSubmissionList(data) {
+  return request({
+    url: '/api/v1/submission/list',
+    method: 'post',
+    data
+  })
+}
+
+// 获取提交详情
+export function getSubmissionDetail(id) {
+  return request({
+    url: `/api/v1/submission/${id}`,
+    method: 'get'
+  })
 } 

@@ -1,9 +1,10 @@
 <script setup>
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { removeToken, isAuthenticated } from './utils/auth'
+import { removeToken, isAuthenticated, getRefreshToken } from './utils/auth'
 import { useUserStore } from './store/user'
 import { message } from 'ant-design-vue'
+import axios from 'axios'
 
 const router = useRouter()
 const route = useRoute()
@@ -41,9 +42,6 @@ const handleMenuClick = (key) => {
     case 'profile':
       router.push('/profile')
       break
-    case 'settings':
-      router.push('/settings')
-      break
     case 'avatar':
       router.push('/avatar')
       break
@@ -67,11 +65,29 @@ const closeDropdown = (event) => {
   }
 }
 
-const handleLogout = () => {
-  removeToken()
-  userStore.clearUserInfo()
-  message.success('已成功退出登录')
-  router.push('/login')
+const handleLogout = async () => {
+  try {
+    const refreshToken = getRefreshToken()
+    if (refreshToken) {
+      await axios.post('/api/v1/user/logout', {}, {
+        headers: {
+          'SOJ-Refresh-Token': refreshToken
+        }
+      })
+    }
+    
+    removeToken()
+    userStore.clearUserInfo()
+    message.success('已成功退出登录')
+    router.push('/login')
+  } catch (error) {
+    console.error('退出登录失败:', error)
+    // 即使请求失败，也清除本地令牌和状态
+    removeToken()
+    userStore.clearUserInfo()
+    message.warning('退出登录可能未完全成功，请稍后再试')
+    router.push('/login')
+  }
 }
 
 onMounted(() => {
@@ -131,9 +147,6 @@ onUnmounted(() => {
               <div class="dropdown-divider"></div>
               <div class="dropdown-item" @click="handleMenuClick('profile')">
                 <span>个人主页</span>
-              </div>
-              <div class="dropdown-item" @click="handleMenuClick('settings')">
-                <span>编辑信息</span>
               </div>
               <div class="dropdown-item" @click="handleMenuClick('avatar')">
                 <span>上传头像</span>

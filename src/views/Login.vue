@@ -37,6 +37,9 @@ const showCaptchaModal = ref(false)
 const modalCaptcha = ref('')
 const modalCaptchaError = ref('')
 
+// 添加密码可见性状态
+const passwordVisible = ref(false)
+
 // 邮箱格式验证
 const validateEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -145,6 +148,11 @@ const verifyCaptchaAndSendCode = async () => {
     // 发生错误时也刷新验证码
     getCaptchaImage()
   }
+}
+
+// 切换密码可见性
+const togglePasswordVisibility = () => {
+  passwordVisible.value = !passwordVisible.value
 }
 
 // 表单验证
@@ -321,14 +329,23 @@ getCaptchaImage()
           <!-- 密码登录 -->
           <template v-else>
             <div class="form-group">
-              <input
-                v-model="formData.password"
-                type="password"
-                placeholder="请输入密码"
-                class="form-control"
-                :class="{ 'error': passwordError }"
-              />
-              <div class="error-message" v-if="passwordError">{{ passwordError }}</div>
+              <div class="password-input-container">
+                <input
+                  :type="passwordVisible ? 'text' : 'password'"
+                  v-model="formData.password"
+                  id="password"
+                  placeholder="请输入密码"
+                  class="form-control"
+                  @keyup.enter="handleSubmit"
+                />
+                <button 
+                  type="button" 
+                  class="toggle-password-btn" 
+                  @click="togglePasswordVisibility"
+                >
+                  <i :class="[passwordVisible ? 'eye-open-icon' : 'eye-close-icon']"></i>
+                </button>
+              </div>
             </div>
             
             <div class="form-group captcha">
@@ -725,5 +742,41 @@ h2 {
 
 .confirm-btn:hover {
   background: #45a049;
+}
+
+.password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-password-btn {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+}
+
+.eye-open-icon {
+  width: 20px;
+  height: 20px;
+  background-image: url('data:image/svg+xml;utf8,<svg t="1650971500" class="icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M512 238.933333c179.2 0 341.333333 102.4 426.666667 256-85.333333 153.6-247.466667 256-426.666667 256S170.666667 648.533333 85.333333 494.933333c85.333333-153.6 247.466667-256 426.666667-256z m0 85.333334c-102.4 0-187.733333 76.8-187.733333 170.666666s85.333333 170.666667 187.733333 170.666667 187.733333-76.8 187.733333-170.666667-85.333333-170.666667-187.733333-170.666666z m0 68.266666c59.733333 0 102.4 42.666667 102.4 102.4s-42.666667 102.4-102.4 102.4-102.4-42.666667-102.4-102.4 42.666667-102.4 102.4-102.4z" fill="%23666666"/></svg>');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.eye-close-icon {
+  width: 20px;
+  height: 20px;
+  background-image: url('data:image/svg+xml;utf8,<svg t="1650971550" class="icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M512 238.933333c179.2 0 341.333333 102.4 426.666667 256-35.2 59.733333-81.066667 110.933333-136.533334 149.333334l-76.8-76.8c42.666667-29.866667 81.066667-68.266667 110.933334-115.2-59.733333-93.866667-166.4-153.6-285.866667-153.6-29.866667 0-55.466667 4.266667-81.066667 8.533333l-89.6-89.6C430.933333 247.466667 469.333333 238.933333 512 238.933333z m-345.6 51.2l136.533333 136.533334c-38.4 38.4-68.266667 85.333333-93.866666 132.266666 55.466667 89.6 166.4 153.6 285.866666 153.6 51.2 0 98.133333-8.533333 140.8-25.6l38.4 38.4 110.933334 110.933334 59.733333-59.733334-618.666667-618.666666-59.733333 59.733333 59.733333 59.733333-59.733333 12.8z m258.133333 258.133334l55.466667 55.466666c-4.266667 0-8.533333 0-12.8 0-59.733333 0-102.4-42.666667-102.4-102.4 0-4.266667 0-8.533333 0-12.8l59.733333 59.733334z m76.8-174.933334l123.733334 123.733334c0-4.266667 0-8.533333 0-12.8 0-93.866667-76.8-170.666667-170.666667-170.666667-4.266667 0-8.533333 0-12.8 0l59.733333 59.733333z" fill="%23666666"/></svg>');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
 }
 </style> 
