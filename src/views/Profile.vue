@@ -1,10 +1,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getUserId } from '../utils/auth'
+import { getUserId, removeToken } from '../utils/auth'
 import { getUserInfo, sendVerifyCode, updatePassword, getCaptcha, updateUserInfo } from '../api/user'
 import { message } from 'ant-design-vue'
 import { useUserStore } from '../store/user'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const userStore = useUserStore()
 const userInfo = ref({})
 const loading = ref(true)
@@ -28,6 +30,7 @@ const formLoading = ref(false)
 const editLoading = ref(false)
 const sendingCode = ref(false)
 const countdown = ref(0)
+const passwordVisible = ref(false)
 
 // 图形验证码相关
 const captchaImg = ref('')
@@ -141,12 +144,14 @@ const handleSubmit = async () => {
     formLoading.value = true
     const res = await updatePassword(passwordForm.value)
     if (res.code === 200) {
-      message.success('密码修改成功')
-      passwordForm.value = {
-        email: '',
-        password: '',
-        code: ''
-      }
+      message.success('密码修改成功，请重新登录')
+      // 修改密码成功后登出
+      removeToken()
+      userStore.clearUserInfo()
+      // 延迟跳转
+      setTimeout(() => {
+        router.push('/login')
+      }, 1500)
     } else {
       message.error(res.message || '修改失败')
     }
@@ -155,6 +160,11 @@ const handleSubmit = async () => {
   } finally {
     formLoading.value = false
   }
+}
+
+// 切换密码可见性
+const togglePasswordVisibility = () => {
+  passwordVisible.value = !passwordVisible.value
 }
 
 // 保存编辑
@@ -377,12 +387,21 @@ onMounted(async () => {
                     <i class="form-icon password-icon"></i>
                     <span>新密码</span>
                   </div>
-                  <input 
-                    type="password" 
-                    v-model="passwordForm.password" 
-                    placeholder="请输入新密码"
-                    class="form-control"
-                  />
+                  <div class="password-input-container">
+                    <input 
+                      :type="passwordVisible ? 'text' : 'password'" 
+                      v-model="passwordForm.password" 
+                      placeholder="请输入新密码"
+                      class="form-control"
+                    />
+                    <button 
+                      type="button" 
+                      class="toggle-password-btn" 
+                      @click="togglePasswordVisibility"
+                    >
+                      <i :class="[passwordVisible ? 'eye-open-icon' : 'eye-close-icon']"></i>
+                    </button>
+                  </div>
                 </div>
                 
                 <div class="form-actions">
@@ -873,5 +892,41 @@ textarea.form-control {
 
 .password-icon {
   background-image: url('data:image/svg+xml;utf8,<svg t="1650971218" class="icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M512 64c153.173333 0 277.333333 124.16 277.333333 277.333333v74.666667H832c35.346667 0 64 28.653333 64 64v405.333333c0 35.346667-28.653333 64-64 64H192c-35.346667 0-64-28.653333-64-64V480c0-35.346667 28.653333-64 64-64h42.666667v-74.666667C234.666667 188.16 358.826667 64 512 64z m0 64c-117.824 0-213.333333 95.509333-213.333333 213.333333v74.666667h426.666666v-74.666667c0-117.824-95.509333-213.333333-213.333333-213.333333zM192 480v405.333333h640V480H192z m320 213.333333c23.573333 0 42.666667-19.114667 42.666667-42.666666 0-23.573333-19.093333-42.666667-42.666667-42.666667s-42.666667 19.093333-42.666667 42.666667c0 23.552 19.093333 42.666667 42.666667 42.666666z" fill="%231890ff"/></svg>');
+}
+
+.password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-password-btn {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+}
+
+.eye-open-icon {
+  width: 20px;
+  height: 20px;
+  background-image: url('data:image/svg+xml;utf8,<svg t="1650971500" class="icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M512 238.933333c179.2 0 341.333333 102.4 426.666667 256-85.333333 153.6-247.466667 256-426.666667 256S170.666667 648.533333 85.333333 494.933333c85.333333-153.6 247.466667-256 426.666667-256z m0 85.333334c-102.4 0-187.733333 76.8-187.733333 170.666666s85.333333 170.666667 187.733333 170.666667 187.733333-76.8 187.733333-170.666667-85.333333-170.666667-187.733333-170.666666z m0 68.266666c59.733333 0 102.4 42.666667 102.4 102.4s-42.666667 102.4-102.4 102.4-102.4-42.666667-102.4-102.4 42.666667-102.4 102.4-102.4z" fill="%23666666"/></svg>');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.eye-close-icon {
+  width: 20px;
+  height: 20px;
+  background-image: url('data:image/svg+xml;utf8,<svg t="1650971550" class="icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M512 238.933333c179.2 0 341.333333 102.4 426.666667 256-35.2 59.733333-81.066667 110.933333-136.533334 149.333334l-76.8-76.8c42.666667-29.866667 81.066667-68.266667 110.933334-115.2-59.733333-93.866667-166.4-153.6-285.866667-153.6-29.866667 0-55.466667 4.266667-81.066667 8.533333l-89.6-89.6C430.933333 247.466667 469.333333 238.933333 512 238.933333z m-345.6 51.2l136.533333 136.533334c-38.4 38.4-68.266667 85.333333-93.866666 132.266666 55.466667 89.6 166.4 153.6 285.866666 153.6 51.2 0 98.133333-8.533333 140.8-25.6l38.4 38.4 110.933334 110.933334 59.733333-59.733334-618.666667-618.666666-59.733333 59.733333 59.733333 59.733333-59.733333 12.8z m258.133333 258.133334l55.466667 55.466666c-4.266667 0-8.533333 0-12.8 0-59.733333 0-102.4-42.666667-102.4-102.4 0-4.266667 0-8.533333 0-12.8l59.733333 59.733334z m76.8-174.933334l123.733334 123.733334c0-4.266667 0-8.533333 0-12.8 0-93.866667-76.8-170.666667-170.666667-170.666667-4.266667 0-8.533333 0-12.8 0l59.733333 59.733333z" fill="%23666666"/></svg>');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
 }
 </style> 
