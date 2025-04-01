@@ -33,9 +33,12 @@ service.interceptors.response.use(
     // 如果响应码不是200，也需要视为错误
     const res = response.data
     if (res.code !== 200) {
-      // 401状态码特殊处理，由下面的错误拦截器处理
-      if (res.code === 401) {
-        return Promise.reject(new Error('Unauthorized'))
+      // 401状态码或token失效特殊处理，由下面的错误拦截器处理
+      if (res.code === 401 || (res.message && res.message.includes('token') && res.message.includes('失效'))) {
+        const error = new Error(res.message || 'Unauthorized')
+        error.response = { status: 401 }
+        error.config = response.config
+        return Promise.reject(error)
       }
       // 其他错误直接返回错误信息
       return Promise.reject(new Error(res.message || '请求失败'))

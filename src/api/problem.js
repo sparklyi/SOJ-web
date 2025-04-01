@@ -48,7 +48,7 @@ export function runCode(data) {
 // 提交代码
 export function submitCode(data) {
   return request({
-    url: '/api/v1/submission/submit',
+    url: '/api/v1/submission/judge',
     method: 'post',
     data
   })

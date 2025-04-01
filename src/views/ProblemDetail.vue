@@ -1,9 +1,10 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { getProblemDetail, getLanguages, runCode, submitCode as submitCodeAPI, getSubmissionList, getSubmissionDetail } from '../api/problem'
 import { message } from 'ant-design-vue'
 import { marked } from 'marked'
+// import lottie from 'lottie-web'
 
 const route = useRoute()
 const problem = ref(null)
@@ -19,6 +20,11 @@ const isRunning = ref(false) // 是否正在运行代码
 const showTestPanel = ref(false) // 是否显示自测面板
 const activeTab = ref('problem') // 当前激活的选项卡: problem, solution, submissions
 
+// 提交代码相关状态
+const isSubmitting = ref(false) // 是否正在提交代码
+const judgeResult = ref(null) // 判题结果
+const showJudgeAnimation = ref(false) // 是否显示判题动画
+
 // 提交记录相关
 const submissionLoading = ref(false)
 const submissionList = ref([])
@@ -28,6 +34,13 @@ const pageSize = ref(10)
 const submissionDetail = ref(null)
 const showSubmissionDetail = ref(false)
 const submissionDetailLoading = ref(false)
+
+// 动画引用对象
+const lottieContainer = ref(null)
+const loadingAnimation = ref(null)
+const successAnimation = ref(null)
+const errorAnimation = ref(null)
+const warningAnimation = ref(null)
 
 // 获取题目详情
 const fetchProblemDetail = async () => {
@@ -43,9 +56,20 @@ const fetchProblemDetail = async () => {
           output: item.expected_output
         }))
       }
+      
+      // 如果没有样例，初始化一个空数组
+      if (!problem.value.samples) {
+        problem.value.samples = []
+      }
+      
+      console.log('题目详情获取成功:', problem.value)
+    } else {
+      console.error('获取题目详情失败:', res.message)
+      message.error(res.message || '获取题目详情失败')
     }
   } catch (error) {
     console.error('获取题目详情失败:', error)
+    message.error('获取题目详情失败: ' + (error.message || '未知错误'))
   } finally {
     loading.value = false
   }
@@ -120,6 +144,11 @@ const getShortLanguageName = (fullName) => {
 const setDefaultCode = () => {
   if (!problem.value) return
   
+  // 先尝试从本地存储加载代码
+  if (loadCodeFromLocalStorage()) {
+    return
+  }
+  
   // 根据选择的语言设置默认代码模板
   switch (language.value) {
     case 'cpp':
@@ -187,8 +216,11 @@ const changeLanguage = (lang) => {
   const selectedLang = languageOptions.value.find(opt => opt.value === lang)
   if (selectedLang) {
     languageId.value = selectedLang.id
+    // 尝试加载缓存的代码，如果没有则使用默认模板
+    if (!loadCodeFromLocalStorage()) {
+      setDefaultCode()
+    }
   }
-  setDefaultCode()
 }
 
 // 提交代码
@@ -204,6 +236,13 @@ const submitCode = async () => {
   }
   
   try {
+    isSubmitting.value = true
+    showJudgeAnimation.value = true
+    judgeResult.value = null
+    
+    // 缓存用户代码
+    saveCodeToLocalStorage()
+    
     const result = await submitCodeAPI({
       problem_id: Number(route.params.id),
       source_code: code.value,
@@ -211,17 +250,33 @@ const submitCode = async () => {
     })
     
     if (result.code === 200) {
-      message.success('代码提交成功')
-      // 切换到提交记录页面
-      activeTab.value = 'submissions'
-      // 刷新提交记录
-      fetchSubmissionList()
+      judgeResult.value = {
+        status: result.data.status,
+        time: result.data.time,
+        memory: result.data.memory
+      }
+      
+      // 显示动画2秒后关闭
+      setTimeout(() => {
+        showJudgeAnimation.value = false
+        message.success('代码提交成功')
+        // 刷新提交记录但不跳转页面
+        if (activeTab.value === 'submissions') {
+          fetchSubmissionList()
+        }
+      }, 2000)
     } else {
+      showJudgeAnimation.value = false
       message.error(result.message || '代码提交失败')
     }
   } catch (error) {
     console.error('提交代码出错:', error)
+    showJudgeAnimation.value = false
     message.error('提交代码失败: ' + (error.message || '未知错误'))
+  } finally {
+    setTimeout(() => {
+      isSubmitting.value = false
+    }, 2000)
   }
 }
 
@@ -290,6 +345,15 @@ const getStatusClass = (status) => {
   return statusMap[status] || 'status-default'
 }
 
+// 获取判题状态样式
+const getJudgeStatusClass = (status) => {
+  if (status === 'Accepted') return 'judge-success'
+  if (status === 'Wrong Answer') return 'judge-error'
+  if (status.includes('Time Limit') || status.includes('Memory Limit')) return 'judge-warning'
+  if (status.includes('Error')) return 'judge-error'
+  return 'judge-default'
+}
+
 // 格式化日期时间
 const formatDateTime = (dateStr) => {
   const date = new Date(dateStr)
@@ -316,6 +380,34 @@ const useExampleInput = (index) => {
     testInput.value = problem.value.samples[index].input
     showTestPanel.value = true
   }
+}
+
+// 代码缓存相关函数
+const getLocalStorageKey = () => {
+  return `soj_code_${route.params.id}_${languageId.value}`
+}
+
+const saveCodeToLocalStorage = () => {
+  try {
+    const key = getLocalStorageKey()
+    localStorage.setItem(key, code.value)
+  } catch (error) {
+    console.error('保存代码到本地失败:', error)
+  }
+}
+
+const loadCodeFromLocalStorage = () => {
+  try {
+    const key = getLocalStorageKey()
+    const savedCode = localStorage.getItem(key)
+    if (savedCode) {
+      code.value = savedCode
+      return true
+    }
+  } catch (error) {
+    console.error('从本地加载代码失败:', error)
+  }
+  return false
 }
 
 // 运行代码
@@ -419,6 +511,149 @@ const switchTab = (tab) => {
   activeTab.value = tab
 }
 
+// 处理Tab键
+const handleTabKey = (event) => {
+  if (event.key === 'Tab') {
+    event.preventDefault()
+    const cursorPosition = event.target.selectionStart
+    const cursorEnd = event.target.selectionEnd
+    
+    // 在光标位置插入Tab字符
+    code.value = code.value.slice(0, cursorPosition) + '\t' + code.value.slice(cursorEnd)
+    
+    // 手动更新光标位置
+    setTimeout(() => {
+      event.target.selectionStart = event.target.selectionEnd = cursorPosition + 1
+    }, 0)
+  }
+}
+
+// 初始化Lottie动画
+const initLottieAnimations = () => {
+  // 加载中动画
+  loadingAnimation.value = lottie.loadAnimation({
+    container: lottieContainer.value,
+    renderer: 'svg',
+    loop: true,
+    autoplay: false,
+    path: 'https://assets6.lottiefiles.com/packages/lf20_x62chJ.json' // 加载中动画
+  })
+  
+  // 成功动画
+  successAnimation.value = lottie.loadAnimation({
+    container: lottieContainer.value,
+    renderer: 'svg',
+    loop: false,
+    autoplay: false,
+    path: 'https://assets7.lottiefiles.com/packages/lf20_jAT409.json' // 成功动画
+  })
+  
+  // 错误动画
+  errorAnimation.value = lottie.loadAnimation({
+    container: lottieContainer.value,
+    renderer: 'svg',
+    loop: false,
+    autoplay: false,
+    path: 'https://assets9.lottiefiles.com/packages/lf20_ckcn4hvm.json' // 错误动画
+  })
+  
+  // 警告动画
+  warningAnimation.value = lottie.loadAnimation({
+    container: lottieContainer.value,
+    renderer: 'svg',
+    loop: false,
+    autoplay: false,
+    path: 'https://assets2.lottiefiles.com/temp/lf20_WdDF6Z.json' // 警告动画
+  })
+}
+
+// 播放评测动画
+const playJudgeAnimation = (status) => {
+  // 停止所有动画
+  loadingAnimation.value?.stop()
+  successAnimation.value?.stop()
+  errorAnimation.value?.stop()
+  warningAnimation.value?.stop()
+  
+  // 根据状态播放对应动画
+  if (!status) {
+    loadingAnimation.value?.play()
+    return
+  }
+  
+  if (status === 'Accepted') {
+    successAnimation.value?.play()
+  } else if (status === 'Wrong Answer' || status.includes('Error')) {
+    errorAnimation.value?.play()
+  } else if (status.includes('Time Limit') || status.includes('Memory Limit')) {
+    warningAnimation.value?.play()
+  } else {
+    loadingAnimation.value?.play()
+  }
+}
+
+// 判题状态对应的图标和消息
+const getJudgeStatusInfo = (status) => {
+  if (!status) {
+    return {
+      icon: '⏳',
+      message: '评测中...',
+      description: '正在提交您的代码并进行评测'
+    }
+  }
+  
+  if (status === 'Accepted') {
+    return {
+      icon: '✅',
+      message: '通过',
+      description: '恭喜，您的代码已通过所有测试用例！'
+    }
+  } else if (status === 'Wrong Answer') {
+    return {
+      icon: '❌',
+      message: '答案错误',
+      description: '您的代码输出与预期结果不符'
+    }
+  } else if (status.includes('Time Limit')) {
+    return {
+      icon: '⏱️',
+      message: '超时',
+      description: '您的代码运行时间超出限制'
+    }
+  } else if (status.includes('Memory Limit')) {
+    return {
+      icon: '📈',
+      message: '内存超限',
+      description: '您的代码使用的内存超出限制'
+    }
+  } else if (status.includes('Compilation Error')) {
+    return {
+      icon: '🛠️',
+      message: '编译错误',
+      description: '您的代码存在语法错误，无法编译'
+    }
+  } else if (status.includes('Error')) {
+    return {
+      icon: '⚠️',
+      message: '错误',
+      description: '运行时发生错误'
+    }
+  } else {
+    return {
+      icon: '❓',
+      message: status,
+      description: '未知状态'
+    }
+  }
+}
+
+// 修复点击题目不显示问题
+watch(route, (newRoute) => {
+  if (newRoute.params.id) {
+    fetchProblemDetail()
+  }
+}, { immediate: true })
+
 onMounted(() => {
   fetchProblemDetail()
   fetchLanguages()
@@ -471,6 +706,7 @@ onMounted(() => {
         <!-- 左侧题目详情 -->
         <div class="problem-info" :class="{ 'hidden-mobile': showEditor }">
           <div class="problem-header">
+          
             <h1>{{ problem.name }}</h1>
             <div class="problem-meta">
               <span :class="['level-tag', problem.level]">
@@ -566,6 +802,7 @@ onMounted(() => {
               class="code-textarea" 
               spellcheck="false"
               placeholder="在此编写代码..."
+              @keydown="handleTabKey"
             ></textarea>
           </div>
           
@@ -629,7 +866,9 @@ onMounted(() => {
           
           <div class="editor-footer">
             <button class="run-btn" @click="toggleTestPanel">{{ showTestPanel ? '隐藏自测' : '自测' }}</button>
-            <button class="submit-btn" @click="submitCode">提交代码</button>
+            <button class="submit-btn" @click="submitCode" :disabled="isSubmitting">
+              {{ isSubmitting ? '提交中...' : '提交代码' }}
+            </button>
           </div>
         </div>
       </div>
@@ -773,14 +1012,51 @@ onMounted(() => {
         </div>
       </div>
     </div>
+    
+    <!-- 判题动画 -->
+    <div class="judge-animation-container" v-if="showJudgeAnimation">
+      <div class="judge-animation-overlay"></div>
+      <div class="judge-animation-content">
+        <div class="animation-box" :class="judgeResult ? getJudgeStatusClass(judgeResult.status) : ''">
+          <!-- 状态图标 -->
+          <div class="judge-icon" v-if="!judgeResult">
+            <div class="loading-spinner">
+              <div class="spinner"></div>
+            </div>
+          </div>
+          <div class="judge-icon" v-else>
+            <div class="status-icon">{{ getJudgeStatusInfo(judgeResult.status).icon }}</div>
+          </div>
+          
+          <!-- 状态信息 -->
+          <div class="judge-message">
+            <div class="status-title">
+              {{ judgeResult ? getJudgeStatusInfo(judgeResult.status).message : '评测中...' }}
+            </div>
+            <div class="status-description">
+              {{ judgeResult ? getJudgeStatusInfo(judgeResult.status).description : '正在提交您的代码并进行评测' }}
+            </div>
+          </div>
+          
+          <!-- 结果信息 -->
+          <div v-if="judgeResult" class="result-display">
+            <div class="result-details">
+              <span>运行时间: {{ judgeResult.time }}s</span>
+              <span>内存: {{ Math.round(judgeResult.memory / 1024) }}MB</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .problem-detail-container {
-  max-width: 100%;
-  margin: 0 auto;
+  width: 135%;
+  max-width: none;
   padding: 20px;
+  margin-left: -17%;
   background-color: #f6f8fa;
   height: 100vh;
   overflow: hidden;
@@ -790,7 +1066,7 @@ onMounted(() => {
 
 .problem-tabs {
   display: flex;
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   background: white;
@@ -798,7 +1074,8 @@ onMounted(() => {
   position: sticky;
   top: 0;
   z-index: 10;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+  width: 100%;
 }
 
 .tab-item {
@@ -853,20 +1130,28 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .split-layout {
   display: flex;
-  gap: 20px;
+  gap: 10px;
   flex: 1;
   overflow: hidden;
+  width: 100%;
+  max-width: none;
+  padding: 0;
 }
 
 .problem-info {
   flex: 1;
   overflow-y: auto;
-  padding-right: 15px;
+  padding: 0;
   height: 100%;
+  width: 100%;
+  max-width: none;
 }
 
 .code-editor {
@@ -878,6 +1163,8 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   height: 100%;
+  width: 100%;
+  max-width: none;
 }
 
 /* 修复在移动端上的样式 */
@@ -896,11 +1183,12 @@ onMounted(() => {
 }
 
 .problem-header {
-  margin-bottom: 20px;
-  padding: 20px;
+  margin-bottom: 10px;
+  padding: 15px;
   border-radius: 8px;
   background: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
 }
 
 .problem-header h1 {
@@ -944,11 +1232,12 @@ onMounted(() => {
 
 .section {
   margin-bottom: 20px;
-  padding: 20px;
+  padding: 15px;
   border-radius: 8px;
   background: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.3s;
+  width: 100%;
 }
 
 .section:hover {
@@ -969,6 +1258,7 @@ onMounted(() => {
   color: #666;
   line-height: 1.6;
   white-space: pre-wrap;
+  width: 100%;
 }
 
 .samples {
@@ -1413,6 +1703,8 @@ pre {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   padding: 20px;
   overflow-y: auto;
+  width: 100%;
+  max-width: none;
 }
 
 .format-btn {
@@ -1644,8 +1936,8 @@ pre {
 
 .modal-content {
   position: relative;
-  width: 80%;
-  max-width: 800px;
+  width: 98%;
+  max-width: 1600px;
   max-height: 90vh;
   overflow-y: auto;
   background: white;
@@ -1889,10 +2181,11 @@ pre {
 }
 
 .markdown-body :deep(blockquote) {
-  padding: 0 1em;
+  padding: 0 0.1em;
   color: #6a737d;
   border-left: 0.25em solid #dfe2e5;
   margin: 0 0 16px 0;
+  width: 98%;
 }
 
 /* 更新备注样式，保持与markdown兼容 */
@@ -1948,5 +2241,195 @@ pre {
 .markdown-body :deep(.hljs-selector-id) {
   color: #900;
   font-weight: bold;
+}
+
+/* 判题动画样式 */
+.judge-animation-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.judge-animation-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+.judge-animation-content {
+  position: relative;
+  z-index: 2001;
+  text-align: center;
+}
+
+.animation-box {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 30px;
+  width: 320px;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.5s ease;
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.judge-icon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: #1890ff;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spinner-text {
+  color: #333;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.result-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.result-details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+}
+
+/* 判题结果样式 */
+.judge-success {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+}
+
+.judge-success .result-status {
+  color: #52c41a;
+}
+
+.judge-error {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+}
+
+.judge-error .result-status {
+  color: #f5222d;
+}
+
+.judge-warning {
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+}
+
+.judge-warning .result-status {
+  color: #faad14;
+}
+
+.judge-default {
+  background: #f5f5f5;
+  border: 1px solid #d9d9d9;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* 禁用提交按钮样式 */
+.submit-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.problem-id-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background-color: #e6f7ff;
+  color: #1890ff;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 10px;
+  border: 1px solid #91d5ff;
+}
+
+.tab-badge {
+  display: inline-block;
+  font-size: 12px;
+  padding: 1px 6px;
+  margin-left: 8px;
+  background-color: #e6f7ff;
+  color: #1890ff;
+  border-radius: 12px;
+  font-weight: normal;
+  vertical-align: middle;
+}
+
+.status-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: scale-in 0.5s ease forwards;
+}
+
+.status-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.status-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 16px;
+}
+
+@keyframes scale-in {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
 }
 </style> 

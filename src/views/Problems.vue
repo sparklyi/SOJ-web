@@ -55,7 +55,6 @@ const fetchProblems = async () => {
 // 处理搜索
 const handleSearch = () => {
   currentPage.value = 1
-  filters.value.page_size = 5
   fetchProblems()
 }
 
@@ -101,6 +100,12 @@ const handlePageChange = (page) => {
   fetchProblems()
 }
 
+// 处理页面大小变化
+const handlePageSizeChange = () => {
+  currentPage.value = 1
+  fetchProblems()
+}
+
 onMounted(() => {
   fetchProblems()
 })
@@ -129,11 +134,11 @@ onMounted(() => {
         </select>
       </div>
       <div class="filter-box">
-        <select v-model="filters.page_size" @change="handleSearch">
-          <option value="10">10条/页</option>
-          <option value="20">20条/页</option>
-          <option value="50" selected>50条/页</option>
-          <option value="100">100条/页</option>
+        <select v-model="filters.page_size" @change="handlePageSizeChange">
+          <option :value="10">10条/页</option>
+          <option :value="20">20条/页</option>
+          <option :value="50">50条/页</option>
+          <option :value="100">100条/页</option>
         </select>
       </div>
       <button class="reset-btn" @click="resetFilters">重置</button>

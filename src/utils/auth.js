@@ -70,12 +70,26 @@ export async function refreshToken() {
       // 根据新的API格式，只更新访问令牌
       updateAccessToken(result.data['SOJ-Access-Token'])
       return result.data['SOJ-Access-Token']
+    } else if (result.code === 401 || result.message?.includes('refresh token 已过期')) {
+      // 刷新token过期，需要重新登录
+      console.error('Refresh token expired')
+      removeToken()
+      const currentPath = window.location.pathname
+      window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`
+      throw new Error('Refresh token expired')
     } else {
       throw new Error(result.message || 'Refresh token failed')
     }
   } catch (error) {
     console.error('Error refreshing token:', error)
-    removeToken()
+    
+    // 只有在确认refresh token失效时才清除token
+    if (error.message?.includes('refresh token') || error.message?.includes('过期')) {
+      removeToken()
+      const currentPath = window.location.pathname
+      window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`
+    }
+    
     throw error
   }
 }
