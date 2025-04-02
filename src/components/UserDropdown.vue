@@ -6,6 +6,7 @@ import { message } from 'ant-design-vue'
 import axios from 'axios'
 import { removeToken, getRefreshToken } from '../utils/auth'
 import { USER_MENU_ITEMS } from '../constants/menu'
+import { logout } from '../api/user'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -48,11 +49,7 @@ const handleLogout = async () => {
   try {
     const refreshToken = getRefreshToken()
     if (refreshToken) {
-      await axios.post('/api/v1/user/logout', {}, {
-        headers: {
-          'SOJ-Refresh-Token': refreshToken
-        }
-      })
+      await logout(refreshToken)
     }
     
     removeToken()
