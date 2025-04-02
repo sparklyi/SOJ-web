@@ -96,4 +96,20 @@ export async function refreshToken() {
 
 export function isAuthenticated() {
   return !!getAccessToken()
+}
+
+export function logout() {
+  // 清除所有代码缓存
+  const keys = Object.keys(localStorage)
+  keys.forEach(key => {
+    if (key.startsWith('soj_code_')) {
+      localStorage.removeItem(key)
+    }
+  })
+  
+  // 清除token
+  localStorage.removeItem('token')
+  localStorage.removeItem('refreshToken')
+  localStorage.removeItem('userId')
+  localStorage.removeItem('userInfo')
 } 
