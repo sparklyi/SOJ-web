@@ -19,6 +19,15 @@ service.interceptors.request.use(
     if (token) {
       config.headers['SOJ-Access-Token'] = token
     }
+    
+    // 调试输出请求信息
+    console.log('发送请求:', {
+      url: config.url,
+      method: config.method,
+      data: config.data,
+      headers: config.headers
+    })
+    
     return config
   },
   error => {
@@ -30,6 +39,13 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
   response => {
+    // 调试输出响应信息
+    console.log('收到响应:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    })
+    
     // 如果响应码不是200，也需要视为错误
     const res = response.data
     if (res.code !== 200) {

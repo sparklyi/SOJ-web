@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { removeToken, isAuthenticated, getRefreshToken } from './utils/auth'
 import { useUserStore } from './store/user'
 import { message } from 'ant-design-vue'
-import axios from 'axios'
+import { logout } from './api/user'
 import Navbar from './layouts/Navbar.vue'
 
 const router = useRouter()
@@ -70,11 +70,7 @@ const handleLogout = async () => {
   try {
     const refreshToken = getRefreshToken()
     if (refreshToken) {
-      await axios.post('/api/v1/user/logout', {}, {
-        headers: {
-          'SOJ-Refresh-Token': refreshToken
-        }
-      })
+      await logout(refreshToken)
     }
     
     removeToken()

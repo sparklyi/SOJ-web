@@ -4,6 +4,8 @@ import Login from '../views/Login.vue'
 import Problems from '../views/Problems.vue'
 import ProblemDetail from '../views/ProblemDetail.vue'
 import Contests from '../views/Contests.vue'
+import ContestDetail from '../views/ContestDetail.vue'
+import ContestWaiting from '../views/ContestWaiting.vue'
 import Admin from '../views/Admin.vue'
 import Profile from '../views/Profile.vue'
 import Settings from '../views/Settings.vue'
@@ -67,6 +69,20 @@ const routes = [
     name: 'Contests',
     component: Contests,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/contest/:id',
+    name: 'ContestDetail',
+    component: ContestDetail,
+    meta: { requiresAuth: true },
+    props: true
+  },
+  {
+    path: '/contest/:id/waiting',
+    name: 'ContestWaiting',
+    component: ContestWaiting,
+    meta: { requiresAuth: true },
+    props: true
   },
   {
     path: '/admin',

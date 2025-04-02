@@ -11,10 +11,19 @@ export function login(data) {
 
 // 注册
 export function register(data) {
+  console.log('发送注册API请求:', {
+    email: data.email,
+    password: data.password,
+    code: data.code
+  });
   return request({
     url: '/api/v1/user/register',
     method: 'post',
-    data
+    data: {
+      email: data.email,
+      password: data.password,
+      code: data.code
+    }
   })
 }
 
@@ -90,6 +99,17 @@ export function refreshUserToken() {
   return request({
     url: '/api/v1/user/refresh_token',
     method: 'post'
+  })
+}
+
+// 登出
+export function logout(refreshToken) {
+  return request({
+    url: '/api/v1/user/logout',
+    method: 'get',
+    headers: {
+      'SOJ-Refresh-Token': refreshToken
+    }
   })
 }
 

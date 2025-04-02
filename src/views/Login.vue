@@ -185,12 +185,13 @@ const validateForm = () => {
       }
     }
   } else {
+    // 注册验证
     if (!formData.value.password) {
       passwordError.value = '请输入密码'
       isValid = false
     }
-    if (!formData.value.captcha) {
-      captchaError.value = '请输入图形验证码'
+    if (!formData.value.verifyCode) {
+      verifyCodeError.value = '请输入验证码'
       isValid = false
     }
   }
@@ -248,15 +249,42 @@ const handleSubmit = async () => {
         }
       }
     } else {
-      // 注册
-      const res = await register(formData.value)
+      // 注册 - 现在使用邮箱验证码
+      if (!formData.value.verifyCode) {
+        verifyCodeError.value = '请输入验证码'
+        return
+      }
+      
+      console.log('注册表单数据:', formData.value)
+      
+      const registerData = {
+        email: formData.value.email,
+        password: formData.value.password,
+        code: formData.value.verifyCode
+      }
+      
+      console.log('发送到API的注册数据:', registerData)
+      
+      const res = await register(registerData)
       if (res.code === 200) {
-        isLogin.value = true
-        loginMode.value = 'code'
+        setToken(res.data)
+        try {
+          const userRes = await getUserInfo(res.data.id)
+          if (userRes.code === 200) {
+            userStore.setUserInfo(userRes.data)
+          }
+        } catch (error) {
+          console.error('获取用户信息失败:', error)
+        }
+        
+        message.success('注册成功')
+        
+        // 重定向到首页
+        router.push('/')
       } else {
         // 显示注册错误信息
         if (res.message.includes('验证码')) {
-          captchaError.value = res.message
+          verifyCodeError.value = res.message
         } else if (res.message.includes('密码')) {
           passwordError.value = res.message
         } else if (res.message.includes('邮箱')) {
@@ -265,11 +293,15 @@ const handleSubmit = async () => {
           // 其他错误信息显示在表单顶部
           verifyCodeError.value = res.message
         }
+        // 注册失败时刷新验证码
+        getCaptchaImage()
       }
     }
   } catch (error) {
     console.error('操作失败:', error)
     verifyCodeError.value = '操作失败，请稍后重试'
+    // 发生错误时刷新验证码
+    getCaptchaImage()
   } finally {
     loading.value = false
   }
@@ -387,22 +419,23 @@ getCaptchaImage()
             <div class="error-message" v-if="passwordError">{{ passwordError }}</div>
           </div>
           
-          <div class="form-group captcha">
+          <div class="form-group verify-code">
             <input
-              v-model="formData.captcha"
+              v-model="formData.verifyCode"
               type="text"
-              placeholder="请输入图形验证码"
+              placeholder="请输入验证码"
               class="form-control"
-              :class="{ 'error': captchaError }"
+              :class="{ 'error': verifyCodeError }"
             />
-            <img
-              :src="captchaImg"
-              alt="验证码"
-              @click="getCaptchaImage"
-              class="captcha-img"
-            />
+            <button
+              @click="sendCode"
+              :disabled="countdown > 0"
+              class="send-code-btn"
+            >
+              {{ countdown > 0 ? `${countdown}s` : '发送验证码' }}
+            </button>
           </div>
-          <div class="error-message" v-if="captchaError">{{ captchaError }}</div>
+          <div class="error-message" v-if="verifyCodeError">{{ verifyCodeError }}</div>
         </template>
         
         <!-- 提交按钮 -->

@@ -1,9 +1,10 @@
 <script setup>
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
-import { getProblemDetail, getLanguages, runCode, submitCode as submitCodeAPI, getSubmissionList, getSubmissionDetail } from '../api/problem'
+import { useRoute, useRouter } from 'vue-router'
+import { getProblemDetail, getLanguages, runCode as runCodeAPI, submitCode as submitCodeAPI, getSubmissionList, getSubmissionDetail } from '../api/problem'
 import { message } from 'ant-design-vue'
 import { marked } from 'marked'
+import { getUserId } from '../utils/auth'
 // import lottie from 'lottie-web'
 
 const route = useRoute()
@@ -65,11 +66,11 @@ const fetchProblemDetail = async () => {
       console.log('题目详情获取成功:', problem.value)
     } else {
       console.error('获取题目详情失败:', res.message)
-      message.error(res.message || '获取题目详情失败')
+      message.error(res.message)
     }
   } catch (error) {
     console.error('获取题目详情失败:', error)
-    message.error('获取题目详情失败: ' + (error.message || '未知错误'))
+    message.error(error.response?.data?.message || '获取题目详情失败')
   } finally {
     loading.value = false
   }
@@ -259,7 +260,7 @@ const submitCode = async () => {
       // 显示动画2秒后关闭
       setTimeout(() => {
         showJudgeAnimation.value = false
-        message.success('代码提交成功')
+        message.success(result.message)
         // 刷新提交记录但不跳转页面
         if (activeTab.value === 'submissions') {
           fetchSubmissionList()
@@ -267,12 +268,12 @@ const submitCode = async () => {
       }, 2000)
     } else {
       showJudgeAnimation.value = false
-      message.error(result.message || '代码提交失败')
+      message.error(result.message)
     }
   } catch (error) {
     console.error('提交代码出错:', error)
     showJudgeAnimation.value = false
-    message.error('提交代码失败: ' + (error.message || '未知错误'))
+    message.error(error.response?.data?.message || '提交代码失败')
   } finally {
     setTimeout(() => {
       isSubmitting.value = false
@@ -287,16 +288,19 @@ const fetchSubmissionList = async () => {
     const res = await getSubmissionList({
       problem_id: Number(route.params.id),
       page: currentPage.value,
-      page_size: pageSize.value
+      page_size: pageSize.value,
+      user_id: Number(getUserId())
     })
     
     if (res.code === 200) {
       submissionList.value = res.data.detail || []
       submissionTotal.value = res.data.count || 0
+    } else {
+      message.error(res.message)
     }
   } catch (error) {
     console.error('获取提交记录失败:', error)
-    message.error('获取提交记录失败')
+    message.error(error.response?.data?.message || '获取提交记录失败')
   } finally {
     submissionLoading.value = false
   }
@@ -310,10 +314,12 @@ const fetchSubmissionDetail = async (submissionId) => {
     if (res.code === 200) {
       submissionDetail.value = res.data
       showSubmissionDetail.value = true
+    } else {
+      message.error(res.message)
     }
   } catch (error) {
     console.error('获取提交详情失败:', error)
-    message.error('获取提交详情失败')
+    message.error(error.response?.data?.message || '获取提交详情失败')
   } finally {
     submissionDetailLoading.value = false
   }
@@ -426,7 +432,7 @@ const runTestCode = async () => {
     isRunning.value = true
     runResult.value = null
     
-    const result = await runCode({
+    const result = await runCodeAPI({
       problem_id: Number(route.params.id),
       source_code: code.value,
       language_id: languageId.value,
