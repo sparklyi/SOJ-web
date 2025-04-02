@@ -12,6 +12,7 @@
     "ant": "^0.2.0",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.8.4",
+    "element-plus": "^2.9.7",
     "lottie-web": "^5.12.2",
     "marked": "^15.0.7",
     "pinia": "^3.0.1",
