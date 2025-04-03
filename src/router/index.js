@@ -3,6 +3,7 @@ import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
 import Problems from '../views/Problems.vue'
 import ProblemDetail from '../views/ProblemDetail.vue'
+import ContestProblemDetail from '../views/ContestProblemDetail.vue'
 import Contests from '../views/Contests.vue'
 import ContestDetail from '../views/ContestDetail.vue'
 import ContestWaiting from '../views/ContestWaiting.vue'
@@ -76,6 +77,11 @@ const routes = [
     component: ContestDetail,
     meta: { requiresAuth: true },
     props: true
+  },
+  {
+    path: '/contest-problem/:id',
+    name: 'ContestProblemDetail',
+    component: ContestProblemDetail
   },
   {
     path: '/contest/:id/waiting',

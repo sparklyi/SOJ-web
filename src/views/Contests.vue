@@ -449,9 +449,12 @@ watch(contestsList, () => {
       <div v-else-if="contestsList.length === 0" class="empty">暂无竞赛数据</div>
       <div v-else>
         <div v-for="contest in contestsList" :key="contest.ID" class="contest-card">
-          <div class="contest-info">
+        <div class="contest-info">
             <div class="contest-header">
-              <h2 class="contest-title">{{ contest.name }}</h2>
+              <h2 class="contest-title">
+                <span class="contest-id">ID: {{ contest.ID }}</span>
+                {{ contest.name }}
+              </h2>
               <div class="contest-tags">
                 <span :class="['status-tag', getContestStatus(contest).class]">
                   {{ getContestStatus(contest).status }}
@@ -469,11 +472,11 @@ watch(contestsList, () => {
               <div class="time-info">
                 <div class="time-item">
                   <span class="time-label">开始时间:</span>
-                  <span class="time-value">{{ formatDate(contest.start_time) }}</span>
+                  <span class="time-value bold">{{ formatDate(contest.start_time) }}</span>
                 </div>
                 <div class="time-item">
                   <span class="time-label">结束时间:</span>
-                  <span class="time-value">{{ formatDate(contest.end_time) }}</span>
+                  <span class="time-value bold">{{ formatDate(contest.end_time) }}</span>
                 </div>
               </div>
               <div class="sponsor-info">
@@ -556,7 +559,7 @@ watch(contestsList, () => {
       </button>
       <span class="page-info">
         第 {{ pagination.page }} 页 / 共 {{ Math.ceil(total / pagination.size) }} 页
-      </span>
+            </span>
       <button 
         class="page-btn"
         :disabled="pagination.page >= Math.ceil(total / pagination.size)"
@@ -566,7 +569,7 @@ watch(contestsList, () => {
       </button>
       <span class="total-info">
         共 {{ total }} 条记录
-      </span>
+            </span>
       <div class="page-size-selector">
         <select v-model="pagination.size" @change="handleSizeChange">
           <option :value="5">5条/页</option>
@@ -1091,6 +1094,23 @@ h1 {
   font-weight: 500;
   text-align: center;
   border: 1px solid #ff9800;
+}
+
+.contest-id {
+  display: inline-block;
+  color: #666;
+  font-size: 14px;
+  background: #f5f5f5;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+  font-weight: normal;
+  vertical-align: middle;
+}
+
+.time-value.bold {
+  font-weight: 700;
+  color: #1890ff;
 }
 
 @media (max-width: 768px) {

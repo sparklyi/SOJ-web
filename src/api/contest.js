@@ -67,4 +67,15 @@ export function getUserApply(userId, contestId) {
       contest_id: Number(contestId)
     }
   })
+}
+
+// 获取竞赛排行榜
+export const getContestRank = (contestId) => {
+  return request({
+    url: '/api/v1/contest/rank',
+    method: 'post',
+    data: {
+      contest_id: Number(contestId)
+    }
+  })
 } 

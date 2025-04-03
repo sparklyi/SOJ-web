@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProblemDetail, getLanguages, runCode as runCodeAPI, submitCode as submitCodeAPI, getSubmissionList, getSubmissionDetail } from '../api/problem'
+import { getContestRank } from '../api/contest'
 import { message } from 'ant-design-vue'
 import { marked } from 'marked'
 import { getUserId } from '../utils/auth'
@@ -42,6 +43,12 @@ const loadingAnimation = ref(null)
 const successAnimation = ref(null)
 const errorAnimation = ref(null)
 const warningAnimation = ref(null)
+
+// 竞赛排行榜数据
+const rankLoading = ref(false)
+const rankList = ref([])
+const rankTotal = ref(0)
+const contestInfo = ref(null)
 
 // 获取题目详情
 const fetchProblemDetail = async () => {
@@ -244,11 +251,20 @@ const submitCode = async () => {
     // 缓存用户代码
     saveCodeToLocalStorage()
     
-    const result = await submitCodeAPI({
+    // 准备提交数据
+    const submitData = {
       problem_id: Number(route.params.id),
       source_code: code.value,
       language_id: languageId.value
-    })
+    }
+    
+    // 如果是从竞赛中访问的题目，添加竞赛ID
+    const contestId = getCurrentContestId()
+    if (contestId) {
+      submitData.contest_id = contestId
+    }
+    
+    const result = await submitCodeAPI(submitData)
     
     if (result.code === 200) {
       judgeResult.value = {
@@ -374,9 +390,11 @@ const formatDateTime = (dateStr) => {
 }
 
 // 监听选项卡变化
-watch(activeTab, (newVal) => {
-  if (newVal === 'submissions') {
-    fetchSubmissionList()
+watch(() => activeTab.value, (newTab) => {
+  if (newTab === 'submissions') {
+    fetchSubmissions()
+  } else if (newTab === 'ranking' && isContestProblem.value) {
+    fetchRankList()
   }
 })
 
@@ -663,7 +681,124 @@ watch(route, (newRoute) => {
 onMounted(() => {
   fetchProblemDetail()
   fetchLanguages()
+  
+  // 检查是否从竞赛页面跳转而来
+  if (getCurrentContestId()) {
+    console.log('从竞赛页面跳转而来，竞赛ID:', getCurrentContestId())
+  }
 })
+
+// 获取当前竞赛ID（如果存在）
+const getCurrentContestId = () => {
+  // 先尝试从URL参数获取竞赛ID
+  const contestIdFromQuery = route.query.contestId
+  if (contestIdFromQuery) {
+    return Number(contestIdFromQuery)
+  }
+  
+  // 如果URL中没有，则从localStorage中获取
+  const contestIdFromStorage = localStorage.getItem('current_contest_id')
+  if (contestIdFromStorage) {
+    return Number(contestIdFromStorage)
+  }
+  
+  return null
+}
+
+// 检查是否是竞赛题目
+const isContestProblem = computed(() => {
+  return !!getCurrentContestId()
+})
+
+// 筛选当前用户在当前竞赛的提交记录
+const fetchSubmissions = async () => {
+  submissionLoading.value = true
+  try {
+    // 添加竞赛ID和用户ID筛选
+    const params = {
+      problem_id: Number(route.params.id),
+      page: currentPage.value,
+      size: pageSize.value
+    }
+    
+    // 如果是竞赛题目，添加竞赛ID筛选
+    const contestId = getCurrentContestId()
+    if (contestId) {
+      params.contest_id = contestId
+    }
+    
+    // 如果用户已登录，添加用户ID筛选
+    const userId = getUserId()
+    if (userId) {
+      params.user_id = Number(userId)
+    }
+    
+    const res = await getSubmissionList(params)
+    if (res.code === 200) {
+      submissionList.value = res.data.records || []
+      submissionTotal.value = res.data.total || 0
+    } else {
+      console.error('获取提交记录失败:', res.message)
+      message.error(res.message || '获取提交记录失败')
+    }
+  } catch (error) {
+    console.error('获取提交记录失败:', error)
+    message.error('获取提交记录失败')
+  } finally {
+    submissionLoading.value = false
+  }
+}
+
+// 获取排行榜
+const fetchRankList = async () => {
+  const contestId = getCurrentContestId()
+  if (!contestId) return
+  
+  rankLoading.value = true
+  try {
+    const res = await getContestRank(contestId)
+    if (res.code === 200 && res.data) {
+      rankList.value = res.data.detail || []
+      rankTotal.value = res.data.count || 0
+    } else {
+      message.error(res.message || '获取排行榜失败')
+    }
+  } catch (error) {
+    console.error('获取排行榜失败:', error)
+  } finally {
+    rankLoading.value = false
+  }
+}
+
+// 获取字母序号
+const getLetterIndex = (index) => {
+  return String.fromCharCode(65 + index) // A, B, C, D...
+}
+
+// 获取用户解题详情
+const getProblemStatus = (userInfo, problemId) => {
+  if (!userInfo || !userInfo.info || !userInfo.info.freeze || !userInfo.info.freeze.details) {
+    return null
+  }
+  
+  return userInfo.info.freeze.details[problemId] || null
+}
+
+// 获取题目状态样式
+const getProblemStatusClass = (status) => {
+  if (!status) return ''
+  
+  switch (status.status) {
+    case 3: // 已通过
+      return 'accepted'
+    case 4: // 部分通过
+      return 'partial'
+    case 5: // 未通过
+      return 'failed'
+    default:
+      return ''
+  }
+}
 </script>
 
 <template>
@@ -1014,6 +1149,48 @@ onMounted(() => {
                 <pre class="source-code">{{ submissionDetail?.source_code }}</pre>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 排行榜内容 -->
+      <div v-if="activeTab === 'ranking'" class="ranking-content">
+        <div class="ranking-list card">
+          <h2>排行榜</h2>
+          
+          <div v-if="rankLoading" class="loading-row">加载中...</div>
+          <div v-else-if="rankList.length === 0" class="empty-ranking">
+            <div class="empty-icon">🏆</div>
+            <div class="empty-text">暂无排名数据</div>
+          </div>
+          <div v-else class="rank-table-container">
+            <table class="rank-table">
+              <thead>
+                <tr>
+                  <th class="rank-number">排名</th>
+                  <th class="user-name">参赛者</th>
+                  <th class="solved-count">通过题数</th>
+                  <th class="total-score">总分</th>
+                  <th class="total-penalty">罚时</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(user, index) in rankList" :key="index">
+                  <td class="rank-number">{{ index + 1 }}</td>
+                  <td class="user-name">{{ user.apply_name }}</td>
+                  <td class="solved-count">
+                    {{ user.info && user.info.freeze ? user.info.freeze.accepted_count : 0 }}
+                  </td>
+                  <td class="total-score">
+                    {{ user.info && user.info.freeze ? user.info.freeze.score_count : 0 }}
+                  </td>
+                  <td class="total-penalty">
+                    {{ user.info && user.info.freeze && user.info.freeze.penalty_count ? 
+                      Math.floor(user.info.freeze.penalty_count) + '秒' : '-' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -2437,5 +2614,103 @@ pre {
   0% { transform: scale(0); opacity: 0; }
   50% { transform: scale(1.2); opacity: 0.7; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+/* 排行榜样式 */
+.ranking-list {
+  margin-bottom: 20px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+.ranking-list h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: #333;
+  position: relative;
+  padding-left: 12px;
+}
+
+.ranking-list h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: #1890ff;
+  border-radius: 2px;
+}
+
+.rank-table-container {
+  overflow-x: auto;
+}
+
+.rank-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.rank-table th,
+.rank-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.rank-table th {
+  font-weight: 500;
+  background: #fafafa;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.rank-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+.rank-number {
+  width: 60px;
+  text-align: center;
+}
+
+.user-name {
+  width: 150px;
+  font-weight: 500;
+}
+
+.solved-count, .total-score, .total-penalty {
+  width: 100px;
+  text-align: center;
+}
+
+.loading-row {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.empty-ranking {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #999;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-text {
+  font-size: 16px;
 }
 </style> 
