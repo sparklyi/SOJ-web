@@ -246,6 +246,14 @@ onUnmounted(() => {
     clearInterval(timerInterval.value)
   }
 })
+
+// 格式化HTML内容
+const getFormattedDescription = computed(() => {
+  if (!contestDetail.value || !contestDetail.value.description) {
+    return '<div class="empty-description">暂无竞赛描述</div>'
+  }
+  return contestDetail.value.description
+})
 </script>
 
 <template>
@@ -328,6 +336,11 @@ onUnmounted(() => {
             {{ getEnterButtonText() }}
           </button>
         </div>
+      </div>
+      
+      <div class="contest-description">
+        <h2>竞赛简介</h2>
+        <div class="description-content" v-html="getFormattedDescription"></div>
       </div>
     </div>
     
@@ -617,5 +630,44 @@ onUnmounted(() => {
   .enter-btn {
     width: 100%;
   }
+}
+
+.contest-description {
+  margin-top: 30px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+.contest-description h2 {
+  font-size: 18px;
+  color: #333;
+  margin: 0 0 20px 0;
+  position: relative;
+  padding-left: 12px;
+}
+
+.contest-description h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: #1890ff;
+  border-radius: 2px;
+}
+
+.description-content {
+  line-height: 1.6;
+  color: #333;
+}
+
+.empty-description {
+  color: #999;
+  text-align: center;
+  padding: 40px 0;
 }
 </style> 

@@ -1,0 +1,1729 @@
+<script setup>
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { getProblemDetail, getLanguages, runCode as runCodeAPI, submitCode as submitCodeAPI, getSubmissionList, getSubmissionDetail } from '../api/problem'
+import { getContestRank } from '../api/contest'
+import { message } from 'ant-design-vue'
+import { marked } from 'marked'
+import { getUserId } from '../utils/auth'
+
+const route = useRoute()
+const router = useRouter()
+const problem = ref(null)
+const loading = ref(false)
+const code = ref('')
+const language = ref('cpp')
+const languageId = ref(null)
+const showEditor = ref(true)
+const languageOptions = ref([])
+const runResult = ref(null)
+const testInput = ref('')
+const isRunning = ref(false)
+const showTestPanel = ref(false)
+const activeTab = ref('problem')
+
+// 提交代码相关状态
+const isSubmitting = ref(false)
+const judgeResult = ref(null)
+const showJudgeAnimation = ref(false)
+
+// 提交记录相关
+const submissionLoading = ref(false)
+const submissionList = ref([])
+const submissionTotal = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(10)
+const submissionDetail = ref(null)
+const showSubmissionDetail = ref(false)
+const submissionDetailLoading = ref(false)
+
+// 竞赛排行榜数据
+const rankLoading = ref(false)
+const rankList = ref([])
+const rankTotal = ref(0)
+
+// 获取题目详情
+const fetchProblemDetail = async () => {
+  loading.value = true
+  try {
+    const res = await getProblemDetail(route.params.id)
+    if (res.code === 200) {
+      problem.value = res.data
+      // 确保样例存在，适配新API格式
+      if (problem.value.example && !problem.value.samples) {
+        problem.value.samples = problem.value.example.map(item => ({
+          input: item.stdin,
+          output: item.expected_output
+        }))
+      }
+      
+      // 如果没有样例，初始化一个空数组
+      if (!problem.value.samples) {
+        problem.value.samples = []
+      }
+    } else {
+      console.error('获取题目详情失败:', res.message)
+      message.error(res.message)
+    }
+  } catch (error) {
+    console.error('获取题目详情失败:', error)
+    message.error(error.response?.data?.message || '获取题目详情失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 转换Markdown内容为HTML
+const parseMarkdown = (content) => {
+  if (!content) return ''
+  try {
+    return marked(content)
+  } catch (error) {
+    console.error('Markdown解析错误:', error)
+    return content
+  }
+}
+
+// 计算属性：解析后的题目描述
+const parsedDescription = computed(() => {
+  return parseMarkdown(problem.value?.description || '')
+})
+
+// 计算属性：解析后的输入格式
+const parsedInputFormat = computed(() => {
+  return parseMarkdown(problem.value?.input_description || problem.value?.input_format || '')
+})
+
+// 计算属性：解析后的输出格式
+const parsedOutputFormat = computed(() => {
+  return parseMarkdown(problem.value?.output_description || problem.value?.output_format || '')
+})
+
+// 计算属性：解析后的备注
+const parsedRemark = computed(() => {
+  return parseMarkdown(problem.value?.remark || '')
+})
+
+// 获取支持的编程语言列表
+const fetchLanguages = async () => {
+  try {
+    const res = await getLanguages()
+    if (res.code === 200 && Array.isArray(res.data)) {
+      // 转换后端语言列表为前端语言选择器可用的格式
+      languageOptions.value = res.data.map(lang => ({
+        value: getShortLanguageName(lang.name), // 转换为简称
+        label: lang.name,
+        id: lang.id
+      }))
+      
+      // 设置默认语言
+      if (languageOptions.value.length > 0) {
+        language.value = languageOptions.value[0].value
+        languageId.value = languageOptions.value[0].id
+        setDefaultCode()
+      }
+    }
+  } catch (error) {
+    console.error('获取语言列表失败:', error)
+  }
+}
+
+// 获取当前竞赛ID（如果存在）
+const getCurrentContestId = () => {
+  // 先尝试从URL参数获取竞赛ID
+  const contestIdFromQuery = route.query.contestId
+  if (contestIdFromQuery) {
+    return Number(contestIdFromQuery)
+  }
+  
+  // 如果URL中没有，则从localStorage中获取
+  const contestIdFromStorage = localStorage.getItem('current_contest_id')
+  if (contestIdFromStorage) {
+    return Number(contestIdFromStorage)
+  }
+  
+  return null
+}
+
+// 切换编辑器显示状态（主要用于移动端）
+const toggleEditor = () => {
+  showEditor.value = !showEditor.value
+}
+
+// 从完整语言名称中提取简称
+const getShortLanguageName = (fullName) => {
+  if (fullName.includes('Python')) return 'python'
+  if (fullName.includes('C++')) return 'cpp'
+  if (fullName.includes('Java')) return 'java'
+  if (fullName.includes('Go')) return 'go'
+  // 默认返回小写的语言名称
+  return fullName.toLowerCase()
+}
+
+// 设置默认代码
+const setDefaultCode = () => {
+  if (!problem.value) return
+  
+  // 先尝试从本地存储加载代码
+  if (loadCodeFromLocalStorage()) {
+    return
+  }
+  
+  // 根据选择的语言设置默认代码模板
+  switch (language.value) {
+    case 'cpp':
+      code.value = `#include <iostream>\n#include <vector>\n#include <string>\nusing namespace std;\n\n// ${problem.value.name}\n\nint main() {\n    // 在这里编写代码\n    return 0;\n}`
+      break
+    case 'java':
+      code.value = `import java.util.*;\n\npublic class Solution {\n    // ${problem.value.name}\n    \n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        // 在这里编写代码\n    }\n}`
+      break
+    case 'python':
+      code.value = `# ${problem.value.name}\n\n# 在这里编写代码\n`
+      break
+    case 'go':
+      code.value = `package main\n\nimport (\n    "fmt"\n)\n\n// ${problem.value.name}\n\nfunc main() {\n    // 在这里编写代码\n}\n`
+      break
+    default:
+      code.value = `// ${problem.value.name}\n\n// 在这里编写代码\n`
+  }
+  
+  // 保存到本地存储
+  saveCodeToLocalStorage()
+}
+
+// 保存代码到本地存储
+const saveCodeToLocalStorage = () => {
+  if (!problem.value) return
+  const key = `code_${problem.value.ID}_${language.value}`
+  localStorage.setItem(key, code.value)
+}
+
+// 从本地存储加载代码
+const loadCodeFromLocalStorage = () => {
+  if (!problem.value) return false
+  const key = `code_${problem.value.ID}_${language.value}`
+  const savedCode = localStorage.getItem(key)
+  if (savedCode) {
+    code.value = savedCode
+    return true
+  }
+  return false
+}
+
+// 切换自测面板
+const toggleTestPanel = () => {
+  showTestPanel.value = !showTestPanel.value
+}
+
+// 自测运行代码
+const runTestCode = async () => {
+  if (!code.value.trim()) {
+    message.warning('请先编写代码')
+    return
+  }
+  
+  if (!languageId.value) {
+    message.warning('请选择编程语言')
+    return
+  }
+  
+  isRunning.value = true
+  runResult.value = null
+  
+  try {
+    const res = await runCodeAPI({
+      language_id: languageId.value,
+      source_code: code.value,
+      stdin: testInput.value
+    })
+    
+    if (res.code === 200) {
+      runResult.value = res.data
+    } else {
+      message.error(res.message || '运行失败')
+    }
+  } catch (error) {
+    console.error('运行代码失败:', error)
+    message.error('运行失败，请检查网络连接')
+  } finally {
+    isRunning.value = false
+  }
+}
+
+// 提交代码
+const submitCode = async () => {
+  if (!code.value.trim()) {
+    message.warning('请先编写代码')
+    return
+  }
+  
+  if (!languageId.value) {
+    message.warning('请选择编程语言')
+    return
+  }
+  
+  isSubmitting.value = true
+  showJudgeAnimation.value = true
+  judgeResult.value = null
+  
+  try {
+    const submitData = {
+      problem_id: Number(route.params.id),
+      language_id: languageId.value,
+      source_code: code.value
+    }
+    
+    // 如果是竞赛题目，添加竞赛ID
+    const contestId = getCurrentContestId()
+    if (contestId) {
+      submitData.contest_id = contestId
+    }
+    
+    const res = await submitCodeAPI(submitData)
+    
+    if (res.code === 200) {
+      judgeResult.value = res.data
+      message.success('提交成功')
+      
+      // 如果在提交记录选项卡，刷新提交记录
+      if (activeTab.value === 'submissions') {
+        await fetchSubmissionList()
+      }
+    } else {
+      message.error(res.message || '提交失败')
+    }
+  } catch (error) {
+    console.error('提交代码失败:', error)
+    message.error('提交失败，请检查网络连接')
+  } finally {
+    isSubmitting.value = false
+    // 延迟关闭动画
+    setTimeout(() => {
+      showJudgeAnimation.value = false
+    }, 1500)
+  }
+}
+
+// 切换标签页
+const switchTab = (tab) => {
+  activeTab.value = tab
+  
+  // 如果切换到提交记录标签页，加载提交记录
+  if (tab === 'submissions') {
+    fetchSubmissionList()
+  } else if (tab === 'ranking') {
+    // 如果切换到排行榜标签页，加载排行榜
+    fetchRankList()
+  }
+}
+
+// 获取提交记录
+const fetchSubmissionList = async () => {
+  submissionLoading.value = true
+  try {
+    // 添加竞赛ID和用户ID筛选
+    const params = {
+      problem_id: Number(route.params.id),
+      page: currentPage.value,
+      size: pageSize.value
+    }
+    
+    // 如果是竞赛题目，添加竞赛ID筛选
+    const contestId = getCurrentContestId()
+    if (contestId) {
+      params.contest_id = contestId
+    }
+    
+    // 如果用户已登录，添加用户ID筛选
+    const userId = getUserId()
+    if (userId) {
+      params.user_id = Number(userId)
+    }
+    
+    const res = await getSubmissionList(params)
+    if (res.code === 200) {
+      submissionList.value = res.data.detail || []
+      submissionTotal.value = res.data.count || 0
+    } else {
+      console.error('获取提交记录失败:', res.message)
+      message.error(res.message || '获取提交记录失败')
+    }
+  } catch (error) {
+    console.error('获取提交记录失败:', error)
+    message.error('获取提交记录失败')
+  } finally {
+    submissionLoading.value = false
+  }
+}
+
+// 获取提交详情
+const fetchSubmissionDetail = async (submissionId) => {
+  submissionDetailLoading.value = true
+  try {
+    const res = await getSubmissionDetail(submissionId)
+    if (res.code === 200) {
+      submissionDetail.value = res.data
+      showSubmissionDetail.value = true
+    } else {
+      message.error(res.message || '获取提交详情失败')
+    }
+  } catch (error) {
+    console.error('获取提交详情失败:', error)
+    message.error('获取提交详情失败')
+  } finally {
+    submissionDetailLoading.value = false
+  }
+}
+
+// 关闭提交详情对话框
+const closeSubmissionDetail = () => {
+  showSubmissionDetail.value = false
+  submissionDetail.value = null
+}
+
+// 获取排行榜
+const fetchRankList = async () => {
+  const contestId = getCurrentContestId()
+  if (!contestId) return
+  
+  rankLoading.value = true
+  try {
+    const res = await getContestRank(contestId)
+    if (res.code === 200 && res.data) {
+      rankList.value = res.data.detail || []
+      rankTotal.value = res.data.count || 0
+    } else {
+      message.error(res.message || '获取排行榜失败')
+    }
+  } catch (error) {
+    console.error('获取排行榜失败:', error)
+  } finally {
+    rankLoading.value = false
+  }
+}
+
+// 格式化日期时间
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`
+}
+
+// 获取状态样式类名
+const getStatusClass = (status) => {
+  if (!status) return ''
+  
+  switch (status) {
+    case 'Accepted':
+      return 'status-accepted'
+    case 'Wrong Answer':
+      return 'status-wrong'
+    case 'Time Limit Exceeded':
+      return 'status-tle'
+    case 'Memory Limit Exceeded':
+      return 'status-mle'
+    case 'Runtime Error':
+      return 'status-runtime'
+    case 'Compilation Error':
+      return 'status-compile'
+    case 'Pending':
+    case 'Judging':
+      return 'status-pending'
+    default:
+      return 'status-other'
+  }
+}
+
+// 处理分页变化
+const handlePageChange = (page) => {
+  if (page < 1 || page > Math.ceil(submissionTotal.value / pageSize.value)) {
+    return
+  }
+  currentPage.value = page
+  fetchSubmissionList()
+}
+
+// 生命周期钩子
+onMounted(() => {
+  fetchProblemDetail()
+  fetchLanguages()
+  
+  // 如果当前有竞赛ID，自动切换到排行榜标签
+  if (getCurrentContestId()) {
+    activeTab.value = 'problem' // 默认展示题目
+  }
+})
+
+// 监听路由参数变化
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    fetchProblemDetail()
+  }
+})
+
+// 当语言变化时，加载该语言的代码或设置默认代码
+watch(language, (newLanguage) => {
+  const matchedLanguage = languageOptions.value.find(opt => opt.value === newLanguage)
+  if (matchedLanguage) {
+    languageId.value = matchedLanguage.id
+  }
+  
+  if (problem.value) {
+    if (!loadCodeFromLocalStorage()) {
+      // 如果没有保存的代码，则设置默认代码
+      setDefaultCode()
+    }
+  }
+})
+
+// 检查是否是竞赛题目
+const isContestProblem = computed(() => {
+  return !!getCurrentContestId()
+})
+
+// 获取字母序号
+const getLetterIndex = (index) => {
+  return String.fromCharCode(65 + index) // A, B, C, D...
+}
+</script>
+
+<template>
+  <div class="problem-detail-container">
+    <!-- 将标签栏移到最顶层 -->
+    <div v-if="!loading && problem" class="problem-tabs">
+      <div 
+        class="tab-item" 
+        :class="{ active: activeTab === 'problem' }"
+        @click="switchTab('problem')"
+      >
+        题目描述
+      </div>
+      <div 
+        class="tab-item" 
+        :class="{ active: activeTab === 'submissions' }"
+        @click="switchTab('submissions')"
+      >
+        提交记录
+      </div>
+      <div 
+        class="tab-item" 
+        :class="{ active: activeTab === 'ranking' }"
+        @click="switchTab('ranking')"
+      >
+        排行榜
+      </div>
+    </div>
+    
+    <div v-if="loading" class="loading">
+      加载中...
+    </div>
+    <div v-else-if="!problem" class="empty">
+      题目不存在
+    </div>
+    <div v-else class="problem-detail">
+      <!-- 移动端切换按钮 -->
+      <div class="mobile-toggle">
+        <button @click="toggleEditor" class="toggle-btn">
+          {{ showEditor ? '查看题目' : '查看编辑器' }}
+        </button>
+      </div>
+      
+      <!-- 题目描述选项卡 -->
+      <div v-if="activeTab === 'problem'" class="split-layout">
+        <!-- 左侧题目详情 -->
+        <div class="problem-info" :class="{ 'hidden-mobile': showEditor }">
+          <div class="problem-header">
+            <h1>{{ problem.name }}</h1>
+            <div class="problem-meta">
+              <span :class="['level-tag', problem.level]">
+                {{ problem.level === 'easy' ? '简单' : problem.level === 'mid' ? '中等' : '困难' }}
+              </span>
+              <span class="create-time" v-if="problem.CreatedAt">
+                创建时间：{{ new Date(problem.CreatedAt).toLocaleDateString() }}
+              </span>
+            </div>
+          </div>
+
+          <div class="problem-content">
+            <div class="section">
+              <h2>题目描述</h2>
+              <div class="description markdown-body" v-html="parsedDescription"></div>
+            </div>
+
+            <div class="section">
+              <h2>输入格式</h2>
+              <div class="markdown-body" v-html="parsedInputFormat"></div>
+            </div>
+
+            <div class="section">
+              <h2>输出格式</h2>
+              <div class="markdown-body" v-html="parsedOutputFormat"></div>
+            </div>
+
+            <div class="section" v-if="problem.samples && problem.samples.length > 0">
+              <h2>示例</h2>
+              <div v-for="(sample, index) in problem.samples" :key="index" class="sample">
+                <div class="sample-header">示例 {{ index + 1 }}</div>
+                <div class="sample-content">
+                  <div class="sample-input">
+                    <div class="sample-label">输入:</div>
+                    <pre>{{ sample.input }}</pre>
+                  </div>
+                  <div class="sample-output">
+                    <div class="sample-label">输出:</div>
+                    <pre>{{ sample.output }}</pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section" v-if="problem.remark">
+              <h2>备注</h2>
+              <div class="markdown-body" v-html="parsedRemark"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 右侧代码编辑器 -->
+        <div class="editor-container" :class="{ 'hidden-mobile': !showEditor }">
+          <div class="editor-header">
+            <div class="editor-toolbar">
+              <div class="language-selector">
+                <label for="language">语言:</label>
+                <select id="language" v-model="language" @change="saveCodeToLocalStorage">
+                  <option v-for="lang in languageOptions" :key="lang.id" :value="lang.value">
+                    {{ lang.label }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <div class="code-editor">
+            <textarea 
+              v-model="code" 
+              @input="saveCodeToLocalStorage" 
+              class="editor-textarea" 
+              spellcheck="false"
+              placeholder="在这里编写代码..."
+            ></textarea>
+          </div>
+          
+          <!-- 测试面板 -->
+          <div v-if="showTestPanel" class="test-panel">
+            <div class="test-input">
+              <div class="panel-header">测试输入</div>
+              <textarea 
+                v-model="testInput" 
+                class="test-textarea" 
+                placeholder="输入测试样例..."
+              ></textarea>
+            </div>
+            <div class="test-output" v-if="runResult">
+              <div class="panel-header">
+                <span>测试输出</span>
+                <span class="status-badge" :class="runResult.status">
+                  {{ runResult.status }}
+                </span>
+              </div>
+              <div class="output-content">
+                <pre v-if="runResult.stdout">{{ runResult.stdout }}</pre>
+                <pre v-else-if="runResult.stderr" class="error-output">{{ runResult.stderr }}</pre>
+                <div v-else class="empty-output">运行完成，无输出</div>
+              </div>
+              <div class="run-stats" v-if="runResult.time">
+                <span>运行耗时: {{ runResult.time }}s</span>
+                <span>内存使用: {{ Math.round(runResult.memory / 1024) }}MB</span>
+              </div>
+            </div>
+            <div class="test-actions">
+              <button 
+                class="run-btn" 
+                @click="runTestCode" 
+                :disabled="isRunning"
+              >
+                {{ isRunning ? '运行中...' : '运行' }}
+              </button>
+            </div>
+          </div>
+          
+          <div class="editor-footer">
+            <button class="run-btn" @click="toggleTestPanel">{{ showTestPanel ? '隐藏自测' : '自测' }}</button>
+            <button class="submit-btn" @click="submitCode" :disabled="isSubmitting">
+              {{ isSubmitting ? '提交中...' : '提交代码' }}
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 提交记录选项卡 -->
+      <div v-else-if="activeTab === 'submissions'" class="tab-content submissions-tab">
+        <div v-if="submissionLoading" class="loading">加载中...</div>
+        <div v-else-if="submissionList.length === 0" class="empty-placeholder">
+          <div class="placeholder-icon">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>暂无提交记录</h3>
+          <p>提交代码后可以在此查看历史记录</p>
+        </div>
+        <div v-else class="submission-list">
+          <div class="submission-table">
+            <div class="table-header">
+              <div class="header-id">ID</div>
+              <div class="header-status">状态</div>
+              <div class="header-language">语言</div>
+              <div class="header-time">提交时间</div>
+              <div class="header-runtime">运行时间</div>
+              <div class="header-memory">内存</div>
+              <div class="header-actions">操作</div>
+            </div>
+            <div 
+              v-for="item in submissionList" 
+              :key="item.ID" 
+              class="table-row"
+            >
+              <div class="cell-id">{{ item.ID }}</div>
+              <div 
+                class="cell-status" 
+                :class="getStatusClass(item.status)"
+              >
+                {{ item.status }}
+              </div>
+              <div class="cell-language">{{ item.language }}</div>
+              <div class="cell-time">{{ formatDateTime(item.CreatedAt) }}</div>
+              <div class="cell-runtime">{{ item.time ? item.time + 's' : '-' }}</div>
+              <div class="cell-memory">{{ item.memory ? Math.round(item.memory / 1024) + 'MB' : '-' }}</div>
+              <div class="cell-actions">
+                <button 
+                  class="view-code-btn" 
+                  @click="fetchSubmissionDetail(item.ID)"
+                >
+                  查看源码
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 分页 -->
+          <div class="pagination">
+            <div class="page-total">共 {{ submissionTotal }} 条记录</div>
+            <div class="page-controls">
+              <button 
+                class="page-btn" 
+                :disabled="currentPage <= 1"
+                @click="handlePageChange(currentPage - 1)"
+              >
+                上一页
+              </button>
+              <span class="page-info">{{ currentPage }} / {{ Math.ceil(submissionTotal / pageSize) }}</span>
+              <button 
+                class="page-btn" 
+                :disabled="currentPage >= Math.ceil(submissionTotal / pageSize)"
+                @click="handlePageChange(currentPage + 1)"
+              >
+                下一页
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 提交详情对话框 -->
+        <div class="submission-detail-modal" v-if="showSubmissionDetail">
+          <div class="modal-overlay" @click="closeSubmissionDetail"></div>
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3>提交详情 #{{ submissionDetail?.ID }}</h3>
+              <button class="close-btn" @click="closeSubmissionDetail">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+            <div v-if="submissionDetailLoading" class="modal-loading">加载中...</div>
+            <div v-else class="modal-body">
+              <div class="detail-info">
+                <div class="detail-item">
+                  <span class="label">题目:</span>
+                  <span class="value">{{ submissionDetail?.problem_name }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">用户:</span>
+                  <span class="value">{{ submissionDetail?.user_name }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">语言:</span>
+                  <span class="value">{{ submissionDetail?.language }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">状态:</span>
+                  <span class="value" :class="getStatusClass(submissionDetail?.status)">{{ submissionDetail?.status }}</span>
+                </div>
+                <div class="detail-item" v-if="submissionDetail?.time">
+                  <span class="label">运行时间:</span>
+                  <span class="value">{{ submissionDetail?.time }}s</span>
+                </div>
+                <div class="detail-item" v-if="submissionDetail?.memory">
+                  <span class="label">内存占用:</span>
+                  <span class="value">{{ Math.round(submissionDetail?.memory / 1024) }}MB</span>
+                </div>
+                <div class="detail-item">
+                  <span class="label">提交时间:</span>
+                  <span class="value">{{ formatDateTime(submissionDetail?.CreatedAt) }}</span>
+                </div>
+              </div>
+              <div class="code-container">
+                <h4>源代码</h4>
+                <pre class="source-code">{{ submissionDetail?.source_code }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 排行榜内容 -->
+      <div v-else-if="activeTab === 'ranking'" class="ranking-content">
+        <div class="ranking-list card">
+          <h2>排行榜</h2>
+          
+          <div v-if="rankLoading" class="loading-row">加载中...</div>
+          <div v-else-if="rankList.length === 0" class="empty-ranking">
+            <div class="empty-icon">🏆</div>
+            <div class="empty-text">暂无排名数据</div>
+          </div>
+          <div v-else class="rank-table-container">
+            <table class="rank-table">
+              <thead>
+                <tr>
+                  <th class="rank-number">排名</th>
+                  <th class="user-name">参赛者</th>
+                  <th class="solved-count">通过题数</th>
+                  <th class="total-score">总分</th>
+                  <th class="total-penalty">罚时</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(user, index) in rankList" :key="index">
+                  <td class="rank-number">{{ index + 1 }}</td>
+                  <td class="user-name">{{ user.apply_name }}</td>
+                  <td class="solved-count">
+                    {{ user.info && user.info.freeze ? user.info.freeze.accepted_count : 0 }}
+                  </td>
+                  <td class="total-score">
+                    {{ user.info && user.info.freeze ? user.info.freeze.score_count : 0 }}
+                  </td>
+                  <td class="total-penalty">
+                    {{ user.info && user.info.freeze && user.info.freeze.penalty_count ? 
+                      Math.floor(user.info.freeze.penalty_count) + '秒' : '-' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 判题动画 -->
+    <div class="judge-animation" v-if="showJudgeAnimation">
+      <div class="animation-container">
+        <div class="judge-loading" v-if="!judgeResult">
+          <div class="loading-text">正在判题...</div>
+        </div>
+        <div class="judge-result" v-else>
+          <div class="result-status" :class="judgeResult.status === 'Accepted' ? 'success' : 'error'">
+            {{ judgeResult.status }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.problem-detail-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.problem-tabs {
+  display: flex;
+  border-bottom: 1px solid #e8e8e8;
+  background: white;
+  margin-bottom: 16px;
+  border-radius: 4px 4px 0 0;
+  overflow-x: auto;
+}
+
+.tab-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 15px;
+  position: relative;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.tab-item.active {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #1890ff;
+}
+
+.tab-item:hover:not(.active) {
+  color: #40a9ff;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 16px;
+  color: #666;
+  background: white;
+  border-radius: 4px;
+}
+
+.empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 16px;
+  color: #666;
+  background: white;
+  border-radius: 4px;
+}
+
+.problem-detail {
+  background: white;
+  border-radius: 4px;
+  min-height: 600px;
+}
+
+.mobile-toggle {
+  display: none;
+  margin-bottom: 16px;
+}
+
+.toggle-btn {
+  width: 100%;
+  padding: 8px 0;
+  background: #f0f2f5;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  transition: all 0.3s;
+}
+
+.toggle-btn:hover {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.split-layout {
+  display: flex;
+  align-items: stretch;
+  min-height: 600px;
+}
+
+.problem-info {
+  flex: 1;
+  padding: 24px;
+  border-right: 1px solid #f0f0f0;
+  overflow-y: auto;
+  max-height: calc(100vh - 140px);
+}
+
+.problem-header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.problem-header h1 {
+  margin: 0 0 16px 0;
+  font-size: 24px;
+  color: #333;
+}
+
+.problem-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.level-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.level-tag.easy {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.level-tag.mid {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.level-tag.hard {
+  background: #fff1f0;
+  color: #ff4d4f;
+}
+
+.create-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.problem-content {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #333;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.section h2 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  color: #333;
+  position: relative;
+  padding-left: 12px;
+}
+
+.section h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: #1890ff;
+  border-radius: 2px;
+}
+
+.description {
+  margin-bottom: 16px;
+}
+
+.markdown-body {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.sample {
+  margin-bottom: 16px;
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sample-header {
+  padding: 8px 12px;
+  background: #fafafa;
+  font-weight: 500;
+  font-size: 14px;
+  color: #666;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.sample-content {
+  padding: 12px;
+}
+
+.sample-input, .sample-output {
+  margin-bottom: 8px;
+}
+
+.sample-label {
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: #666;
+  font-size: 13px;
+}
+
+.sample-input pre, .sample-output pre {
+  margin: 0;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+}
+
+.editor-container {
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #f0f0f0;
+}
+
+.editor-header {
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.language-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.language-selector label {
+  font-size: 14px;
+  color: #666;
+}
+
+.language-selector select {
+  padding: 4px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.code-editor {
+  flex: 1;
+  position: relative;
+}
+
+.editor-textarea {
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  border: none;
+  resize: none;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+  background: #fafafa;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.test-panel {
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  color: #666;
+}
+
+.test-textarea {
+  width: 100%;
+  height: 100px;
+  padding: 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  resize: none;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.test-output {
+  margin-top: 16px;
+}
+
+.output-content {
+  padding: 8px;
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.output-content pre {
+  margin: 0;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+.error-output {
+  color: #ff4d4f;
+}
+
+.empty-output {
+  padding: 8px;
+  color: #999;
+  text-align: center;
+  font-style: italic;
+}
+
+.run-stats {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #666;
+}
+
+.test-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: normal;
+}
+
+.status-badge.Accepted, .status-badge.success {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.status-badge.error {
+  background: #fff1f0;
+  color: #ff4d4f;
+}
+
+.editor-footer {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.run-btn, .submit-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.run-btn {
+  background: white;
+  color: #1890ff;
+  border: 1px solid #1890ff;
+}
+
+.run-btn:hover:not(:disabled) {
+  background: #e6f7ff;
+}
+
+.submit-btn {
+  background: #1890ff;
+  color: white;
+  border: none;
+  flex: 1;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #40a9ff;
+}
+
+.submit-btn:disabled, .run-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.judge-animation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.animation-container {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  width: 80%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.judge-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.loading-text {
+  font-size: 18px;
+  color: #666;
+}
+
+.judge-result {
+  padding: 16px;
+}
+
+.result-status {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.result-status.success {
+  color: #52c41a;
+}
+
+.result-status.error {
+  color: #ff4d4f;
+}
+
+/* 排行榜样式 */
+.ranking-content {
+  padding: 20px;
+  background: white;
+}
+
+.ranking-list {
+  margin-bottom: 20px;
+}
+
+.ranking-list h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: #333;
+  position: relative;
+  padding-left: 12px;
+}
+
+.ranking-list h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: #1890ff;
+  border-radius: 2px;
+}
+
+.loading-row {
+  text-align: center;
+  padding: 30px;
+  color: #666;
+}
+
+.empty-ranking {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50px 0;
+  color: #999;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-text {
+  font-size: 16px;
+}
+
+.rank-table-container {
+  overflow-x: auto;
+}
+
+.rank-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.rank-table th,
+.rank-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.rank-table th {
+  font-weight: 500;
+  background: #fafafa;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.rank-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+.rank-number {
+  width: 60px;
+  text-align: center;
+}
+
+.user-name {
+  width: 150px;
+  font-weight: 500;
+}
+
+.solved-count, .total-score, .total-penalty {
+  width: 100px;
+  text-align: center;
+}
+
+/* 提交记录选项卡样式 */
+.submissions-tab {
+  padding: 20px;
+}
+
+.submission-list {
+  background: white;
+}
+
+.empty-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+  color: #999;
+}
+
+.placeholder-icon {
+  margin-bottom: 16px;
+  color: #d9d9d9;
+}
+
+.empty-placeholder h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #666;
+}
+
+.empty-placeholder p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.submission-table {
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 80px 120px 120px 180px 100px 100px 1fr;
+  background: #fafafa;
+  padding: 12px 16px;
+  font-weight: 500;
+  color: #666;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 80px 120px 120px 180px 100px 100px 1fr;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  align-items: center;
+}
+
+.table-row:hover {
+  background: #f5f5f5;
+}
+
+.cell-id, .header-id {
+  font-weight: 500;
+}
+
+.cell-status, .header-status {
+  font-weight: 500;
+}
+
+.status-accepted {
+  color: #52c41a;
+}
+
+.status-wrong {
+  color: #ff4d4f;
+}
+
+.status-tle {
+  color: #faad14;
+}
+
+.status-mle {
+  color: #faad14;
+}
+
+.status-runtime {
+  color: #ff4d4f;
+}
+
+.status-compile {
+  color: #ff4d4f;
+}
+
+.status-pending {
+  color: #1890ff;
+}
+
+.status-other {
+  color: #666;
+}
+
+.view-code-btn {
+  background: transparent;
+  color: #1890ff;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.view-code-btn:hover {
+  color: #40a9ff;
+  text-decoration: underline;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.page-total {
+  font-size: 14px;
+  color: #666;
+}
+
+.page-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-btn {
+  padding: 4px 12px;
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.page-btn:hover:not(:disabled) {
+  color: #1890ff;
+  border-color: #1890ff;
+}
+
+.page-btn:disabled {
+  color: #d9d9d9;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 14px;
+  color: #666;
+}
+
+.submission-detail-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1001;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #999;
+}
+
+.modal-loading {
+  padding: 30px;
+  text-align: center;
+  color: #666;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.detail-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.value {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.code-container {
+  background: #f5f5f5;
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.code-container h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.source-code {
+  margin: 0;
+  padding: 16px;
+  background: white;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* 响应式设计 */
+@media (max-width: 992px) {
+  .split-layout {
+    flex-direction: column;
+  }
+  
+  .problem-info, .editor-container {
+    width: 100%;
+    max-height: none;
+  }
+  
+  .mobile-toggle {
+    display: block;
+  }
+  
+  .problem-info.hidden-mobile, .editor-container.hidden-mobile {
+    display: none;
+  }
+  
+  .editor-container {
+    border-left: none;
+    border-top: 1px solid #f0f0f0;
+  }
+  
+  .problem-detail-container {
+    padding: 12px;
+  }
+  
+  .table-header, .table-row {
+    grid-template-columns: 60px 100px 100px 1fr;
+  }
+  
+  .header-runtime, .header-memory, .header-actions,
+  .cell-runtime, .cell-memory, .cell-actions {
+    display: none;
+  }
+}
+</style> 

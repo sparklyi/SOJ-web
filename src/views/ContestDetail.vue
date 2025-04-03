@@ -6,7 +6,8 @@ import {
   joinPrivateContest,
   applyContest,
   cancelApply,
-  getUserApply 
+  getUserApply,
+  getContestRank 
 } from '../api/contest'
 import { message, Modal } from 'ant-design-vue'
 import { getUserId } from '../utils/auth'
@@ -47,6 +48,11 @@ const applyDialogVisible = ref(false)
 const userApply = ref(null)
 const checkingApply = ref(false)
 
+// 排行榜数据
+const rankLoading = ref(false)
+const rankList = ref([])
+const rankTotal = ref(0)
+
 // 计算当前时间是否小于比赛开始时间
 const isBeforeStart = computed(() => {
   if (!contestDetail.value) return false
@@ -66,6 +72,13 @@ const isPublicAccess = computed(() => {
   if (!contestDetail.value) return false
   return contestDetail.value.public
 })
+
+// 存储当前的竞赛ID，用于题目提交时传递
+const storeContestId = () => {
+  if (contestId.value) {
+    localStorage.setItem('current_contest_id', contestId.value)
+  }
+}
 
 // 获取竞赛详情
 const fetchContestDetail = async () => {
@@ -315,16 +328,150 @@ const getContestStatus = (contest) => {
   }
 }
 
-// 前往题目详情
-const goToProblem = (problem) => {
-  router.push(`/problem/${problem.id}?contestId=${contestId.value}`)
+// 计算题目通过率
+const calculatePassRate = (problem) => {
+  if (!problem) return '0%'
+  
+  // 如果题目没有提交数据，返回'0%'
+  if (!problem.submit_count || problem.submit_count === 0) {
+    return '0%'
+  }
+  
+  // 如果有提交数据，计算通过率
+  const passRate = ((problem.accept_count || 0) / problem.submit_count * 100).toFixed(1)
+  return `${passRate}%`
 }
+
+// 跳转到题目详情
+const goToProblem = (problemId) => {
+  // 存储当前竞赛ID
+  storeContestId()
+  // 在新标签页打开题目
+  const problemUrl = `/contest-problem/${problemId}`
+  window.open(problemUrl, '_blank')
+}
+
+// 获取排行榜
+const fetchRankList = async () => {
+  if (!contestId.value) return
+  
+  rankLoading.value = true
+  try {
+    const res = await getContestRank(contestId.value)
+    if (res.code === 200 && res.data) {
+      rankList.value = res.data.detail || []
+      rankTotal.value = res.data.count || 0
+    } else {
+      message.error(res.message || '获取排行榜失败')
+    }
+  } catch (error) {
+    console.error('获取排行榜失败:', error)
+  } finally {
+    rankLoading.value = false
+  }
+}
+
+// 获取用户解题详情
+const getProblemStatus = (userInfo, problemId) => {
+  if (!userInfo || !userInfo.info || !userInfo.info.freeze || !userInfo.info.freeze.details) {
+    return null
+  }
+  
+  return userInfo.info.freeze.details[problemId] || null
+}
+
+// 获取题目状态样式
+const getProblemStatusClass = (status) => {
+  if (!status) return ''
+  
+  switch (status.status) {
+    case 3: // 已通过
+      return 'accepted'
+    case 4: // 部分通过
+      return 'partial'
+    case 5: // 未通过
+      return 'failed'
+    default:
+      return ''
+  }
+}
+
+// 获取题目尝试次数和时间
+const getProblemAttemptInfo = (status) => {
+  if (!status) return ''
+  
+  let result = ''
+  
+  // 添加尝试次数
+  if (status.count) {
+    result += `${status.count}次`
+  }
+  
+  // 添加罚时
+  if (status.penalty) {
+    const penalty = Math.floor(status.penalty / 60)
+    result += result ? `，${penalty}分钟` : `${penalty}分钟`
+  }
+  
+  return result
+}
+
+// 获取字母序号
+const getLetterIndex = (index) => {
+  return String.fromCharCode(65 + index); // A, B, C, D...
+}
+
+// 当标签页切换到排行榜时加载数据
+watch(activeTab, (newTab) => {
+  if (newTab === 'ranking') {
+    fetchRankList()
+  }
+})
 
 // 当路由变化时，重新获取竞赛详情
 watch(() => route.params.id, (newId) => {
   if (newId) {
     fetchContestDetail()
   }
+})
+
+// 计算比赛进度
+const getContestProgress = computed(() => {
+  if (!contestDetail.value) return 0
+  
+  const now = new Date()
+  const startTime = new Date(contestDetail.value.start_time)
+  const endTime = new Date(contestDetail.value.end_time)
+  
+  // 比赛未开始
+  if (now < startTime) return 0
+  
+  // 比赛已结束
+  if (now > endTime) return 100
+  
+  // 比赛进行中
+  const totalTime = endTime - startTime
+  const passedTime = now - startTime
+  
+  return Math.floor((passedTime / totalTime) * 100)
+})
+
+// 获取比赛剩余时间文本
+const getContestRemainingTime = computed(() => {
+  if (!contestDetail.value) return ''
+  
+  const now = new Date()
+  const endTime = new Date(contestDetail.value.end_time)
+  
+  // 比赛已结束
+  if (now > endTime) return '比赛已结束'
+  
+  // 计算剩余时间
+  const diff = endTime - now
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  
+  return `剩余时间: ${hours}小时 ${minutes}分钟`
 })
 
 onMounted(() => {
@@ -481,24 +628,25 @@ onMounted(() => {
             <div class="problems-list card">
               <h2>题目列表</h2>
               
-              <table v-if="contestDetail.problemList && contestDetail.problemList.length > 0" class="problems-table">
-                <thead>
-                  <tr>
-                    <th class="id-column">题目ID</th>
-                    <th class="name-column">题目名称</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="problem in contestDetail.problemList" :key="problem.id" @click="goToProblem(problem)" class="problem-row">
-                    <td class="id-column">{{ problem.id }}</td>
-                    <td class="name-column">{{ problem.name }}</td>
-                  </tr>
-                </tbody>
-              </table>
-              
-              <div v-else class="empty-problems">
-                <div class="empty-icon">📋</div>
-                <div class="empty-text">暂无竞赛题目</div>
+              <div v-if="loading" class="loading">加载中...</div>
+              <div v-else-if="contestDetail.problemList.length === 0" class="empty">暂无题目</div>
+              <div v-else class="problems-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>序号</th>
+                      <th>题目</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(problem, index) in contestDetail.problemList" :key="problem.id">
+                      <td>{{ getLetterIndex(index) }}</td>
+                      <td>
+                        <a class="problem-link" @click="goToProblem(problem.id)">{{ problem.name }}</a>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -508,9 +656,81 @@ onMounted(() => {
             <div class="ranking-list card">
               <h2>排行榜</h2>
               
-              <div class="empty-ranking">
+              <!-- 比赛进度条 -->
+              <div class="contest-progress-container">
+                <div class="progress-info">
+                  <div class="progress-status">{{ getContestStatus(contestDetail).status }}</div>
+                  <div class="progress-time">{{ getContestRemainingTime }}</div>
+                </div>
+                <div class="progress-bar-container">
+                  <div class="progress-bar" :style="{ width: getContestProgress + '%' }"></div>
+                </div>
+              </div>
+              
+              <div v-if="rankLoading" class="loading-row">加载中...</div>
+              <div v-else-if="rankList.length === 0" class="empty-ranking">
                 <div class="empty-icon">🏆</div>
-                <div class="empty-text">排行榜功能即将上线</div>
+                <div class="empty-text">暂无排名数据</div>
+              </div>
+              <div v-else class="rank-table-container">
+                <table class="rank-table">
+                  <thead>
+                    <tr>
+                      <th class="rank-number">排名</th>
+                      <th class="user-name">参赛者</th>
+                      <th class="solved-count">通过题数</th>
+                      <th class="total-score">总分</th>
+                      <th class="total-penalty">罚时</th>
+                      <!-- 为每个题目创建一列，以字母命名 -->
+                      <template v-if="contestDetail.problemList && contestDetail.problemList.length > 0">
+                        <th 
+                          v-for="(problem, index) in contestDetail.problemList" 
+                          :key="problem.id" 
+                          class="problem-status"
+                        >
+                          {{ getLetterIndex(index) }}
+                        </th>
+                      </template>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(user, index) in rankList" :key="index">
+                      <td class="rank-number">{{ index + 1 }}</td>
+                      <td class="user-name">{{ user.apply_name }}</td>
+                      <td class="solved-count">
+                        {{ user.info && user.info.freeze ? user.info.freeze.accepted_count : 0 }}
+                      </td>
+                      <td class="total-score">
+                        {{ user.info && user.info.freeze ? user.info.freeze.score_count : 0 }}
+                      </td>
+                      <td class="total-penalty">
+                        {{ user.info && user.info.freeze && user.info.freeze.penalty_count ? 
+                          Math.floor(user.info.freeze.penalty_count) + '秒' : '-' }}
+                      </td>
+                      <!-- 为每个题目创建一个单元格，用不同显示方式 -->
+                      <template v-if="contestDetail.problemList && contestDetail.problemList.length > 0">
+                        <td 
+                          v-for="problem in contestDetail.problemList" 
+                          :key="problem.id" 
+                          class="problem-status"
+                          :class="getProblemStatusClass(getProblemStatus(user, problem.id))"
+                        >
+                          <template v-if="getProblemStatus(user, problem.id)">
+                            <template v-if="getProblemStatus(user, problem.id).status === 3">
+                              <!-- 已通过，显示count-1 -->
+                              {{ Math.max(0, getProblemStatus(user, problem.id).count - 1) }}
+                            </template>
+                            <template v-else>
+                              <!-- 未通过，显示红色count -->
+                              <span class="failed-count">{{ getProblemStatus(user, problem.id).count }}</span>
+                            </template>
+                          </template>
+                          <template v-else>-</template>
+                        </td>
+                      </template>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -1118,6 +1338,17 @@ onMounted(() => {
   margin-top: 24px;
 }
 
+.problem-link {
+  color: #1890ff;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+
+.problem-link:hover {
+  color: #40a9ff;
+}
+
 @media (max-width: 768px) {
   .contest-detail-container {
     padding: 15px;
@@ -1182,5 +1413,154 @@ onMounted(() => {
   .problems-table td {
     padding: 8px;
   }
+}
+
+.difficulty {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.difficulty.Easy,
+.difficulty.简单 {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.difficulty.Medium,
+.difficulty.中等 {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.difficulty.Hard,
+.difficulty.困难 {
+  background: #fff1f0;
+  color: #f5222d;
+}
+
+.action-btn {
+  padding: 4px 12px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 12px;
+}
+
+.action-btn:hover {
+  background: #40a9ff;
+}
+
+.rank-table-container {
+  overflow-x: auto;
+}
+
+.rank-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.rank-table th,
+.rank-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.rank-table th {
+  font-weight: 500;
+  background: #fafafa;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.rank-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+.rank-number {
+  width: 60px;
+  text-align: center;
+}
+
+.user-name {
+  width: 150px;
+  font-weight: 500;
+}
+
+.solved-count, .total-score, .total-penalty {
+  width: 100px;
+  text-align: center;
+}
+
+.problem-status {
+  width: 100px;
+  text-align: center;
+}
+
+.problem-status.accepted {
+  background-color: rgba(82, 196, 26, 0.2);
+}
+
+.problem-status.partial {
+  background-color: rgba(250, 173, 20, 0.2);
+}
+
+.problem-status.failed {
+  background-color: rgba(245, 34, 45, 0.2);
+}
+
+.loading-row {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.failed-count {
+  color: #f5222d;
+  font-weight: 500;
+}
+
+.contest-progress-container {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 6px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.progress-status {
+  font-weight: 500;
+  color: #333;
+}
+
+.progress-time {
+  color: #ff9800;
+  font-weight: 500;
+}
+
+.progress-bar-container {
+  height: 10px;
+  background: #e0e0e0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #1890ff;
+  border-radius: 5px;
+  transition: width 0.3s ease;
 }
 </style> 

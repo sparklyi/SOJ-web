@@ -63,7 +63,9 @@ export function getSubmissionList(data) {
       user_id: data.user_id,
       problem_id: data.problem_id,
       language_id: data.language_id,
-      contest_id: data.contest_id
+      contest_id: data.contest_id,
+      page: data.page || 1,
+      size: data.size || 10
     }
   })
 }
