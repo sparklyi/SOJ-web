@@ -18,10 +18,19 @@ export function getProblems(params) {
 }
 
 // 获取题目详情
-export function getProblemDetail(id) {
+export function getProblemDetail(id, contestId) {
+  const url = `/api/v1/problem/${Number(id)}`
+  const params = {}
+  
+  // 如果提供了竞赛ID，则添加到参数中
+  if (contestId) {
+    params.contest_id = Number(contestId)
+  }
+  
   return request({
-    url: `/api/v1/problem/${Number(id)}`,
-    method: 'get'
+    url,
+    method: 'get',
+    params
   })
 }
 
