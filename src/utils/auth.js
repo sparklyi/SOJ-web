@@ -1,5 +1,3 @@
-import axios from 'axios'
-
 // token 相关操作
 const ACCESS_TOKEN_KEY = 'SOJ-Access-Token'
 const REFRESH_TOKEN_KEY = 'SOJ-Refresh-Token'
@@ -94,11 +92,13 @@ export async function refreshToken() {
   }
 }
 
+// 检查用户是否已认证
 export function isAuthenticated() {
   return !!getAccessToken()
 }
 
-export function logout() {
+// 清除本地缓存的代码和token
+export function clearLocalStorage() {
   // 清除所有代码缓存
   const keys = Object.keys(localStorage)
   keys.forEach(key => {
@@ -108,8 +108,7 @@ export function logout() {
   })
   
   // 清除token
-  localStorage.removeItem('token')
-  localStorage.removeItem('refreshToken')
-  localStorage.removeItem('userId')
-  localStorage.removeItem('userInfo')
+  localStorage.removeItem(ACCESS_TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  localStorage.removeItem(USER_ID_KEY)
 } 
