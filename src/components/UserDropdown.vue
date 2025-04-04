@@ -10,9 +10,15 @@ import { logout } from '../api/user'
 const router = useRouter()
 const userStore = useUserStore()
 const showDropdown = ref(false)
+const expandedMenus = ref({}) // 记录展开状态的子菜单
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value
+}
+
+// 切换子菜单展开状态
+const toggleSubMenu = (key) => {
+  expandedMenus.value[key] = !expandedMenus.value[key]
 }
 
 const handleMenuClick = (key) => {
@@ -28,8 +34,14 @@ const handleMenuClick = (key) => {
     case 'submissions':
       router.push('/submissions')
       break
-    case 'contests-record':
-      router.push('/contests-record')
+    case 'contest-applies':
+      router.push('/contest-applies')
+      break
+    case 'contest-manage':
+      router.push('/contest-manage')
+      break
+    case 'problem-manage':
+      router.push('/problem-manage')
       break
     case 'logout':
       handleLogout()
@@ -86,13 +98,32 @@ onUnmounted(() => {
         <small class="user-role" :style="{ color: userStore.roleColor }">{{ userStore.roleName }}</small>
       </div>
       <div class="dropdown-divider"></div>
-      <div
-        v-for="item in USER_MENU_ITEMS"
-        :key="item.key"
-        class="dropdown-item"
-        @click="handleMenuClick(item.key)"
-      >
-        <span>{{ item.label }}</span>
+      <div v-for="item in USER_MENU_ITEMS" :key="item.key">
+        <!-- 处理带子菜单的项目 -->
+        <div v-if="item.children" class="dropdown-parent">
+          <div class="dropdown-item parent-item" @click="toggleSubMenu(item.key)">
+            <span>{{ item.label }}</span>
+            <span class="dropdown-caret" :class="{ 'rotated': expandedMenus[item.key] }">▼</span>
+          </div>
+          <div class="dropdown-submenu" v-show="expandedMenus[item.key]">
+            <div
+              v-for="child in item.children"
+              :key="child.key"
+              class="dropdown-item submenu-item"
+              @click="handleMenuClick(child.key)"
+            >
+              <span>{{ child.label }}</span>
+            </div>
+          </div>
+        </div>
+        <!-- 处理普通菜单项 -->
+        <div
+          v-else
+          class="dropdown-item"
+          @click="handleMenuClick(item.key)"
+        >
+          <span>{{ item.label }}</span>
+        </div>
       </div>
     </div>
   </div>
@@ -168,9 +199,39 @@ onUnmounted(() => {
   padding: 8px 16px;
   cursor: pointer;
   transition: all 0.3s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .dropdown-item:hover {
   background: #f5f5f5;
+}
+
+.dropdown-parent {
+  position: relative;
+}
+
+.parent-item {
+  font-weight: 500;
+}
+
+.dropdown-caret {
+  font-size: 10px;
+  transition: transform 0.3s ease;
+}
+
+.dropdown-caret.rotated {
+  transform: rotate(180deg);
+}
+
+.dropdown-submenu {
+  padding-left: 16px;
+  background: #f9f9f9;
+}
+
+.submenu-item {
+  padding-left: 24px;
+  font-size: 14px;
 }
 </style> 

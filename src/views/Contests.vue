@@ -81,6 +81,19 @@ const fetchContests = async () => {
     if (res.code === 200) {
       contestsList.value = res.data.detail || []
       total.value = res.data.count || 0
+      
+      // 初始化每个竞赛的状态值
+      if (contestsList.value.length > 0) {
+        for (const contest of contestsList.value) {
+          if (checkingApply.value[contest.ID] === undefined) {
+            checkingApply.value[contest.ID] = false
+          }
+          if (userApplyStatus.value[contest.ID] === undefined) {
+            userApplyStatus.value[contest.ID] = null
+          }
+        }
+      }
+      
     } else {
       message.error(res.message || '获取竞赛列表失败')
     }
@@ -170,8 +183,6 @@ const enterContest = async (contest) => {
 // 检查是否已报名竞赛
 const checkApplyStatus = async (contestId) => {
   if (!currentUserId) {
-    message.warning('请先登录')
-    router.push('/login')
     return false
   }
   
@@ -184,13 +195,15 @@ const checkApplyStatus = async (contestId) => {
       // 已报名
       userApplyStatus.value[contestId] = res.data
       return true
-    } else if (res.code === 404) {
-      // 未报名
+    } else {
+      // 未报名或其他情况，都设为null
       userApplyStatus.value[contestId] = null
       return false
     }
   } catch (error) {
     console.error('获取报名状态失败:', error)
+    // 发生错误时也设为null
+    userApplyStatus.value[contestId] = null
     return false
   } finally {
     checkingApply.value[contestId] = false
@@ -334,6 +347,17 @@ const isBeforeStart = (contest) => {
 const fetchAllApplyStatus = async () => {
   if (!currentUserId || !contestsList.value.length) return
   
+  // 初始化状态值，避免undefined导致的条件判断问题
+  for (const contest of contestsList.value) {
+    if (!checkingApply.value[contest.ID]) {
+      checkingApply.value[contest.ID] = false
+    }
+    if (userApplyStatus.value[contest.ID] === undefined) {
+      userApplyStatus.value[contest.ID] = null
+    }
+  }
+  
+  // 获取报名状态
   for (const contest of contestsList.value) {
     await checkApplyStatus(contest.ID)
   }
@@ -381,8 +405,26 @@ const getCountdown = (startTime) => {
   }
 }
 
-onMounted(() => {
-  fetchContests()
+// 获取竞赛状态提示
+const getContestStatusTip = (contest) => {
+  const now = new Date()
+  const startTime = new Date(contest.start_time)
+  const endTime = new Date(contest.end_time)
+  
+  if (now < startTime) {
+    return `比赛未开始，将在${getCountdown(contest.start_time)}后开始`
+  } else if (now >= startTime && now <= endTime) {
+    return '比赛正在进行中'
+  } else {
+    return '比赛已结束'
+  }
+}
+
+onMounted(async () => {
+  await fetchContests()
+  if (currentUserId && contestsList.value.length > 0) {
+    await fetchAllApplyStatus()
+  }
 })
 
 // 当竞赛列表加载完成后，获取报名状态
@@ -489,60 +531,91 @@ watch(contestsList, () => {
                 <div class="apply-badge">已报名</div>
                 <div class="apply-info">
                   <span>{{ userApplyStatus[contest.ID].name }}</span>
-                  <button class="edit-btn" @click="showApplyDialog(contest)">
-                    编辑报名信息
-                  </button>
                 </div>
               </div>
             </div>
           </div>
           <div class="contest-action">
-            <!-- 如果是创建者显示管理按钮 -->
-            <button 
-              v-if="isContestCreator(contest)" 
-              class="manage-btn" 
-              @click="goToContestManage(contest.ID)"
-            >
-              竞赛管理
-            </button>
+            <!-- 管理员和创建者操作 -->
+            <div v-if="currentUserId && (contest.user_id === Number(currentUserId) || userStore.role >= 2)">
+              <button 
+                class="enter-btn" 
+                @click="enterContest(contest)"
+                :title="getContestStatusTip(contest)"
+              >
+                进入比赛
+              </button>
+              
+              <!-- 管理员也显示报名按钮 -->
+              <button
+                v-if="!userApplyStatus[contest.ID]"
+                class="apply-btn"
+                @click="showApplyDialog(contest)"
+                :disabled="applyLoading[contest.ID] || checkingApply[contest.ID]"
+              >
+                {{ applyLoading[contest.ID] ? '报名中...' : '立即报名' }}
+              </button>
+              
+              <!-- 如果管理员已报名，也显示取消和编辑按钮 -->
+              <template v-if="userApplyStatus[contest.ID]">
+                <button
+                  class="cancel-btn"
+                  @click="handleCancelApply(contest.ID)"
+                  :disabled="!isBeforeStart(contest) || cancelLoading[contest.ID] || checkingApply[contest.ID]"
+                >
+                  {{ cancelLoading[contest.ID] ? '取消中...' : '取消报名' }}
+                </button>
+                
+                <button
+                  class="edit-btn"
+                  @click="showApplyDialog(contest)"
+                >
+                  编辑信息
+                </button>
+              </template>
+            </div>
             
-            <!-- 如果未到比赛开始时间且未报名，显示报名按钮 -->
-            <button 
-              v-if="currentUserId && isBeforeStart(contest) && !userApplyStatus[contest.ID] && !checkingApply[contest.ID]" 
-              class="apply-btn" 
-              @click="showApplyDialog(contest)"
-              :disabled="applyLoading[contest.ID]"
-            >
-              {{ applyLoading[contest.ID] ? '报名中...' : '报名竞赛' }}
-            </button>
-            
-            <!-- 如果已报名且未开始，显示取消报名按钮 -->
-            <button 
-              v-if="currentUserId && isBeforeStart(contest) && userApplyStatus[contest.ID] && !checkingApply[contest.ID]" 
-              class="cancel-btn" 
-              @click="handleCancelApply(contest.ID)"
-              :disabled="cancelLoading[contest.ID]"
-            >
-              {{ cancelLoading[contest.ID] ? '取消中...' : '取消报名' }}
-            </button>
-            
-            <!-- 正在加载报名状态 -->
-            <button 
-              v-if="checkingApply[contest.ID]" 
-              class="loading-btn" 
-              disabled
-            >
-              检查报名状态...
-            </button>
-            
-            <!-- 进入竞赛按钮，已报名或创建者可点击 -->
-            <button 
-              class="enter-btn" 
-              @click="enterContest(contest)"
-              :disabled="!isContestCreator(contest) && !userApplyStatus[contest.ID]"
-            >
-              进入竞赛
-            </button>
+            <!-- 普通用户操作 -->
+            <div v-else>
+              <!-- 报名按钮 -->
+              <button
+                v-if="!userApplyStatus[contest.ID]"
+                class="apply-btn"
+                @click="showApplyDialog(contest)"
+                :disabled="applyLoading[contest.ID] || checkingApply[contest.ID]"
+              >
+                {{ applyLoading[contest.ID] ? '报名中...' : '立即报名' }}
+              </button>
+              
+              <!-- 已报名显示取消报名和进入比赛按钮 -->
+              <template v-if="userApplyStatus[contest.ID]">
+                <!-- 取消报名按钮 -->
+                <button
+                  class="cancel-btn"
+                  @click="handleCancelApply(contest.ID)"
+                  :disabled="!isBeforeStart(contest) || cancelLoading[contest.ID] || checkingApply[contest.ID]"
+                >
+                  {{ cancelLoading[contest.ID] ? '取消中...' : '取消报名' }}
+                </button>
+                
+                <!-- 进入比赛按钮 -->
+                <button
+                  class="enter-btn"
+                  @click="enterContest(contest)"
+                  :title="getContestStatusTip(contest)"
+                >
+                  进入比赛
+                </button>
+                
+                <!-- 编辑报名信息按钮 -->
+                <button
+                  class="edit-btn"
+                  @click="showApplyDialog(contest)"
+                >
+                  编辑信息
+                </button>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -846,6 +919,13 @@ h1 {
   min-width: 120px;
 }
 
+.contest-action > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
 .manage-btn,
 .apply-btn,
 .cancel-btn,
@@ -925,16 +1005,22 @@ h1 {
 }
 
 .edit-btn {
-  background: #f0f0f0;
-  color: #1890ff;
-  border: 1px solid #1890ff;
-  padding: 3px 8px;
-  font-size: 12px;
-  margin-left: 10px;
+  background: #faad14;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.edit-btn:hover {
-  background: #e6f7ff;
+.edit-btn:hover:not(:disabled) {
+  background: #ffc53d;
+}
+
+.edit-btn:disabled {
+  background: #f0f0f0;
+  color: #d9d9d9;
+  cursor: not-allowed;
 }
 
 /* 报名状态样式 */
@@ -1139,11 +1225,20 @@ h1 {
     width: 100%;
     flex-direction: row;
     flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  
+  .contest-action > div {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
   }
   
   .contest-action button {
     flex: 1;
-    min-width: 120px;
+    min-width: 100px;
+    margin: 4px;
   }
   
   .time-info {

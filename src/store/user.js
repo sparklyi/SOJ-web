@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { getUserInfo } from '../api/user'
 import { getUserId } from '../utils/auth'
+import { USER_ROLES } from '../constants/menu'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
@@ -9,26 +10,29 @@ export const useUserStore = defineStore('user', {
     error: null
   }),
   getters: {
-    isAdmin: (state) => state.userInfo.role === 3,
+    isAdmin: (state) => state.userInfo.role >= USER_ROLES.ADMIN,
+    isRoot: (state) => state.userInfo.role === USER_ROLES.ROOT,
+    isBanned: (state) => state.userInfo.role === USER_ROLES.BAN,
+    role: (state) => state.userInfo.role || 0,
     isLoggedIn: (state) => !!state.userInfo.ID,
     username: (state) => state.userInfo.username || '',
     avatar: (state) => state.userInfo.avatar || '',
     notify: (state) => state.userInfo.notify || 1,
     roleColor: (state) => {
       switch (state.userInfo.role) {
-        case -1: return '#999999' // 封禁用户 - 灰色
-        case 1: return '#1890ff' // 普通用户 - 蓝色
-        case 2: return '#52c41a' // 管理员 - 绿色
-        case 3: return '#fa541c' // 超级管理员 - 红色
+        case USER_ROLES.BAN: return '#999999' // 封禁用户 - 灰色
+        case USER_ROLES.USER: return '#1890ff' // 普通用户 - 蓝色
+        case USER_ROLES.ADMIN: return '#52c41a' // 管理员 - 绿色
+        case USER_ROLES.ROOT: return '#fa541c' // 超级管理员 - 红色
         default: return '#666666' // 默认颜色
       }
     },
     roleName: (state) => {
       switch (state.userInfo.role) {
-        case -1: return '封禁用户'
-        case 1: return '普通用户'
-        case 2: return '管理员'
-        case 3: return '超级管理员'
+        case USER_ROLES.BAN: return '封禁用户'
+        case USER_ROLES.USER: return '普通用户'
+        case USER_ROLES.ADMIN: return '管理员'
+        case USER_ROLES.ROOT: return '超级管理员'
         default: return '用户'
       }
     }

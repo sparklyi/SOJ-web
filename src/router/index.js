@@ -13,6 +13,9 @@ import Settings from '../views/Settings.vue'
 import Avatar from '../views/Avatar.vue'
 import Submissions from '../views/Submissions.vue'
 import ContestsRecord from '../views/ContestsRecord.vue'
+import ContestApplies from '../views/ContestApplies.vue'
+import ContestManage from '../views/ContestManage.vue'
+import ProblemManage from '../views/ProblemManage.vue'
 import { isAuthenticated, getUserId, getAccessToken } from '../utils/auth'
 
 // 简单的管理员权限检查函数
@@ -124,6 +127,24 @@ const routes = [
     path: '/contests-record',
     name: 'ContestsRecord',
     component: ContestsRecord,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/contest-applies',
+    name: 'ContestApplies',
+    component: ContestApplies,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/contest-manage',
+    name: 'ContestManage',
+    component: ContestManage,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/problem-manage',
+    name: 'ProblemManage',
+    component: ProblemManage,
     meta: { requiresAuth: true }
   }
 ]

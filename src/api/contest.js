@@ -78,4 +78,27 @@ export const getContestRank = (contestId) => {
       contest_id: Number(contestId)
     }
   })
+}
+
+// 获取个人报名的比赛列表
+export function getUserAppliedContests(params) {
+  return request({
+    url: '/api/v1/apply/self',
+    method: 'get',
+    params
+  })
+}
+
+
+// 获取管理权限的竞赛列表
+export function getManageableContests(userId, params) {
+  return request({
+    url: '/api/v1/contest',
+    method: 'post',
+    data: {
+      user_id: userId,
+      page:params.page,
+      page_size:params.page_size
+    }
+  })
 } 
