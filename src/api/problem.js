@@ -85,4 +85,48 @@ export function getSubmissionDetail(id) {
     url: `/api/v1/submission/${id}`,
     method: 'get'
   })
+}
+
+// 获取用户创建的题目列表
+export function getUserProblems(params) {
+  // 过滤掉空值参数
+  const filteredParams = Object.fromEntries(
+    Object.entries(params).filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+  )
+  
+  return request({
+    url: '/api/v1/problem/user',
+    method: 'post',
+    data: {
+      ...filteredParams,
+      page: params.page || 1,
+      page_size: params.page_size || 10
+    }
+  })
+}
+
+// 删除题目
+export function deleteProblemAPI(problemId) {
+  return request({
+    url: `/api/v1/problem/${problemId}`,
+    method: 'delete'
+  })
+}
+
+// 更新题目
+export function updateProblemAPI(problemId, data) {
+  return request({
+    url: `/api/v1/problem/${problemId}`,
+    method: 'put',
+    data
+  })
+}
+
+// 创建题目
+export function createProblemAPI(data) {
+  return request({
+    url: '/api/v1/problem/create',
+    method: 'post',
+    data
+  })
 } 

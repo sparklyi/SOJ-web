@@ -520,7 +520,7 @@ getCaptchaImage()
   position: relative;
   overflow: hidden;
   min-width: 50%;
-  background: linear-gradient(45deg, #ffffff, #b7fab5);
+  background: linear-gradient(45deg, #3ecc68, #b7fab5);
 }
 
 .auth-content {
