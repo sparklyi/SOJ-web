@@ -2,7 +2,7 @@
 import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProblemDetail, getLanguages, runCode as runCodeAPI, submitCode as submitCodeAPI, getSubmissionList, getSubmissionDetail } from '../api/problem'
-import { getContestRank } from '../api/contest'
+import { getContestRank, getContestDetail } from '../api/contest'
 import { message } from 'ant-design-vue'
 import { marked } from 'marked'
 import { getUserId } from '../utils/auth'
@@ -42,11 +42,144 @@ const rankLoading = ref(false)
 const rankList = ref([])
 const rankTotal = ref(0)
 
+// 存储竞赛问题列表
+const contestProblems = ref([])
+
+// 存储竞赛信息
+const contestInfo = ref(null)
+
+// 获取当前竞赛ID
+const getCurrentContestId = () => {
+  // 先尝试从URL参数获取竞赛ID
+  const contestIdFromQuery = route.query.contestId
+  if (contestIdFromQuery) {
+    return Number(contestIdFromQuery)
+  }
+  
+  // 如果URL中没有，则从localStorage中获取
+  const contestIdFromStorage = localStorage.getItem('current_contest_id')
+  if (contestIdFromStorage) {
+    return Number(contestIdFromStorage)
+  }
+  
+  return null
+}
+
+// 获取竞赛状态相关数据
+const getContestStatus = (contest) => {
+  if (!contest) return { status: '未知', statusClass: '' }
+  
+  const now = new Date().getTime()
+  const start = new Date(contest.started_at).getTime()
+  const end = new Date(contest.ended_at).getTime()
+  
+  if (now < start) {
+    return { status: '未开始', statusClass: 'upcoming' }
+  } else if (now < end) {
+    return { status: '进行中', statusClass: 'ongoing' }
+  } else {
+    return { status: '已结束', statusClass: 'ended' }
+  }
+}
+
+// 格式化时间间隔
+const formatDuration = (ms) => {
+  const seconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+  
+  const remainingHours = hours % 24
+  const remainingMinutes = minutes % 60
+  
+  let result = ''
+  if (days > 0) result += `${days}天 `
+  if (remainingHours > 0 || days > 0) result += `${remainingHours}小时 `
+  result += `${remainingMinutes}分钟`
+  
+  return result
+}
+
+// 获取竞赛进度百分比
+const getContestProgress = computed(() => {
+  if (!contestInfo.value) return 0
+  
+  const now = new Date().getTime()
+  const start = new Date(contestInfo.value.started_at).getTime()
+  const end = new Date(contestInfo.value.ended_at).getTime()
+  
+  // 如果未开始
+  if (now < start) return 0
+  // 如果已结束
+  if (now > end) return 100
+  
+  // 计算进度百分比
+  const total = end - start
+  const elapsed = now - start
+  return Math.floor((elapsed / total) * 100)
+})
+
+// 获取剩余时间描述
+const getContestRemainingTime = computed(() => {
+  if (!contestInfo.value) return ''
+  
+  const now = new Date().getTime()
+  const start = new Date(contestInfo.value.started_at).getTime()
+  const end = new Date(contestInfo.value.ended_at).getTime()
+  
+  // 如果未开始
+  if (now < start) {
+    const diff = start - now
+    return `距离开始还有 ${formatDuration(diff)}`
+  }
+  
+  // 如果已结束
+  if (now > end) {
+    return '竞赛已结束'
+  }
+  
+  // 计算剩余时间
+  const diff = end - now
+  return `距离结束还有 ${formatDuration(diff)}`
+})
+
+// 获取竞赛信息
+const fetchContestInfo = async () => {
+  const contestId = getCurrentContestId()
+  if (!contestId) return
+  
+  try {
+    const res = await getContestDetail(contestId)
+    if (res.code === 200) {
+      contestInfo.value = res.data
+      
+      // 尝试从竞赛详情中提取题目列表
+      if (contestInfo.value.problem_set) {
+        try {
+          const problemList = JSON.parse(contestInfo.value.problem_set)
+          if (problemList && problemList.length > 0) {
+            contestProblems.value = problemList
+            console.log('从竞赛详情获取到题目列表：', contestProblems.value)
+          }
+        } catch (e) {
+          console.error('解析题目集失败:', e)
+        }
+      } else if (contestInfo.value.problemList && contestInfo.value.problemList.length > 0) {
+        contestProblems.value = contestInfo.value.problemList
+        console.log('从竞赛详情problemList获取到题目列表：', contestProblems.value)
+      }
+    }
+  } catch (error) {
+    console.error('获取竞赛信息失败:', error)
+  }
+}
+
 // 获取题目详情
 const fetchProblemDetail = async () => {
   loading.value = true
   try {
-    const res = await getProblemDetail(route.params.id)
+    const contestId = getCurrentContestId()
+    const res = await getProblemDetail(route.params.id, contestId)
     if (res.code === 200) {
       problem.value = res.data
       // 确保样例存在，适配新API格式
@@ -126,23 +259,6 @@ const fetchLanguages = async () => {
   } catch (error) {
     console.error('获取语言列表失败:', error)
   }
-}
-
-// 获取当前竞赛ID（如果存在）
-const getCurrentContestId = () => {
-  // 先尝试从URL参数获取竞赛ID
-  const contestIdFromQuery = route.query.contestId
-  if (contestIdFromQuery) {
-    return Number(contestIdFromQuery)
-  }
-  
-  // 如果URL中没有，则从localStorage中获取
-  const contestIdFromStorage = localStorage.getItem('current_contest_id')
-  if (contestIdFromStorage) {
-    return Number(contestIdFromStorage)
-  }
-  
-  return null
 }
 
 // 切换编辑器显示状态（主要用于移动端）
@@ -314,6 +430,8 @@ const switchTab = (tab) => {
   } else if (tab === 'ranking') {
     // 如果切换到排行榜标签页，加载排行榜
     fetchRankList()
+    // 确保每次切换到排行榜时都能看到最新的竞赛信息
+    fetchContestInfo()
   }
 }
 
@@ -388,10 +506,30 @@ const fetchRankList = async () => {
   
   rankLoading.value = true
   try {
+    // 先获取竞赛详情，确保contestInfo中有最新的数据
+    const detailRes = await getContestDetail(contestId)
+    if (detailRes.code === 200) {
+      contestInfo.value = detailRes.data
+    }
+    
     const res = await getContestRank(contestId)
     if (res.code === 200 && res.data) {
       rankList.value = res.data.detail || []
       rankTotal.value = res.data.count || 0
+      
+      // 确保problem_list存在并保存下来
+      if (res.data.problem_list && res.data.problem_list.length > 0) {
+        contestProblems.value = res.data.problem_list
+        console.log('题目列表已获取:', contestProblems.value)
+      } else {
+        console.warn('排行榜返回的题目列表为空')
+        
+        // 如果排行榜API没有返回题目列表，尝试从竞赛详情获取
+        if (contestInfo.value && contestInfo.value.problemList) {
+          contestProblems.value = contestInfo.value.problemList
+          console.log('从竞赛详情获取题目列表:', contestProblems.value)
+        }
+      }
     } else {
       message.error(res.message || '获取排行榜失败')
     }
@@ -400,6 +538,48 @@ const fetchRankList = async () => {
   } finally {
     rankLoading.value = false
   }
+}
+
+// 获取字母序号
+const getLetterIndex = (index) => {
+  return String.fromCharCode(65 + index) // A, B, C, D...
+}
+
+// 获取用户解题详情
+const getProblemStatus = (userInfo, problemId) => {
+  if (!userInfo || !userInfo.info || !userInfo.info.freeze || !userInfo.info.freeze.details) {
+    return null
+  }
+  
+  return userInfo.info.freeze.details[problemId] || null
+}
+
+// 获取题目状态样式
+const getProblemStatusClass = (status) => {
+  if (!status) return ''
+  
+  switch (status.status) {
+    case 3: // 已通过
+      return 'accepted'
+    case 4: // 部分通过
+      return 'partial'
+    case 5: // 未通过
+      return 'failed'
+    default:
+      return ''
+  }
+}
+
+// 是否显示题目尝试次数和AC时间
+const showProblemAttempt = (status) => {
+  return status && (status.status === 3 || status.status === 4 || status.attempts > 0)
+}
+
+// 格式化AC时间（秒转为分钟显示）
+const formatACTime = (seconds) => {
+  if (!seconds) return ''
+  const minutes = Math.floor(seconds / 60)
+  return `${minutes}分钟`
 }
 
 // 格式化日期时间
@@ -443,14 +623,30 @@ const handlePageChange = (page) => {
   fetchSubmissionList()
 }
 
+// 使用样例输入
+const useExampleInput = (index) => {
+  if (problem.value && problem.value.samples && problem.value.samples[index]) {
+    testInput.value = problem.value.samples[index].input
+    showTestPanel.value = true
+  }
+}
+
 // 生命周期钩子
-onMounted(() => {
+onMounted(async () => {
+  // 先获取竞赛信息，再获取题目详情和语言
+  await fetchContestInfo() 
   fetchProblemDetail()
   fetchLanguages()
   
-  // 如果当前有竞赛ID，自动切换到排行榜标签
+  // 如果当前有竞赛ID，获取排行榜数据
   if (getCurrentContestId()) {
-    activeTab.value = 'problem' // 默认展示题目
+    // 如果此时排行榜为空，获取排行榜数据
+    if (!contestProblems.value || contestProblems.value.length === 0) {
+      await fetchRankList()
+    }
+    
+    // 默认展示题目
+    activeTab.value = 'problem'
   }
 })
 
@@ -481,9 +677,25 @@ const isContestProblem = computed(() => {
   return !!getCurrentContestId()
 })
 
-// 获取字母序号
-const getLetterIndex = (index) => {
-  return String.fromCharCode(65 + index) // A, B, C, D...
+/* 在合适的位置添加onKeyDown处理函数 */
+const handleEditorKeyDown = (e) => {
+  // 处理Tab键
+  if (e.key === 'Tab') {
+    e.preventDefault()
+    
+    // 获取当前光标位置
+    const start = e.target.selectionStart
+    const end = e.target.selectionEnd
+    
+    // 在光标位置插入制表符（2个空格）
+    const newValue = code.value.substring(0, start) + '  ' + code.value.substring(end)
+    code.value = newValue
+    
+    // 将光标位置移动到插入后的位置
+    nextTick(() => {
+      e.target.selectionStart = e.target.selectionEnd = start + 2
+    })
+  }
 }
 </script>
 
@@ -545,41 +757,46 @@ const getLetterIndex = (index) => {
           </div>
 
           <div class="problem-content">
-            <div class="section">
+            <div class="section description-section">
               <h2>题目描述</h2>
               <div class="description markdown-body" v-html="parsedDescription"></div>
             </div>
 
-            <div class="section">
+            <div class="section input-section">
               <h2>输入格式</h2>
-              <div class="markdown-body" v-html="parsedInputFormat"></div>
+              <div class="input-format markdown-body" v-html="parsedInputFormat"></div>
             </div>
 
-            <div class="section">
+            <div class="section output-section">
               <h2>输出格式</h2>
-              <div class="markdown-body" v-html="parsedOutputFormat"></div>
+              <div class="output-format markdown-body" v-html="parsedOutputFormat"></div>
             </div>
 
-            <div class="section" v-if="problem.samples && problem.samples.length > 0">
+            <div class="section samples-section" v-if="problem.samples && problem.samples.length > 0">
               <h2>示例</h2>
-              <div v-for="(sample, index) in problem.samples" :key="index" class="sample">
-                <div class="sample-header">示例 {{ index + 1 }}</div>
-                <div class="sample-content">
-                  <div class="sample-input">
-                    <div class="sample-label">输入:</div>
-                    <pre>{{ sample.input }}</pre>
+              <div class="samples">
+                <div v-for="(sample, index) in problem.samples" :key="index" class="sample">
+                  <div class="sample-header">
+                    <span class="sample-title">示例 {{ index + 1 }}</span>
+                    <button class="use-example-btn" @click="useExampleInput(index)">使用此示例</button>
                   </div>
-                  <div class="sample-output">
-                    <div class="sample-label">输出:</div>
-                    <pre>{{ sample.output }}</pre>
+                  <div class="sample-content">
+                    <div class="sample-input">
+                      <div class="label">输入:</div>
+                      <pre>{{ sample.input }}</pre>
+                    </div>
+                    <div class="sample-output">
+                      <div class="label">输出:</div>
+                      <pre>{{ sample.output }}</pre>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="section" v-if="problem.remark">
+            <div class="section remark-section" v-if="problem.remark">
               <h2>备注</h2>
-              <div class="markdown-body" v-html="parsedRemark"></div>
+              <div class="remark markdown-body" v-html="parsedRemark"></div>
             </div>
           </div>
         </div>
@@ -589,7 +806,6 @@ const getLetterIndex = (index) => {
           <div class="editor-header">
             <div class="editor-toolbar">
               <div class="language-selector">
-                <label for="language">语言:</label>
                 <select id="language" v-model="language" @change="saveCodeToLocalStorage">
                   <option v-for="lang in languageOptions" :key="lang.id" :value="lang.value">
                     {{ lang.label }}
@@ -603,6 +819,7 @@ const getLetterIndex = (index) => {
             <textarea 
               v-model="code" 
               @input="saveCodeToLocalStorage" 
+              @keydown="handleEditorKeyDown"
               class="editor-textarea" 
               spellcheck="false"
               placeholder="在这里编写代码..."
@@ -793,6 +1010,16 @@ const getLetterIndex = (index) => {
             <div class="empty-text">暂无排名数据</div>
           </div>
           <div v-else class="rank-table-container">
+            <div class="contest-problems">
+              <h3>竞赛题目</h3>
+              <div class="problem-list">
+                <div v-for="(problem, index) in contestProblems" :key="problem.id" class="problem-item">
+                  <span class="problem-letter">{{ getLetterIndex(index) }}</span>
+                  <span class="problem-name">{{ problem.name }}</span>
+                </div>
+              </div>
+            </div>
+            
             <table class="rank-table">
               <thead>
                 <tr>
@@ -801,6 +1028,16 @@ const getLetterIndex = (index) => {
                   <th class="solved-count">通过题数</th>
                   <th class="total-score">总分</th>
                   <th class="total-penalty">罚时</th>
+                  <!-- 为每个题目创建一列，以字母命名 -->
+                  <template v-if="contestProblems && contestProblems.length > 0">
+                    <th 
+                      v-for="(problem, index) in contestProblems" 
+                      :key="problem.id" 
+                      class="problem-status"
+                    >
+                      {{ getLetterIndex(index) }}
+                    </th>
+                  </template>
                 </tr>
               </thead>
               <tbody>
@@ -815,8 +1052,30 @@ const getLetterIndex = (index) => {
                   </td>
                   <td class="total-penalty">
                     {{ user.info && user.info.freeze && user.info.freeze.penalty_count ? 
-                      Math.floor(user.info.freeze.penalty_count) + '秒' : '-' }}
+                      Math.floor(user.info.freeze.penalty_count / 60) + '分钟' : '-' }}
                   </td>
+                  
+                  <!-- 题目状态列 -->
+                  <template v-if="contestProblems && contestProblems.length > 0">
+                    <td 
+                      v-for="problem in contestProblems" 
+                      :key="problem.id" 
+                      class="problem-status"
+                      :class="getProblemStatusClass(getProblemStatus(user, problem.id))"
+                    >
+                      <template v-if="getProblemStatus(user, problem.id)">
+                        <template v-if="getProblemStatus(user, problem.id).status === 3">
+                          <!-- 已通过，显示尝试次数 -->
+                          {{ getProblemStatus(user, problem.id).count || 0 }}
+                        </template>
+                        <template v-else>
+                          <!-- 未通过，显示红色尝试次数 -->
+                          <span class="failed-count">{{ getProblemStatus(user, problem.id).count || 0 }}</span>
+                        </template>
+                      </template>
+                      <template v-else>-</template>
+                    </td>
+                  </template>
                 </tr>
               </tbody>
             </table>
@@ -843,9 +1102,15 @@ const getLetterIndex = (index) => {
 
 <style scoped>
 .problem-detail-container {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 135%;
+  max-width: none;
   padding: 20px;
+  margin-left: -17%;
+  background-color: #f6f8fa;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .problem-tabs {
@@ -937,16 +1202,19 @@ const getLetterIndex = (index) => {
 
 .split-layout {
   display: flex;
-  align-items: stretch;
+  flex-direction: row;
+  height: calc(100vh - 160px); /* 增加高度 */
   min-height: 600px;
+  max-width: 1600px; /* 增加最大宽度 */
+  margin: 0 auto; /* 居中 */
+  overflow: hidden;
 }
 
 .problem-info {
-  flex: 1;
-  padding: 24px;
-  border-right: 1px solid #f0f0f0;
+  width: 45%; /* 调整宽度比例 */
+  padding: 20px;
   overflow-y: auto;
-  max-height: calc(100vh - 140px);
+  box-sizing: border-box;
 }
 
 .problem-header {
@@ -977,18 +1245,18 @@ const getLetterIndex = (index) => {
 }
 
 .level-tag.easy {
-  background: #f6ffed;
-  color: #52c41a;
+  background: #e8f5e9;
+  color: #4caf50;
 }
 
 .level-tag.mid {
-  background: #fff7e6;
-  color: #fa8c16;
+  background: #fff3e0;
+  color: #ff9800;
 }
 
 .level-tag.hard {
-  background: #fff1f0;
-  color: #ff4d4f;
+  background: #ffebee;
+  color: #f44336;
 }
 
 .create-time {
@@ -1003,31 +1271,35 @@ const getLetterIndex = (index) => {
 }
 
 .section {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s;
+  width: 100%;
+}
+
+.section:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .section h2 {
-  margin: 0 0 16px 0;
-  font-size: 18px;
+  margin: 0 0 15px 0;
   color: #333;
-  position: relative;
-  padding-left: 12px;
+  font-size: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
 }
 
-.section h2::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 16px;
-  background: #1890ff;
-  border-radius: 2px;
-}
-
-.description {
-  margin-bottom: 16px;
+.description,
+.input-format,
+.output-format,
+.remark {
+  color: #666;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  width: 100%;
 }
 
 .markdown-body {
@@ -1035,14 +1307,60 @@ const getLetterIndex = (index) => {
   line-height: 1.6;
 }
 
-.sample {
-  margin-bottom: 16px;
-  border: 1px solid #f0f0f0;
+.markdown-body pre {
+  background-color: #f6f8fa;
   border-radius: 4px;
-  overflow: hidden;
+  padding: 12px;
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.markdown-body code {
+  background-color: #f6f8fa;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-family: monospace;
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+}
+
+.markdown-body table th,
+.markdown-body table td {
+  border: 1px solid #dfe2e5;
+  padding: 8px 12px;
+}
+
+.markdown-body table th {
+  background-color: #f6f8fa;
+}
+
+.samples {
+  display: grid;
+  gap: 15px;
+}
+
+.sample {
+  background: #f9f9f9;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #eaeaea;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.sample:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
 .sample-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
   padding: 8px 12px;
   background: #fafafa;
   font-weight: 500;
@@ -1051,33 +1369,64 @@ const getLetterIndex = (index) => {
   border-bottom: 1px solid #f0f0f0;
 }
 
+.sample-title {
+  color: #333;
+  font-weight: 500;
+}
+
+.use-example-btn {
+  padding: 4px 8px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.use-example-btn:hover {
+  background: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .sample-content {
   padding: 12px;
 }
 
 .sample-input, .sample-output {
   margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #eaeaea;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-.sample-label {
-  font-weight: 500;
-  margin-bottom: 4px;
+.label {
   color: #666;
-  font-size: 13px;
+  font-size: 14px;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #eaeaea;
+  font-weight: 500;
 }
 
 .sample-input pre, .sample-output pre {
   margin: 0;
-  padding: 8px 12px;
-  background: #f5f5f5;
+  padding: 12px;
+  background: white;
   border-radius: 4px;
   overflow-x: auto;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 14px;
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .editor-container {
-  width: 50%;
+  width: 55%; /* 调整宽度比例 */
   display: flex;
   flex-direction: column;
   border-left: 1px solid #f0f0f0;
@@ -1126,8 +1475,8 @@ const getLetterIndex = (index) => {
   font-family: 'Courier New', Courier, monospace;
   font-size: 14px;
   line-height: 1.5;
-  color: #333;
-  background: #fafafa;
+  color: #ccc; /* 亮色字体 */
+  background: #1e1e1e; /* 黑色背景 */
   outline: none;
   box-sizing: border-box;
 }
@@ -1347,6 +1696,84 @@ const getLetterIndex = (index) => {
   border-radius: 2px;
 }
 
+/* 竞赛题目列表样式 */
+.contest-problems {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  border: 1px solid #eee;
+}
+
+.contest-problems h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 16px;
+  color: #333;
+}
+
+.problem-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.problem-item {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.problem-letter {
+  font-weight: bold;
+  color: #1890ff;
+}
+
+.problem-name {
+  color: #333;
+}
+
+/* 竞赛进度条样式 */
+.contest-progress-container {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.progress-status {
+  font-weight: 500;
+  color: #333;
+}
+
+.progress-time {
+  color: #666;
+}
+
+.progress-bar-container {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #1890ff, #52c41a);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
 .loading-row {
   text-align: center;
   padding: 30px;
@@ -1384,8 +1811,9 @@ const getLetterIndex = (index) => {
 .rank-table th,
 .rank-table td {
   padding: 12px;
-  text-align: left;
+  text-align: center;
   border-bottom: 1px solid #eee;
+  vertical-align: middle;
 }
 
 .rank-table th {
@@ -1400,19 +1828,30 @@ const getLetterIndex = (index) => {
   background-color: #f5f5f5;
 }
 
-.rank-number {
-  width: 60px;
-  text-align: center;
-}
-
 .user-name {
-  width: 150px;
+  text-align: left;
   font-weight: 500;
 }
 
-.solved-count, .total-score, .total-penalty {
-  width: 100px;
-  text-align: center;
+.problem-status {
+  width: 60px;
+}
+
+.failed-count {
+  color: #ff4d4f;
+}
+
+/* 问题状态样式 */
+.accepted {
+  background-color: #d4edda;
+}
+
+.partial {
+  background-color: #fff3cd;
+}
+
+.failed {
+  background-color: #f8d7da;
 }
 
 /* 提交记录选项卡样式 */
@@ -1693,28 +2132,26 @@ const getLetterIndex = (index) => {
 @media (max-width: 992px) {
   .split-layout {
     flex-direction: column;
+    height: auto;
   }
   
   .problem-info, .editor-container {
     width: 100%;
-    max-height: none;
-  }
-  
-  .mobile-toggle {
-    display: block;
-  }
-  
-  .problem-info.hidden-mobile, .editor-container.hidden-mobile {
-    display: none;
+    height: auto;
   }
   
   .editor-container {
-    border-left: none;
-    border-top: 1px solid #f0f0f0;
+    height: 500px;
   }
   
-  .problem-detail-container {
-    padding: 12px;
+  .hidden-mobile {
+    display: none;
+  }
+  
+  .mobile-toggle {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
   }
   
   .table-header, .table-row {

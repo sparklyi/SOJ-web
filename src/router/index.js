@@ -133,6 +133,92 @@ const router = createRouter({
   routes
 })
 
+// 添加一个辅助函数，用于在导航到题目页面后更新标题
+// 这个需要放在router创建之后，beforeEach之前
+const updateDynamicTitle = async (to) => {
+  try {
+    // 题目详情页、竞赛题目详情页，尝试获取题目名称
+    if ((to.name === 'problemDetail' || to.name === 'contestProblemDetail') && to.params.id) {
+      // 先设置一个临时标题
+      document.title = `SOJ - 题目 #${to.params.id}`
+      
+      // 异步获取题目信息
+      const { getProblemDetail } = await import('../api/problem')
+      const contestId = to.query.contestId || localStorage.getItem('current_contest_id') || null
+      const result = await getProblemDetail(to.params.id, contestId)
+      
+      if (result && result.code === 200 && result.data && result.data.name) {
+        // 获取到题目名称后，更新标题
+        document.title = `SOJ - ${result.data.name}`
+      }
+    }
+    // 竞赛详情页，尝试获取竞赛名称
+    else if (to.name === 'contestDetail' && to.params.id) {
+      // 先设置一个临时标题
+      document.title = `SOJ - 竞赛 #${to.params.id}`
+      
+      // 异步获取竞赛信息
+      const { getContestDetail } = await import('../api/contest')
+      const result = await getContestDetail(to.params.id)
+      
+      if (result && result.code === 200 && result.data && result.data.name) {
+        // 获取到竞赛名称后，更新标题
+        document.title = `SOJ - ${result.data.name}`
+      }
+    }
+  } catch (error) {
+    console.error('获取动态标题出错:', error)
+  }
+}
+
+// 修改现有的路由守卫
+router.beforeEach((to, from, next) => {
+  // 基础标题
+  let title = 'SOJ - 在线评测系统'
+
+  // 根据路由动态设置标题
+  if (to.meta.title) {
+    // 如果路由自己定义了标题，直接使用
+    title = to.meta.title
+  } else if (to.name === 'problemDetail' && to.params.id) {
+    // 题目详情页 - 先设置基础标题，后续异步更新
+    title = `SOJ - 题目 #${to.params.id}`
+  } else if (to.name === 'contestProblemDetail' && to.params.id) {
+    // 竞赛题目详情页 - 先设置基础标题，后续异步更新
+    title = `SOJ - 竞赛题目 #${to.params.id}`
+  } else if (to.name === 'contestDetail' && to.params.id) {
+    // 竞赛详情页 - 先设置基础标题，后续异步更新
+    title = `SOJ - 竞赛 #${to.params.id}`
+  } else if (to.name === 'contests') {
+    // 竞赛列表页
+    title = `SOJ - 竞赛列表`
+  } else if (to.name === 'problems') {
+    // 题目列表页
+    title = `SOJ - 题库`
+  } else if (to.name === 'login') {
+    // 登录页
+    title = `SOJ - 登录`
+  } else if (to.name === 'register') {
+    // 注册页
+    title = `SOJ - 注册`
+  } else if (to.name === 'profile') {
+    // 个人资料页
+    title = `SOJ - 个人资料`
+  }
+
+  // 设置页面标题
+  document.title = title
+  next()
+})
+
+// 路由后置钩子，用于异步更新标题
+router.afterEach((to) => {
+  // 对于需要动态获取标题的页面，在导航完成后异步更新标题
+  if (['problemDetail', 'contestProblemDetail', 'contestDetail'].includes(to.name)) {
+    updateDynamicTitle(to)
+  }
+})
+
 // 路由守卫
 router.beforeEach(async (to, from, next) => {
   // 检查是否需要身份验证
@@ -167,6 +253,41 @@ router.beforeEach(async (to, from, next) => {
     return
   }
 
+  // 动态设置页面标题
+  let title = 'SOJ - 在线评测系统'
+
+  // 根据路由动态设置标题
+  if (to.meta.title) {
+    // 如果路由自己定义了标题，直接使用
+    title = to.meta.title
+  } else if (to.name === 'problemDetail' && to.params.id) {
+    // 题目详情页
+    title = `SOJ - 题目 #${to.params.id}`
+  } else if (to.name === 'contestProblemDetail' && to.params.id) {
+    // 竞赛题目详情页
+    title = `SOJ - 竞赛题目 #${to.params.id}`
+  } else if (to.name === 'contestDetail' && to.params.id) {
+    // 竞赛详情页
+    title = `SOJ - 竞赛 #${to.params.id}`
+  } else if (to.name === 'contests') {
+    // 竞赛列表页
+    title = `SOJ - 竞赛列表`
+  } else if (to.name === 'problems') {
+    // 题目列表页
+    title = `SOJ - 题库`
+  } else if (to.name === 'login') {
+    // 登录页
+    title = `SOJ - 登录`
+  } else if (to.name === 'register') {
+    // 注册页
+    title = `SOJ - 注册`
+  } else if (to.name === 'profile') {
+    // 个人资料页
+    title = `SOJ - 个人资料`
+  }
+
+  // 设置页面标题
+  document.title = title
   next()
 })
 

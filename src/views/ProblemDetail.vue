@@ -50,11 +50,34 @@ const rankList = ref([])
 const rankTotal = ref(0)
 const contestInfo = ref(null)
 
+// 获取当前竞赛ID（如果存在）
+const getCurrentContestId = () => {
+  // 先尝试从URL参数获取竞赛ID
+  const contestIdFromQuery = route.query.contestId
+  if (contestIdFromQuery) {
+    return Number(contestIdFromQuery)
+  }
+  
+  // 如果URL中没有，则从localStorage中获取
+  const contestIdFromStorage = localStorage.getItem('current_contest_id')
+  if (contestIdFromStorage) {
+    return Number(contestIdFromStorage)
+  }
+  
+  return null
+}
+
+// 检查是否是竞赛题目
+const isContestProblem = computed(() => {
+  return !!getCurrentContestId()
+})
+
 // 获取题目详情
 const fetchProblemDetail = async () => {
   loading.value = true
   try {
-    const res = await getProblemDetail(route.params.id)
+    const contestId = getCurrentContestId()
+    const res = await getProblemDetail(route.params.id, contestId)
     if (res.code === 200) {
       problem.value = res.data
       // 确保样例存在，适配新API格式
@@ -533,6 +556,13 @@ const formatCode = () => {
 // 切换选项卡
 const switchTab = (tab) => {
   activeTab.value = tab
+  
+  // 当切换到提交记录选项卡时获取提交记录
+  if (tab === 'submissions') {
+    fetchSubmissions()
+  } else if (tab === 'ranking' && isContestProblem.value) {
+    fetchRankList()
+  }
 }
 
 // 处理Tab键
@@ -688,44 +718,18 @@ onMounted(() => {
   }
 })
 
-// 获取当前竞赛ID（如果存在）
-const getCurrentContestId = () => {
-  // 先尝试从URL参数获取竞赛ID
-  const contestIdFromQuery = route.query.contestId
-  if (contestIdFromQuery) {
-    return Number(contestIdFromQuery)
-  }
-  
-  // 如果URL中没有，则从localStorage中获取
-  const contestIdFromStorage = localStorage.getItem('current_contest_id')
-  if (contestIdFromStorage) {
-    return Number(contestIdFromStorage)
-  }
-  
-  return null
-}
-
-// 检查是否是竞赛题目
-const isContestProblem = computed(() => {
-  return !!getCurrentContestId()
-})
-
 // 筛选当前用户在当前竞赛的提交记录
 const fetchSubmissions = async () => {
   submissionLoading.value = true
   try {
-    // 添加竞赛ID和用户ID筛选
+    // 添加题目ID和用户ID筛选
     const params = {
       problem_id: Number(route.params.id),
       page: currentPage.value,
       size: pageSize.value
     }
     
-    // 如果是竞赛题目，添加竞赛ID筛选
-    const contestId = getCurrentContestId()
-    if (contestId) {
-      params.contest_id = contestId
-    }
+    // 不再携带contest_id参数
     
     // 如果用户已登录，添加用户ID筛选
     const userId = getUserId()
@@ -735,8 +739,8 @@ const fetchSubmissions = async () => {
     
     const res = await getSubmissionList(params)
     if (res.code === 200) {
-      submissionList.value = res.data.records || []
-      submissionTotal.value = res.data.total || 0
+      submissionList.value = res.data.detail || []
+      submissionTotal.value = res.data.count || 0
     } else {
       console.error('获取提交记录失败:', res.message)
       message.error(res.message || '获取提交记录失败')
@@ -1724,12 +1728,12 @@ pre {
 }
 
 .submit-btn {
-  background: #4CAF50;
+  background: #40a9ff;
   color: white;
 }
 
 .submit-btn:hover {
-  background: #45a049;
+  background: #4dabf8;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
 }
