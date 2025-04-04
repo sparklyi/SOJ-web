@@ -10,7 +10,9 @@ const userStore = useUserStore()
 
 <template>
   <nav class="navbar">
-    <div class="nav-brand">SOJ</div>
+    <div class="nav-brand">
+      <img src="../assets/logo.svg" alt="SOJ Logo" class="brand-logo">
+    </div>
     <div class="nav-links">
       <router-link
         v-for="item in MAIN_MENU_ITEMS"
@@ -54,9 +56,13 @@ const userStore = useUserStore()
 }
 
 .nav-brand {
-  font-size: 24px;
-  font-weight: bold;
-  color: #4CAF50;
+  display: flex;
+  align-items: center;
+}
+
+.brand-logo {
+  height: 40px;
+  width: auto;
 }
 
 .nav-links {

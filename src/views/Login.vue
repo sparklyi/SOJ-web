@@ -316,7 +316,10 @@ getCaptchaImage()
     <div class="auth-box">
       <!-- 左侧图片 -->
       <div class="auth-image">
-        <img src="../assets/auth-bg.svg" alt="认证背景" />
+        <div class="auth-content">
+          <img src="../assets/logo.svg" alt="SOJ Logo" class="auth-logo" />
+          <div class="auth-text">SOJ在线测评系统</div>
+        </div>
       </div>
       
       <!-- 右侧表单 -->
@@ -509,7 +512,7 @@ getCaptchaImage()
 
 .auth-image {
   flex: 1;
-  background: #4CAF50;
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -517,40 +520,28 @@ getCaptchaImage()
   position: relative;
   overflow: hidden;
   min-width: 50%;
+  background: linear-gradient(45deg, #ffffff, #b7fab5);
 }
 
-.auth-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.auth-image::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(45deg, rgba(76, 175, 80, 0.8), rgba(69, 160, 73, 0.8));
-  z-index: 1;
-}
-
-.auth-image::before {
-  content: '欢迎使用';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  font-size: 3rem;
-  font-weight: bold;
+.auth-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   z-index: 2;
+  text-align: center;
+}
+
+.auth-logo {
+  width: 200px;
+  height: auto;
+  margin-bottom: 30px;
+}
+
+.auth-text {
+  color: white;
+  font-size: 2rem;
+  font-weight: bold;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-  white-space: nowrap;
 }
 
 .auth-form {
