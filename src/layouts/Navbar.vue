@@ -17,11 +17,16 @@ const userStore = useUserStore()
       <router-link
         v-for="item in MAIN_MENU_ITEMS"
         :key="item.path"
-        :to="item.path"
+        :to="item.comingSoon ? '#' : item.path"
         class="nav-link"
-        :class="{ active: route.path === item.path }"
+        :class="{ 
+          active: route.path === item.path,
+          'coming-soon': item.comingSoon
+        }"
+        @click="item.comingSoon && $event.preventDefault()"
       >
         {{ item.label }}
+        <span v-if="item.comingSoon" class="coming-soon-tag">即将上线</span>
       </router-link>
       <router-link
         v-if="userStore.isAdmin"
@@ -76,16 +81,38 @@ const userStore = useUserStore()
   padding: 8px 12px;
   border-radius: 4px;
   transition: all 0.3s;
+  position: relative;
 }
 
 .nav-link:hover {
-  color: #4CAF50;
+  color: #4a90e2;
   background: #f5f5f5;
 }
 
 .nav-link.active {
-  color: #4CAF50;
-  background: #e8f5e9;
+  color: #4a90e2;
+  background: #e6f7ff;
+}
+
+.nav-link.coming-soon {
+  color: #999;
+  cursor: default;
+}
+
+.nav-link.coming-soon:hover {
+  background: #f9f9f9;
+}
+
+.coming-soon-tag {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  background: #ffab00;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  white-space: nowrap;
 }
 
 .nav-auth {
@@ -96,7 +123,7 @@ const userStore = useUserStore()
 
 .login-btn {
   padding: 8px 16px;
-  background: #4CAF50;
+  background: #4a90e2;
   color: white;
   border-radius: 4px;
   text-decoration: none;
@@ -104,6 +131,6 @@ const userStore = useUserStore()
 }
 
 .login-btn:hover {
-  background: #45a049;
+  background: #357dd8;
 }
 </style> 

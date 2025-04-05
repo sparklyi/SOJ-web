@@ -114,19 +114,49 @@ export function deleteProblemAPI(problemId) {
 }
 
 // 更新题目
-export function updateProblemAPI(problemId, data) {
+export const updateProblemAPI = (problemData) => {
   return request({
-    url: `/api/v1/problem/${problemId}`,
+    url: `/api/v1/problem/update`,
     method: 'put',
-    data
+    data: problemData
   })
 }
 
-// 创建题目
+// 创建新题目
 export function createProblemAPI(data) {
   return request({
     url: '/api/v1/problem/create',
     method: 'post',
     data
+  })
+}
+
+// 获取题目测试点
+export function getProblemTestCaseAPI(id) {
+  return request({
+    url: `/api/v1/problem/${id}/case`,
+    method: 'get'
+  })
+}
+
+// 创建题目测试点
+export function createProblemTestCaseAPI(id, data) {
+  return request({
+    url: `/api/v1/problem/${id}/create`,
+    method: 'post',
+    data: {
+      content: data
+    }
+  })
+}
+
+// 更新题目测试点
+export function updateProblemTestCaseAPI(id, data) {
+  return request({
+    url: `/api/v1/problem/${id}/update`,
+    method: 'put',
+    data: {
+      content: data
+    }
   })
 } 

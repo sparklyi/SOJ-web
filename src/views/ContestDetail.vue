@@ -705,7 +705,7 @@ onMounted(() => {
                       </td>
                       <td class="total-penalty">
                         {{ user.info && user.info.freeze && user.info.freeze.penalty_count ? 
-                          Math.floor(user.info.freeze.penalty_count) + '秒' : '-' }}
+                          Math.floor(user.info.freeze.penalty_count)  : '-' }}
                       </td>
                       <!-- 为每个题目创建一个单元格，用不同显示方式 -->
                       <template v-if="contestDetail.problemList && contestDetail.problemList.length > 0">
