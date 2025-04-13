@@ -647,6 +647,10 @@ const formatCode = () => {
 
 // 切换选项卡
 const switchTab = (tab) => {
+  // 保存当前的弹窗状态
+  const wasSubmissionDetailVisible = showSubmissionDetail.value
+  const currentSubmissionDetail = submissionDetail.value
+  
   activeTab.value = tab
   
   // 当切换到提交记录选项卡时获取提交记录
@@ -657,6 +661,14 @@ const switchTab = (tab) => {
     fetchJudgeCount()
     // 获取排行榜数据
     fetchProblemRanking()
+  }
+  
+  // 如果之前弹窗是开着的，确保切换后仍然显示
+  if (wasSubmissionDetailVisible && currentSubmissionDetail) {
+    submissionDetail.value = currentSubmissionDetail
+    nextTick(() => {
+      showSubmissionDetail.value = true
+    })
   }
 }
 
@@ -1034,12 +1046,18 @@ const viewRankSubmissionDetail = (submissionId) => {
   const submissionData = timeRanking.value.find(item => item.submissionId === submissionId)
   
   if (submissionData && submissionData.originalData) {
-    // 找到数据，展示弹窗
-    showSubmissionDetail.value = true
+    // 重要：先关闭可能已经打开的模态窗
+    showSubmissionDetail.value = false
+    
+    // 然后设置数据
+    submissionDetail.value = submissionData.originalData
     submissionDetailLoading.value = false
     
-    // 直接使用原始完整数据
-    submissionDetail.value = submissionData.originalData
+    // 使用nextTick确保DOM更新后再显示模态窗
+    nextTick(() => {
+      showSubmissionDetail.value = true
+      console.log('显示提交详情:', submissionId, showSubmissionDetail.value)
+    })
   } else {
     message.warning('未找到对应的提交详情')
   }
@@ -1127,10 +1145,6 @@ const viewRankSubmissionDetail = (submissionId) => {
               <div class="output-format markdown-body" v-html="parsedOutputFormat"></div>
             </div>
 
-            <div class="section" v-if="problem.remark">
-              <h2>备注</h2>
-              <div class="remark markdown-body" v-html="parsedRemark"></div>
-            </div>
 
             <div class="section">
               <h2>样例</h2>
@@ -1152,6 +1166,11 @@ const viewRankSubmissionDetail = (submissionId) => {
                   </div>
                 </div>
               </div>
+            </div>
+            
+            <div class="section" v-if="problem.remark">
+              <h2>备注</h2>
+              <div class="remark markdown-body" v-html="parsedRemark"></div>
             </div>
           </div>
         </div>
@@ -1317,7 +1336,7 @@ const viewRankSubmissionDetail = (submissionId) => {
               <div class="cell-language">{{ item.language }}</div>
               <div class="cell-time">{{ formatDateTime(item.CreatedAt) }}</div>
               <div class="cell-runtime">{{ item.time ? item.time + 's' : '-' }}</div>
-              <div class="cell-memory">{{ item.memory ? Math.round(item.memory / 1024) + 'KB' : '-' }}</div>
+              <div class="cell-memory">{{ item.memory ? formatMemory(item.memory) : '-' }}</div>
               <div class="cell-actions">
                 <button 
                   class="view-code-btn" 
@@ -1348,58 +1367,6 @@ const viewRankSubmissionDetail = (submissionId) => {
               >
                 下一页
               </button>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 提交详情对话框 -->
-        <div class="submission-detail-modal" v-if="showSubmissionDetail">
-          <div class="modal-overlay" @click="closeSubmissionDetail"></div>
-          <div class="modal-content">
-            <div class="modal-header">
-              <h3>提交详情 #{{ submissionDetail?.ID }}</h3>
-              <button class="close-btn" @click="closeSubmissionDetail">
-                <svg viewBox="0 0 24 24" width="20" height="20">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </button>
-            </div>
-            <div v-if="submissionDetailLoading" class="modal-loading">加载中...</div>
-            <div v-else class="modal-body">
-              <div class="detail-info">
-                <div class="detail-item">
-                  <span class="label">题目:</span>
-                  <span class="value">{{ submissionDetail?.problem_name }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="label">用户:</span>
-                  <span class="value">{{ submissionDetail?.user_name }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="label">语言:</span>
-                  <span class="value">{{ submissionDetail?.language }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="label">状态:</span>
-                  <span class="value" :class="getStatusClass(submissionDetail?.status)">{{ submissionDetail?.status }}</span>
-                </div>
-                <div class="detail-item" v-if="submissionDetail?.time">
-                  <span class="label">运行时间:</span>
-                  <span class="value">{{ submissionDetail?.time }}s</span>
-                </div>
-                <div class="detail-item" v-if="submissionDetail?.memory">
-                  <span class="label">内存占用:</span>
-                  <span class="value">{{ Math.round(submissionDetail?.memory / 1024) }}MB</span>
-                </div>
-                <div class="detail-item">
-                  <span class="label">提交时间:</span>
-                  <span class="value">{{ formatDateTime(submissionDetail?.CreatedAt) }}</span>
-                </div>
-              </div>
-              <div class="code-container">
-                <h4>源代码</h4>
-                <pre class="source-code">{{ submissionDetail?.source_code }}</pre>
-              </div>
             </div>
           </div>
         </div>
@@ -1447,96 +1414,41 @@ const viewRankSubmissionDetail = (submissionId) => {
           
           <!-- 排行榜卡片 -->
           <div class="stat-card ranking-section">
-            <h2>时间/空间排行榜</h2>
+            <h2>排行榜</h2>
             <div v-if="rankingLoading" class="chart-loading">加载中...</div>
             <div v-else-if="timeRanking.length === 0" class="empty-chart">
               暂无排行数据
             </div>
-            <div v-else class="custom-tabs">
-              <div class="custom-tabs-header">
-                <div 
-                  class="custom-tab-item" 
-                  :class="{ active: activeRankTab === 'time' }"
-                  @click="switchRankTab('time')"
-                >
-                  时间排行
-                </div>
-                <div 
-                  class="custom-tab-item" 
-                  :class="{ active: activeRankTab === 'memory' }"
-                  @click="switchRankTab('memory')"
-                >
-                  内存排行
-                </div>
-              </div>
-              
-              <div class="custom-tabs-content">
-                <!-- 时间排行 -->
-                <div v-if="activeRankTab === 'time'" class="rank-table-wrapper">
-                  <table class="rank-table">
-                    <thead>
-                      <tr>
-                        <th class="rank-col">#</th>
-                        <th class="user-col">用户</th>
-                        <th class="stat-col">运行时间</th>
-                        <th class="stat-col">内存</th>
-                        <th class="lang-col">语言</th>
-                        <th class="action-col">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="item in timeRanking" :key="item.submissionId">
-                        <td class="rank-col">{{ item.rank }}</td>
-                        <td class="user-col">{{ item.username }}</td>
-                        <td class="stat-col highlight">{{ item.time }}</td>
-                        <td class="stat-col">{{ item.memory }}</td>
-                        <td class="lang-col">{{ item.language }}</td>
-                        <td class="action-col">
-                          <button 
-                            class="view-detail-btn" 
-                            @click.stop="viewRankSubmissionDetail(item.submissionId)"
-                          >
-                            查看详情
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                
-                <!-- 内存排行 -->
-                <div v-else-if="activeRankTab === 'memory'" class="rank-table-wrapper">
-                  <table class="rank-table">
-                    <thead>
-                      <tr>
-                        <th class="rank-col">#</th>
-                        <th class="user-col">用户</th>
-                        <th class="stat-col">运行时间</th>
-                        <th class="stat-col">内存</th>
-                        <th class="lang-col">语言</th>
-                        <th class="action-col">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="item in memoryRanking" :key="item.submissionId">
-                        <td class="rank-col">{{ item.rank }}</td>
-                        <td class="user-col">{{ item.username }}</td>
-                        <td class="stat-col">{{ item.time }}</td>
-                        <td class="stat-col highlight">{{ item.memory }}</td>
-                        <td class="lang-col">{{ item.language }}</td>
-                        <td class="action-col">
-                          <button 
-                            class="view-detail-btn" 
-                            @click.stop="viewRankSubmissionDetail(item.submissionId)"
-                          >
-                            查看详情
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+            <div v-else class="rank-table-wrapper">
+              <table class="rank-table">
+                <thead>
+                  <tr>
+                    <th class="rank-col">#</th>
+                    <th class="user-col">用户</th>
+                    <th class="stat-col">运行时间</th>
+                    <th class="stat-col">内存</th>
+                    <th class="lang-col">语言</th>
+                    <th class="action-col">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in timeRanking" :key="item.submissionId">
+                    <td class="rank-col">{{ item.rank }}</td>
+                    <td class="user-col">{{ item.username }}</td>
+                    <td class="stat-col highlight">{{ item.time }}</td>
+                    <td class="stat-col">{{ item.memory }}</td>
+                    <td class="lang-col">{{ item.language }}</td>
+                    <td class="action-col">
+                      <button 
+                        class="view-detail-btn" 
+                        @click.stop="viewRankSubmissionDetail(item.submissionId)"
+                      >
+                        查看详情
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1580,6 +1492,58 @@ const viewRankSubmissionDetail = (submissionId) => {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 提交详情对话框 - 移到根级别 -->
+    <div class="submission-detail-modal" v-if="showSubmissionDetail">
+      <div class="modal-overlay" @click="closeSubmissionDetail"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>提交详情 #{{ submissionDetail?.ID }}</h3>
+          <button class="close-btn" @click="closeSubmissionDetail">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div v-if="submissionDetailLoading" class="modal-loading">加载中...</div>
+        <div v-else class="modal-body">
+          <div class="detail-info">
+            <div class="detail-item">
+              <span class="label">题目:</span>
+              <span class="value">{{ submissionDetail?.problem_name }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">用户:</span>
+              <span class="value">{{ submissionDetail?.user_name }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">语言:</span>
+              <span class="value">{{ submissionDetail?.language }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">状态:</span>
+              <span class="value" :class="getStatusClass(submissionDetail?.status)">{{ submissionDetail?.status }}</span>
+            </div>
+            <div class="detail-item" v-if="submissionDetail?.time">
+              <span class="label">运行时间:</span>
+              <span class="value">{{ submissionDetail?.time }}s</span>
+            </div>
+            <div class="detail-item" v-if="submissionDetail?.memory">
+              <span class="label">内存占用:</span>
+              <span class="value">{{ formatMemory(submissionDetail?.memory) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">提交时间:</span>
+              <span class="value">{{ formatDateTime(submissionDetail?.CreatedAt) }}</span>
+            </div>
+          </div>
+          <div class="code-container">
+            <h4>源代码</h4>
+            <pre class="source-code">{{ submissionDetail?.source_code }}</pre>
           </div>
         </div>
       </div>

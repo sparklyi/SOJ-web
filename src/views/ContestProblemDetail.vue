@@ -87,17 +87,28 @@ const formatDuration = (ms) => {
   const seconds = Math.floor(ms / 1000)
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
   
-  const remainingHours = hours % 24
-  const remainingMinutes = minutes % 60
+  const h = hours % 24
+  const m = minutes % 60
+  const s = seconds % 60
   
-  let result = ''
-  if (days > 0) result += `${days}天 `
-  if (remainingHours > 0 || days > 0) result += `${remainingHours}小时 `
-  result += `${remainingMinutes}分钟`
+  const parts = []
+  if (h > 0) parts.push(`${h}小时`)
+  if (m > 0) parts.push(`${m}分钟`)
+  if (s > 0 || parts.length === 0) parts.push(`${s}秒`)
   
-  return result
+  return parts.join(' ')
+}
+
+// 格式化内存显示
+const formatMemory = (memoryInBytes) => {
+  if (memoryInBytes < 1024) {
+    return memoryInBytes + 'B'
+  } else if (memoryInBytes < 1024 * 1024) {
+    return (memoryInBytes / 1024).toFixed(2) + 'KB'
+  } else {
+    return (memoryInBytes / (1024 * 1024)).toFixed(2) + 'MB'
+  }
 }
 
 // 获取竞赛进度百分比
@@ -576,8 +587,6 @@ const showProblemAttempt = (status) => {
   return status && (status.status === 3 || status.status === 4 || status.attempts > 0)
 }
 
-
-
 // 格式化日期时间
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '-'
@@ -846,7 +855,7 @@ const handleEditorKeyDown = (e) => {
               </div>
               <div class="run-stats" v-if="runResult.time">
                 <span>运行耗时: {{ runResult.time }}s</span>
-                <span>内存使用: {{ Math.round(runResult.memory / 1024) }}MB</span>
+                <span>内存使用: {{ formatMemory(runResult.memory) }}</span>
               </div>
             </div>
             <div class="test-actions">
@@ -907,7 +916,7 @@ const handleEditorKeyDown = (e) => {
               <div class="cell-language">{{ item.language }}</div>
               <div class="cell-time">{{ formatDateTime(item.CreatedAt) }}</div>
               <div class="cell-runtime">{{ item.time ? item.time + 's' : '-' }}</div>
-              <div class="cell-memory">{{ item.memory ? Math.round(item.memory / 1024) + 'MB' : '-' }}</div>
+              <div class="cell-memory">{{ item.memory ? formatMemory(item.memory) : '-' }}</div>
               <div class="cell-actions">
                 <button 
                   class="view-code-btn" 
@@ -979,7 +988,7 @@ const handleEditorKeyDown = (e) => {
                 </div>
                 <div class="detail-item" v-if="submissionDetail?.memory">
                   <span class="label">内存占用:</span>
-                  <span class="value">{{ Math.round(submissionDetail?.memory / 1024) }}MB</span>
+                  <span class="value">{{ formatMemory(submissionDetail?.memory) }}</span>
                 </div>
                 <div class="detail-item">
                   <span class="label">提交时间:</span>
