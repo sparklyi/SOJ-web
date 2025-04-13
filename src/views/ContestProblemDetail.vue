@@ -332,7 +332,7 @@ const toggleTestPanel = () => {
 }
 
 // 自测运行代码
-const runTestCode = async () => {
+const runCode = async () => {
   if (!code.value.trim()) {
     message.warning('请先编写代码')
     return
@@ -348,6 +348,7 @@ const runTestCode = async () => {
   
   try {
     const res = await runCodeAPI({
+      problem_id: Number(route.params.id),
       language_id: languageId.value,
       source_code: code.value,
       stdin: testInput.value
@@ -575,12 +576,7 @@ const showProblemAttempt = (status) => {
   return status && (status.status === 3 || status.status === 4 || status.attempts > 0)
 }
 
-// 格式化AC时间（秒转为分钟显示）
-const formatACTime = (seconds) => {
-  if (!seconds) return ''
-  const minutes = Math.floor(seconds / 60)
-  return `${minutes}分钟`
-}
+
 
 // 格式化日期时间
 const formatDateTime = (dateStr) => {
@@ -856,7 +852,7 @@ const handleEditorKeyDown = (e) => {
             <div class="test-actions">
               <button 
                 class="run-btn" 
-                @click="runTestCode" 
+                @click="runCode" 
                 :disabled="isRunning"
               >
                 {{ isRunning ? '运行中...' : '运行' }}
@@ -1052,7 +1048,7 @@ const handleEditorKeyDown = (e) => {
                   </td>
                   <td class="total-penalty">
                     {{ user.info && user.info.freeze && user.info.freeze.penalty_count ? 
-                      Math.floor(user.info.freeze.penalty_count / 60) + '分钟' : '-' }}
+                      Math.floor(user.info.freeze.penalty_count)  : '-' }}
                   </td>
                   
                   <!-- 题目状态列 -->

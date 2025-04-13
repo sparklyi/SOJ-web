@@ -1,7 +1,9 @@
 export const MAIN_MENU_ITEMS = [
   { path: '/', label: '首页' },
   { path: '/problems', label: '题库' },
-  { path: '/contests', label: '竞赛' }
+  { path: '/contests', label: '竞赛' },
+  { path: '/discussion', label: '讨论区', comingSoon: true },
+  { path: '/ranking', label: '排行榜', comingSoon: true }
 ]
 
 export const USER_MENU_ITEMS = [

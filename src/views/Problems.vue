@@ -1,7 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getProblems } from '../api/problem'
+import { getProblems, getProblemJudgeCount } from '../api/problem'
 import { message } from 'ant-design-vue'
 
 const router = useRouter()
@@ -9,6 +9,10 @@ const problems = ref([])
 const loading = ref(false)
 const total = ref(0)
 const currentPage = ref(1)
+
+// 题目通过率缓存
+const problemPassRates = reactive({})
+const passRateLoading = reactive({})
 
 // 筛选条件
 const filters = ref({
@@ -39,6 +43,11 @@ const fetchProblems = async () => {
     if (response.code === 200) {
       problems.value = response.data.detail || []
       total.value = response.data.count || 0
+      
+      // 获取每个题目的通过率
+      problems.value.forEach(problem => {
+        fetchProblemPassRate(problem.ID)
+      })
     } else {
       message.error(response.message || '获取题目列表失败')
       problems.value = []
@@ -49,6 +58,80 @@ const fetchProblems = async () => {
     problems.value = []
   } finally {
     loading.value = false
+  }
+}
+
+// 获取题目通过率
+const fetchProblemPassRate = async (problemId) => {
+  // 如果已经有数据或正在加载，则不重复请求
+  if (problemPassRates[problemId] !== undefined || passRateLoading[problemId]) {
+    return
+  }
+  
+  // 标记为加载中
+  passRateLoading[problemId] = true
+  
+  try {
+    const res = await getProblemJudgeCount(problemId)
+    if (res.code === 200) {
+      // 计算通过率
+      const data = res.data
+      let totalSubmissions = 0
+      let acceptedSubmissions = 0
+      
+      for (const status in data) {
+        const count = parseInt(data[status] || 0)
+        totalSubmissions += count
+        if (status === 'Accepted') {
+          acceptedSubmissions = count
+        }
+      }
+      
+      // 计算通过率百分比
+      const passRate = totalSubmissions > 0 
+        ? Math.round((acceptedSubmissions / totalSubmissions) * 100) 
+        : 0
+        
+      problemPassRates[problemId] = {
+        passRate,
+        totalSubmissions,
+        acceptedSubmissions
+      }
+    }
+  } catch (error) {
+    console.error(`获取题目 ${problemId} 通过率失败:`, error)
+  } finally {
+    passRateLoading[problemId] = false
+  }
+}
+
+// 获取题目通过率显示文本
+const getPassRateText = (problemId) => {
+  if (passRateLoading[problemId]) {
+    return '加载中...'
+  }
+  
+  if (!problemPassRates[problemId]) {
+    return '暂无数据'
+  }
+  
+  const { passRate } = problemPassRates[problemId]
+  return `${passRate}%`
+}
+
+// 获取通过率样式
+const getPassRateClass = (problemId) => {
+  if (!problemPassRates[problemId]) {
+    return ''
+  }
+  
+  const { passRate } = problemPassRates[problemId]
+  if (passRate >= 70) {
+    return 'pass-rate-high'
+  } else if (passRate >= 40) {
+    return 'pass-rate-medium'
+  } else {
+    return 'pass-rate-low'
   }
 }
 
@@ -168,8 +251,11 @@ onMounted(() => {
             </div>
           </div>
           <div class="problem-footer">
-            <span class="create-time">创建时间：{{ new Date(problem.CreatedAt).toLocaleString() }}</span>
-            <span class="update-time">更新时间：{{ new Date(problem.UpdatedAt).toLocaleString() }}</span>
+            <div class="problem-stats">
+              <span class="pass-rate">
+                通过率: {{ getPassRateText(problem.ID) }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -201,107 +287,104 @@ onMounted(() => {
 
 <style scoped>
 .problems-container {
+  padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
 }
 
 h1 {
-  margin-bottom: 30px;
+  font-size: 24px;
   color: #333;
+  margin-bottom: 24px;
 }
 
 .filters {
   display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-  align-items: center;
-  background: #fff;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .search-box {
   flex: 1;
+  min-width: 200px;
 }
 
-.search-box input {
+.filter-box {
+  width: 150px;
+}
+
+.search-box input,
+.filter-box select {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid #d9d9d9;
   border-radius: 4px;
   font-size: 14px;
 }
 
-.filter-box select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  min-width: 120px;
+.search-box input:focus,
+.filter-box select:focus {
+  border-color: #40a9ff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
 }
 
 .reset-btn {
   padding: 8px 16px;
   background: #f5f5f5;
-  border: 1px solid #ddd;
+  border: 1px solid #d9d9d9;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .reset-btn:hover {
-  background: #e8e8e8;
-}
-
-.problems-list {
-  min-height: 200px;
-  position: relative;
+  color: #40a9ff;
+  border-color: #40a9ff;
 }
 
 .loading, .empty {
   text-align: center;
   padding: 40px;
+  font-size: 16px;
   color: #999;
 }
 
 .problem-card {
   background: white;
   border-radius: 8px;
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
   margin-bottom: 16px;
-  border: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s, box-shadow 0.3s;
+  cursor: pointer;
 }
 
 .problem-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border-color: #e8e8e8;
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .problem-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 12px;
 }
 
 .problem-title-wrapper {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .problem-id {
-  color: #1890ff;
-  font-size: 14px;
   background: #f5f5f5;
-  padding: 2px 8px;
+  color: #666;
+  padding: 4px 8px;
   border-radius: 4px;
+  font-size: 13px;
 }
 
 .problem-title {
@@ -313,81 +396,92 @@ h1 {
 .problem-meta {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
-.level-tag {
+.level-tag, .status-tag {
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
-  font-weight: 500;
 }
 
 .level-tag.easy {
-  background: #f6ffed;
-  color: #52c41a;
-}
-
-.level-tag.mid {
-  background: #fff7e6;
-  color: #fa8c16;
-}
-
-.level-tag.hard {
-  background: #fff1f0;
-  color: #f5222d;
-}
-
-.status-tag {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-tag.active {
   background: #e8f5e9;
   color: #4caf50;
 }
 
-.status-tag.inactive {
+.level-tag.mid {
+  background: #fff3e0;
+  color: #ff9800;
+}
+
+.level-tag.hard {
   background: #ffebee;
   color: #f44336;
 }
 
+.status-tag.active {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.status-tag.inactive {
+  background: #f5f5f5;
+  color: #999;
+}
+
 .problem-footer {
   display: flex;
-  gap: 16px;
+  justify-content: space-between;
   color: #999;
-  font-size: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  font-size: 13px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.problem-time {
+  display: flex;
+  gap: 16px;
+}
+
+.problem-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.pass-rate {
+  font-weight: 500;
+  color: #52c41a;
+}
+
+.pass-rate-high, .pass-rate-medium, .pass-rate-low {
+  color: #52c41a;
 }
 
 .pagination {
   margin-top: 24px;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   gap: 16px;
 }
 
 .pagination button {
   padding: 8px 16px;
-  border: 1px solid #ddd;
-  background: white;
+  background: #fff;
+  border: 1px solid #d9d9d9;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .pagination button:hover:not(:disabled) {
-  border-color: #4CAF50;
-  color: #4CAF50;
+  color: #40a9ff;
+  border-color: #40a9ff;
 }
 
 .pagination button:disabled {
-  opacity: 0.5;
+  color: #d9d9d9;
   cursor: not-allowed;
 }
 
@@ -396,28 +490,25 @@ h1 {
   font-size: 14px;
 }
 
+.total-info {
+  margin-left: 16px;
+  color: #999;
+}
+
 @media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .filter-box {
-    width: 100%;
-  }
-  
-  .filter-box select {
-    width: 100%;
-  }
-  
   .problem-header {
     flex-direction: column;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .problem-meta {
+    margin-top: 8px;
   }
   
   .problem-footer {
     flex-direction: column;
-    gap: 8px;
+    align-items: flex-start;
   }
 }
 </style> 

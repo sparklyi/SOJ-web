@@ -1,4 +1,14 @@
 <script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const form = ref({
+  username: '',
+  password: '',
+  confirmPassword: ''
+})
+
 // 添加密码可见性状态
 const passwordVisible = ref(false)
 const confirmPasswordVisible = ref(false)
@@ -12,51 +22,113 @@ const togglePasswordVisibility = () => {
 const toggleConfirmPasswordVisibility = () => {
   confirmPasswordVisible.value = !confirmPasswordVisible.value
 }
+
+// 提交注册
+const register = () => {
+  // 注册逻辑
+}
 </script>
 
-<!-- 密码输入框 -->
-<div class="form-group">
-  <label for="password">密码</label>
-  <div class="password-input-container">
-    <input
-      :type="passwordVisible ? 'text' : 'password'"
-      v-model="form.password"
-      id="password"
-      placeholder="请输入密码"
-      class="form-control"
-    />
-    <button 
-      type="button" 
-      class="toggle-password-btn" 
-      @click="togglePasswordVisibility"
-    >
-      <i :class="[passwordVisible ? 'eye-open-icon' : 'eye-close-icon']"></i>
-    </button>
-  </div>
-</div>
+<template>
+  <div class="register-container">
+    <h1>注册</h1>
+    <form @submit.prevent="register">
+      <!-- 用户名输入框 -->
+      <div class="form-group">
+        <label for="username">用户名</label>
+        <input
+          type="text"
+          v-model="form.username"
+          id="username"
+          placeholder="请输入用户名"
+          class="form-control"
+        />
+      </div>
+      
+      <!-- 密码输入框 -->
+      <div class="form-group">
+        <label for="password">密码</label>
+        <div class="password-input-container">
+          <input
+            :type="passwordVisible ? 'text' : 'password'"
+            v-model="form.password"
+            id="password"
+            placeholder="请输入密码"
+            class="form-control"
+          />
+          <button 
+            type="button" 
+            class="toggle-password-btn" 
+            @click="togglePasswordVisibility"
+          >
+            <i :class="[passwordVisible ? 'eye-open-icon' : 'eye-close-icon']"></i>
+          </button>
+        </div>
+      </div>
 
-<!-- 确认密码输入框 -->
-<div class="form-group">
-  <label for="confirmPassword">确认密码</label>
-  <div class="password-input-container">
-    <input
-      :type="confirmPasswordVisible ? 'text' : 'password'"
-      v-model="form.confirmPassword"
-      id="confirmPassword"
-      placeholder="请再次输入密码"
-      class="form-control"
-    />
-    <button 
-      type="button" 
-      class="toggle-password-btn" 
-      @click="toggleConfirmPasswordVisibility"
-    >
-      <i :class="[confirmPasswordVisible ? 'eye-open-icon' : 'eye-close-icon']"></i>
-    </button>
+      <!-- 确认密码输入框 -->
+      <div class="form-group">
+        <label for="confirmPassword">确认密码</label>
+        <div class="password-input-container">
+          <input
+            :type="confirmPasswordVisible ? 'text' : 'password'"
+            v-model="form.confirmPassword"
+            id="confirmPassword"
+            placeholder="请再次输入密码"
+            class="form-control"
+          />
+          <button 
+            type="button" 
+            class="toggle-password-btn" 
+            @click="toggleConfirmPasswordVisibility"
+          >
+            <i :class="[confirmPasswordVisible ? 'eye-open-icon' : 'eye-close-icon']"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="submit" class="btn-register">注册</button>
+        <p class="login-link">已有账号？<a @click="router.push('/login')">登录</a></p>
+      </div>
+    </form>
   </div>
-</div>
+</template>
 
-<style>
+<style scoped>
+.register-container {
+  max-width: 500px;
+  margin: 3rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #333;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
 .password-input-container {
   position: relative;
   display: flex;
@@ -91,5 +163,41 @@ const toggleConfirmPasswordVisibility = () => {
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
+}
+
+.form-actions {
+  margin-top: 2rem;
+}
+
+.btn-register {
+  width: 100%;
+  padding: 12px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-register:hover {
+  background: #40a9ff;
+}
+
+.login-link {
+  text-align: center;
+  margin-top: 1rem;
+  color: #666;
+}
+
+.login-link a {
+  color: #1890ff;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.login-link a:hover {
+  text-decoration: underline;
 }
 </style> 

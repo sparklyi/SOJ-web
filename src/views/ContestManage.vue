@@ -60,7 +60,7 @@ const handleSizeChange = () => {
 
 // 创建新比赛
 const createContest = () => {
-  router.push('/contest/create')
+  router.push('/contest-create')
 }
 
 // 进入比赛
@@ -70,12 +70,12 @@ const enterContest = (contestId) => {
 
 // 编辑比赛
 const editContest = (contestId) => {
-  router.push(`/contest/edit/${contestId}`)
+  router.push(`/contest-edit/${contestId}`)
 }
 
 // 进入比赛管理页面
 const manageContest = (contestId) => {
-  router.push(`/contest/management/${contestId}`)
+  router.push(`/contest-management/${contestId}`)
 }
 
 // 格式化时间
@@ -238,7 +238,7 @@ h1 {
 
 .create-btn {
   padding: 10px 20px;
-  background: #52c41a;
+  background: #4a90e2;
   color: white;
   border: none;
   border-radius: 4px;
@@ -249,7 +249,7 @@ h1 {
 }
 
 .create-btn:hover {
-  background: #73d13d;
+  background: #357dd8;
 }
 
 .contests-list {

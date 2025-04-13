@@ -114,19 +114,65 @@ export function deleteProblemAPI(problemId) {
 }
 
 // 更新题目
-export function updateProblemAPI(problemId, data) {
+export const updateProblemAPI = (problemData) => {
   return request({
-    url: `/api/v1/problem/${problemId}`,
+    url: `/api/v1/problem/update`,
     method: 'put',
-    data
+    data: problemData
   })
 }
 
-// 创建题目
+// 创建新题目
 export function createProblemAPI(data) {
   return request({
     url: '/api/v1/problem/create',
     method: 'post',
     data
+  })
+}
+
+// 获取题目测试点
+export function getProblemTestCaseAPI(id) {
+  return request({
+    url: `/api/v1/problem/${id}/case`,
+    method: 'get'
+  })
+}
+
+// 创建题目测试点
+export function createProblemTestCaseAPI(id, data) {
+  return request({
+    url: `/api/v1/problem/${id}/create`,
+    method: 'post',
+    data: {
+      content: data
+    }
+  })
+}
+
+// 更新题目测试点
+export function updateProblemTestCaseAPI(id, data) {
+  return request({
+    url: `/api/v1/problem/${id}/update`,
+    method: 'put',
+    data: {
+      content: data
+    }
+  })
+}
+
+// 获取题目判题统计数据
+export function getProblemJudgeCount(problemId) {
+  return request({
+    url: `/api/v1/problem/${problemId}/judge_count`,
+    method: 'get'
+  })
+}
+
+// 获取题目排行榜
+export function getProblemRanking(problemId) {
+  return request({
+    url: `/api/v1/submission/rank/${problemId}`,
+    method: 'get'
   })
 } 
