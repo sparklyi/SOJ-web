@@ -1,21 +1,54 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getUserProblems, deleteProblemAPI, updateProblemAPI } from '../api/problem'
-import { message } from 'ant-design-vue'
+import { getUserProblems, deleteProblemAPI, updateProblemAPI, getProblemDetail } from '../api/problem'
+import { message, Modal } from 'ant-design-vue'
 import { getUserId } from '../utils/auth'
+import { useUserStore } from '../store/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const loading = ref(false)
 const userProblems = ref([])
 const total = ref(0)
 const userId = getUserId()
+
+// 判断当前用户是否有创建题目的权限（管理员或超级管理员）
+const hasCreatePermission = computed(() => userStore.isAdmin)
 
 // 分页参数
 const pagination = reactive({
   page: 1,
   page_size: 10
 })
+
+// 筛选参数
+const filters = reactive({
+  difficulty: '',
+  status: '',  // 公开状态：public, private, all
+  keyword: ''  // 关键词搜索
+})
+
+// 难度级别选项
+const difficultyOptions = [
+  { value: '', label: '全部难度' },
+  { value: 'easy', label: '简单' },
+  { value: 'mid', label: '中等' },
+  { value: 'hard', label: '困难' }
+]
+
+// 状态选项
+const statusOptions = [
+  { value: '', label: '全部状态' },
+  { value: 'public', label: '公开' },
+  { value: 'private', label: '私有' }
+]
+
+// 监听筛选条件变化
+watch(filters, () => {
+  pagination.page = 1  // 重置为第一页
+  fetchUserProblems()
+}, { deep: true })
 
 // 获取用户创建的题目列表
 const fetchUserProblems = async () => {
@@ -31,10 +64,42 @@ const fetchUserProblems = async () => {
       user_id: userId
     }
     
+    // 添加筛选条件
+    if (filters.difficulty) {
+      params.level = filters.difficulty
+    }
+    if (filters.status) {
+      params.status = filters.status === 'public'
+    }
+    if (filters.keyword) {
+      params.keyword = filters.keyword
+    }
+    
     const res = await getUserProblems(params)
     if (res.code === 200) {
-      userProblems.value = res.data.detail || []
-      total.value = res.data.count || 0
+      if (res.data && Array.isArray(res.data.detail)) {
+        userProblems.value = res.data.detail.map(problem => ({
+          ...problem,
+          // 后端可能返回的字段不一致，这里统一处理
+          title: problem.title || problem.name,
+          public: problem.public || problem.status || false,
+          difficulty: problem.difficulty || problem.level || 1
+        }))
+        total.value = res.data.count || 0
+      } else if (res.data && Array.isArray(res.data)) {
+        // 处理直接返回数组的情况
+        userProblems.value = res.data.map(problem => ({
+          ...problem,
+          title: problem.title || problem.name,
+          public: problem.public || problem.status || false,
+          difficulty: problem.difficulty || problem.level || 1
+        }))
+        total.value = res.data.length
+      } else {
+        userProblems.value = []
+        total.value = 0
+        message.warning('未获取到题目数据')
+      }
     } else {
       message.error(res.message || '获取题目列表失败')
     }
@@ -58,38 +123,106 @@ const handleSizeChange = () => {
   fetchUserProblems()
 }
 
+// 重置筛选条件
+const resetFilters = () => {
+  filters.difficulty = ''
+  filters.status = ''
+  filters.keyword = ''
+  // watch会自动触发fetchUserProblems
+}
+
 // 创建新题目
 const createProblem = () => {
-  router.push('/problem/create')
+  if (!hasCreatePermission.value) {
+    message.error('您没有创建题目的权限')
+    return
+  }
+  router.push('/problem-create')
 }
 
 // 编辑题目
 const editProblem = (problemId) => {
-  router.push(`/problem/edit/${problemId}`)
+  router.push(`/problem-edit/${problemId}`)
+}
+
+// 编辑测试点
+const editTestCase = (problemId) => {
+  router.push(`/problem-testcase/${problemId}`)
 }
 
 // 删除题目
 const deleteProblem = async (problemId) => {
-  if (confirm('确定要删除这个题目吗？该操作不可恢复！')) {
-    try {
-      const res = await deleteProblemAPI(problemId)
-      if (res.code === 200) {
-        message.success('删除成功')
-        fetchUserProblems()
-      } else {
-        message.error(res.message || '删除失败')
+  Modal.confirm({
+    title: '确认删除',
+    content: '确定要删除这个题目吗？该操作不可恢复！',
+    okText: '确认',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        const res = await deleteProblemAPI(problemId)
+        if (res.code === 200) {
+          message.success('删除成功')
+          fetchUserProblems()
+        } else {
+          message.error(res.message || '删除失败')
+        }
+      } catch (error) {
+        console.error('删除题目失败:', error)
+        message.error('删除题目失败')
       }
-    } catch (error) {
-      console.error('删除题目失败:', error)
-      message.error('删除题目失败')
     }
-  }
+  })
 }
 
 // 切换题目公开状态
 const toggleProblemPublic = async (problem) => {
+  // 如果要将题目设为公开，先确认
+  if (!problem.public) {
+    Modal.confirm({
+      title: '确认公开题目',
+      content: '公开题目前，请确保您已完成题目描述录入和测试点编辑，公开后将对所有用户可见。是否继续？',
+      okText: '确认公开',
+      cancelText: '取消',
+      onOk: async () => {
+        await updateProblemStatus(problem)
+      }
+    })
+  } else {
+    // 如果是设为私有，直接执行
+    await updateProblemStatus(problem)
+  }
+}
+
+// 更新题目状态
+const updateProblemStatus = async (problem) => {
   try {
-    const res = await updateProblemAPI(problem.ID, { public: !problem.public })
+    loading.value = true
+    
+    // 1. 先获取题目的详细信息
+    const detailRes = await getProblemDetail(problem.ID)
+    if (detailRes.code !== 200 || !detailRes.data) {
+      message.error('获取题目详情失败，无法切换状态')
+      return
+    }
+    
+    // 2. 准备更新数据，基于获取的详情
+    const problemDetail = detailRes.data
+    const updateData = {
+      id: problem.ID,
+      name: problemDetail.name || problemDetail.title || problem.title,
+      description: problemDetail.description || '',
+      input_description: problemDetail.input_description || '',
+      output_description: problemDetail.output_description || '',
+      level: problemDetail.level || problemDetail.difficulty || 'easy',
+      example: problemDetail.example || [],
+      lang_limit: problemDetail.lang_limit || {},
+      remark: problemDetail.remark || '',
+      visible: !problem.public, // 切换状态，使用visible字段
+      owner: problemDetail.owner || 0
+    }
+    
+    // 3. 调用更新接口
+    const res = await updateProblemAPI(updateData)
     if (res.code === 200) {
       message.success(`已${problem.public ? '设为私有' : '公开'}`)
       problem.public = !problem.public
@@ -99,6 +232,8 @@ const toggleProblemPublic = async (problem) => {
   } catch (error) {
     console.error('切换题目状态失败:', error)
     message.error('操作失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -109,6 +244,17 @@ const viewProblem = (problemId) => {
 
 // 获取难度标签
 const getDifficultyTag = (difficulty) => {
+  // 处理返回的是字符串的情况
+  if (typeof difficulty === 'string') {
+    const map = {
+      'easy': { label: '简单', class: 'easy' },
+      'mid': { label: '中等', class: 'medium' },
+      'hard': { label: '困难', class: 'hard' }
+    }
+    return map[difficulty] || { label: '未知', class: '' }
+  }
+  
+  // 处理返回的是数字的情况
   const map = {
     1: { label: '简单', class: 'easy' },
     2: { label: '中等', class: 'medium' },
@@ -119,8 +265,14 @@ const getDifficultyTag = (difficulty) => {
 
 // 格式化时间
 const formatDate = (dateStr) => {
+  if (!dateStr) return '未知'
   const date = new Date(dateStr)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+// 跳转到测试点管理页面
+const manageTestCase = (id) => {
+  router.push(`/problem-testcase/${id}`)
 }
 
 onMounted(() => {
@@ -132,13 +284,45 @@ onMounted(() => {
   <div class="problems-manage-container">
     <div class="page-header">
       <h1>题目管理</h1>
-      <button class="create-btn" @click="createProblem">创建新题目</button>
+      <button v-if="hasCreatePermission" class="create-btn" @click="createProblem">创建新题目</button>
+    </div>
+    
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>难度:</label>
+        <select v-model="filters.difficulty">
+          <option v-for="option in difficultyOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label>状态:</label>
+        <select v-model="filters.status">
+          <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="filter-group keyword-filter">
+        <input 
+          type="text" 
+          v-model="filters.keyword" 
+          placeholder="题目名称关键词"
+          class="keyword-input"
+        />
+      </div>
+      
+      <button class="reset-btn" @click="resetFilters">重置筛选</button>
     </div>
     
     <!-- 题目列表 -->
     <div class="problems-list">
       <div v-if="loading" class="loading">加载中...</div>
-      <div v-else-if="userProblems.length === 0" class="empty">您还没有创建任何题目</div>
+      <div v-else-if="userProblems.length === 0" class="empty">没有符合条件的题目</div>
       <div v-else>
         <div v-for="problem in userProblems" :key="problem.ID" class="problem-card">
           <div class="problem-info">
@@ -194,6 +378,12 @@ onMounted(() => {
               @click="editProblem(problem.ID)"
             >
               编辑题目
+            </button>
+            <button 
+              class="testcase-btn" 
+              @click="manageTestCase(problem.ID)"
+            >
+              编辑测试点
             </button>
             <button 
               class="toggle-btn" 
@@ -258,7 +448,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 h1 {
@@ -269,7 +459,7 @@ h1 {
 
 .create-btn {
   padding: 10px 20px;
-  background: #52c41a;
+  background: #4a90e2;
   color: white;
   border: none;
   border-radius: 4px;
@@ -280,7 +470,66 @@ h1 {
 }
 
 .create-btn:hover {
-  background: #73d13d;
+  background: #357dd8;
+}
+
+/* 筛选栏样式 */
+.filter-bar {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-group label {
+  font-weight: 500;
+  color: #666;
+  min-width: 40px;
+}
+
+.filter-group select,
+.keyword-input {
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 120px;
+}
+
+.keyword-filter {
+  flex-grow: 1;
+}
+
+.keyword-input {
+  flex-grow: 1;
+  min-width: 200px;
+}
+
+.reset-btn {
+  padding: 8px 16px;
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.reset-btn:hover {
+  background: #e8e8e8;
+  color: #333;
 }
 
 .problems-list {
@@ -324,7 +573,7 @@ h1 {
 .problem-title {
   font-size: 20px;
   margin: 0 0 10px 0;
-  color: #1890ff;
+  color: #4a90e2;
 }
 
 .problem-tags {
@@ -344,8 +593,8 @@ h1 {
 }
 
 .difficulty-tag.easy {
-  background: #e8f5e9;
-  color: #4caf50;
+  background: #e6f7ff;
+  color: #4a90e2;
 }
 
 .difficulty-tag.medium {
@@ -412,6 +661,7 @@ h1 {
 
 .view-btn,
 .edit-btn,
+.testcase-btn,
 .toggle-btn,
 .delete-btn {
   padding: 8px 16px;
@@ -421,15 +671,16 @@ h1 {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .view-btn {
-  background: #1890ff;
+  background: #4a90e2;
   color: white;
 }
 
 .view-btn:hover {
-  background: #40a9ff;
+  background: #357dd8;
 }
 
 .edit-btn {
@@ -441,13 +692,22 @@ h1 {
   background: #ffc53d;
 }
 
+.testcase-btn {
+  background: #722ed1;
+  color: white;
+}
+
+.testcase-btn:hover {
+  background: #9254de;
+}
+
 .toggle-btn.public-action {
-  background: #52c41a;
+  background: #4a90e2;
   color: white;
 }
 
 .toggle-btn.public-action:hover {
-  background: #73d13d;
+  background: #357dd8;
 }
 
 .toggle-btn.private-action {
@@ -486,8 +746,8 @@ h1 {
 }
 
 .page-btn:hover:not(:disabled) {
-  color: #1890ff;
-  border-color: #1890ff;
+  color: #4a90e2;
+  border-color: #4a90e2;
 }
 
 .page-btn:disabled {
@@ -507,5 +767,83 @@ h1 {
   padding: 6px;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
+}
+
+.problem-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.visibility-btn,
+.edit-btn,
+.testcase-btn,
+.delete-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.edit-btn {
+  background-color: #1890ff;
+  color: white;
+}
+
+.edit-btn:hover {
+  background-color: #40a9ff;
+}
+
+.testcase-btn {
+  background-color: #52c41a;
+  color: white;
+}
+
+.testcase-btn:hover {
+  background-color: #73d13d;
+}
+
+.delete-btn {
+  background-color: #ff4d4f;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-group {
+    justify-content: space-between;
+  }
+  
+  .problem-card {
+    flex-direction: column;
+  }
+  
+  .problem-action {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-left: 0;
+    margin-top: 15px;
+    min-width: auto;
+  }
+  
+  .view-btn,
+  .edit-btn,
+  .testcase-btn,
+  .toggle-btn,
+  .delete-btn {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+  }
+  
+  .pagination {
+    flex-wrap: wrap;
+  }
 }
 </style> 

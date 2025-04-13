@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
+import Register from '../views/Register.vue'
 import Problems from '../views/Problems.vue'
 import ProblemDetail from '../views/ProblemDetail.vue'
 import ContestProblemDetail from '../views/ContestProblemDetail.vue'
@@ -16,6 +17,10 @@ import ContestsRecord from '../views/ContestsRecord.vue'
 import ContestApplies from '../views/ContestApplies.vue'
 import ContestManage from '../views/ContestManage.vue'
 import ProblemManage from '../views/ProblemManage.vue'
+import ProblemCreate from '../views/ProblemCreate.vue'
+import ProblemEdit from '../views/ProblemEdit.vue'
+import NotFound from '../views/NotFound.vue'
+import ProblemTestCase from '../views/ProblemTestCase.vue'
 import { isAuthenticated, getUserId, getAccessToken } from '../utils/auth'
 
 // 简单的管理员权限检查函数
@@ -57,6 +62,11 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: Login
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register
   },
   {
     path: '/problems',
@@ -146,6 +156,40 @@ const routes = [
     name: 'ProblemManage',
     component: ProblemManage,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/problem-create',
+    name: 'ProblemCreate',
+    component: ProblemCreate,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/problem-edit/:id',
+    name: 'ProblemEdit',
+    component: ProblemEdit,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/problem-testcase/:id',
+    name: 'ProblemTestCase',
+    component: ProblemTestCase,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/not-found',
+    name: 'NotFound',
+    component: NotFound
+  },
+  {
+    path: '/contest-create',
+    name: 'ContestCreate',
+    component: () => import('../views/ContestCreate.vue'),
+    meta: { requiresAuth: true }
+  },
+  // 通配符路由，匹配所有未定义的路径，必须放在最后
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/not-found'
   }
 ]
 
@@ -159,7 +203,7 @@ const router = createRouter({
 const updateDynamicTitle = async (to) => {
   try {
     // 题目详情页、竞赛题目详情页，尝试获取题目名称
-    if ((to.name === 'problemDetail' || to.name === 'contestProblemDetail') && to.params.id) {
+    if ((to.name === 'ProblemDetail' || to.name === 'ContestProblemDetail') && to.params.id) {
       // 先设置一个临时标题
       document.title = `SOJ - 题目 #${to.params.id}`
       
@@ -174,7 +218,7 @@ const updateDynamicTitle = async (to) => {
       }
     }
     // 竞赛详情页，尝试获取竞赛名称
-    else if (to.name === 'contestDetail' && to.params.id) {
+    else if (to.name === 'ContestDetail' && to.params.id) {
       // 先设置一个临时标题
       document.title = `SOJ - 竞赛 #${to.params.id}`
       
@@ -193,54 +237,6 @@ const updateDynamicTitle = async (to) => {
 }
 
 // 修改现有的路由守卫
-router.beforeEach((to, from, next) => {
-  // 基础标题
-  let title = 'SOJ - 在线评测系统'
-
-  // 根据路由动态设置标题
-  if (to.meta.title) {
-    // 如果路由自己定义了标题，直接使用
-    title = to.meta.title
-  } else if (to.name === 'problemDetail' && to.params.id) {
-    // 题目详情页 - 先设置基础标题，后续异步更新
-    title = `SOJ - 题目 #${to.params.id}`
-  } else if (to.name === 'contestProblemDetail' && to.params.id) {
-    // 竞赛题目详情页 - 先设置基础标题，后续异步更新
-    title = `SOJ - 竞赛题目 #${to.params.id}`
-  } else if (to.name === 'contestDetail' && to.params.id) {
-    // 竞赛详情页 - 先设置基础标题，后续异步更新
-    title = `SOJ - 竞赛 #${to.params.id}`
-  } else if (to.name === 'contests') {
-    // 竞赛列表页
-    title = `SOJ - 竞赛列表`
-  } else if (to.name === 'problems') {
-    // 题目列表页
-    title = `SOJ - 题库`
-  } else if (to.name === 'login') {
-    // 登录页
-    title = `SOJ - 登录`
-  } else if (to.name === 'register') {
-    // 注册页
-    title = `SOJ - 注册`
-  } else if (to.name === 'profile') {
-    // 个人资料页
-    title = `SOJ - 个人资料`
-  }
-
-  // 设置页面标题
-  document.title = title
-  next()
-})
-
-// 路由后置钩子，用于异步更新标题
-router.afterEach((to) => {
-  // 对于需要动态获取标题的页面，在导航完成后异步更新标题
-  if (['problemDetail', 'contestProblemDetail', 'contestDetail'].includes(to.name)) {
-    updateDynamicTitle(to)
-  }
-})
-
-// 路由守卫
 router.beforeEach(async (to, from, next) => {
   // 检查是否需要身份验证
   if (to.matched.some(record => record.meta.requiresAuth)) {
@@ -274,35 +270,35 @@ router.beforeEach(async (to, from, next) => {
     return
   }
 
-  // 动态设置页面标题
+  // 基础标题
   let title = 'SOJ - 在线评测系统'
 
   // 根据路由动态设置标题
   if (to.meta.title) {
     // 如果路由自己定义了标题，直接使用
     title = to.meta.title
-  } else if (to.name === 'problemDetail' && to.params.id) {
-    // 题目详情页
+  } else if (to.name === 'ProblemDetail' && to.params.id) {
+    // 题目详情页 - 先设置基础标题，后续异步更新
     title = `SOJ - 题目 #${to.params.id}`
-  } else if (to.name === 'contestProblemDetail' && to.params.id) {
-    // 竞赛题目详情页
+  } else if (to.name === 'ContestProblemDetail' && to.params.id) {
+    // 竞赛题目详情页 - 先设置基础标题，后续异步更新
     title = `SOJ - 竞赛题目 #${to.params.id}`
-  } else if (to.name === 'contestDetail' && to.params.id) {
+  } else if (to.name === 'ContestDetail' && to.params.id) {
     // 竞赛详情页
     title = `SOJ - 竞赛 #${to.params.id}`
-  } else if (to.name === 'contests') {
+  } else if (to.name === 'Contests') {
     // 竞赛列表页
     title = `SOJ - 竞赛列表`
-  } else if (to.name === 'problems') {
+  } else if (to.name === 'Problems') {
     // 题目列表页
     title = `SOJ - 题库`
-  } else if (to.name === 'login') {
+  } else if (to.name === 'Login') {
     // 登录页
     title = `SOJ - 登录`
-  } else if (to.name === 'register') {
+  } else if (to.name === 'Register') {
     // 注册页
     title = `SOJ - 注册`
-  } else if (to.name === 'profile') {
+  } else if (to.name === 'Profile') {
     // 个人资料页
     title = `SOJ - 个人资料`
   }
@@ -312,9 +308,14 @@ router.beforeEach(async (to, from, next) => {
   next()
 })
 
-// 全局后置钩子
-router.afterEach((to, from) => {
-  // 路由切换后的操作，比如关闭加载动画等
+// 路由后置钩子，用于异步更新标题
+router.afterEach((to) => {
+  // 对于需要动态获取标题的页面，在导航完成后异步更新标题
+  if (['ProblemDetail', 'ContestProblemDetail', 'ContestDetail'].includes(to.name)) {
+    updateDynamicTitle(to)
+  }
+  
+  // 路由切换后，滚动到页面顶部
   window.scrollTo(0, 0)
 })
 
