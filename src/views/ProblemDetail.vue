@@ -1,12 +1,14 @@
 <script setup>
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getProblemDetail, getLanguages, runCode as runCodeAPI, submitCode as submitCodeAPI, getSubmissionList, getSubmissionDetail } from '../api/problem'
-import { getContestRank } from '../api/contest'
-import { message } from 'ant-design-vue'
+import { getProblemDetail, getLanguages, runCode as runCodeAPI, submitCode as submitCodeAPI, getSubmissionList, getSubmissionDetail, getProblemJudgeCount, getProblemRanking } from '../api/problem'
+import { message, Tabs } from 'ant-design-vue'
+import * as echarts from 'echarts'
 import { marked } from 'marked'
 import { getUserId } from '../utils/auth'
 // import lottie from 'lottie-web'
+
+const TabPane = Tabs.TabPane
 
 const route = useRoute()
 const problem = ref(null)
@@ -20,7 +22,7 @@ const runResult = ref(null) // 运行结果
 const testInput = ref('') // 自测输入
 const isRunning = ref(false) // 是否正在运行代码
 const showTestPanel = ref(false) // 是否显示自测面板
-const activeTab = ref('problem') // 当前激活的选项卡: problem, solution, submissions
+const activeTab = ref('problem') // 当前激活的选项卡: problem, solution, submissions, statistics
 
 // 提交代码相关状态
 const isSubmitting = ref(false) // 是否正在提交代码
@@ -50,6 +52,108 @@ const rankList = ref([])
 const rankTotal = ref(0)
 const contestInfo = ref(null)
 
+// 统计数据相关
+const statisticsLoading = ref(false)
+const pieChart = ref(null)
+const judgeCount = ref({}) // 从API获取的题目判题统计
+const statusColors = {
+  'Accepted': '#52c41a',
+  'Wrong Answer': '#f5222d',
+  'Time Limit Exceeded': '#faad14',
+  'Memory Limit Exceeded': '#fa8c16',
+  'Runtime Error': '#eb2f96',
+  'Compilation Error': '#1890ff',
+  'Unknown Error': '#8c8c8c'
+}
+
+// 排行榜数据
+const rankingLoading = ref(false)
+const timeRanking = ref([])
+const memoryRanking = ref([])
+
+// 计算总提交数
+const totalSubmissions = computed(() => {
+  let total = 0
+  for (const key in judgeCount.value) {
+    total += parseInt(judgeCount.value[key] || 0)
+  }
+  return total
+})
+
+// 计算通过提交数
+const acceptedSubmissions = computed(() => {
+  return parseInt(judgeCount.value['Accepted'] || 0)
+})
+
+// 计算通过率
+const passRate = computed(() => {
+  if (totalSubmissions.value === 0) return 0
+  return Math.round((acceptedSubmissions.value / totalSubmissions.value) * 100)
+})
+
+// 获取题目判题统计数据
+const fetchJudgeCount = async () => {
+  statisticsLoading.value = true
+  try {
+    const res = await getProblemJudgeCount(route.params.id)
+    if (res.code === 200) {
+      judgeCount.value = res.data
+      nextTick(() => {
+        initStatisticsCharts()
+      })
+    } else {
+      message.error(res.message || '获取题目统计数据失败')
+    }
+  } catch (error) {
+    console.error('获取题目统计数据失败:', error)
+    message.error('获取题目统计数据失败')
+  } finally {
+    statisticsLoading.value = false
+  }
+}
+
+// 获取题目排行榜
+const fetchProblemRanking = async () => {
+  rankingLoading.value = true
+  try {
+    const res = await getProblemRanking(route.params.id)
+    if (res.code === 200 && Array.isArray(res.data)) {
+      // 直接使用API返回的数据
+      timeRanking.value = res.data.map((item, index) => ({
+        rank: index + 1,
+        submissionId: item.ID,
+        username: item.user_name,
+        time: item.time.toFixed(3) + 's',
+        memory: formatMemory(item.memory),
+        language: item.language,
+        // 保存完整的原始数据，便于查看详情
+        originalData: item
+      }))
+      
+      // memoryRanking不再需要单独排序
+      memoryRanking.value = timeRanking.value
+    } else {
+      message.error(res.message || '获取排行榜失败')
+    }
+  } catch (error) {
+    console.error('获取排行榜失败:', error)
+    message.error('获取排行榜失败')
+  } finally {
+    rankingLoading.value = false
+  }
+}
+
+// 格式化内存显示
+const formatMemory = (memoryInBytes) => {
+  if (memoryInBytes < 1024) {
+    return memoryInBytes + 'B'
+  } else if (memoryInBytes < 1024 * 1024) {
+    return (memoryInBytes / 1024).toFixed(2) + 'KB'
+  } else {
+    return (memoryInBytes / (1024 * 1024)).toFixed(2) + 'MB'
+  }
+}
+
 // 获取当前竞赛ID（如果存在）
 const getCurrentContestId = () => {
   // 先尝试从URL参数获取竞赛ID
@@ -76,8 +180,7 @@ const isContestProblem = computed(() => {
 const fetchProblemDetail = async () => {
   loading.value = true
   try {
-    const contestId = getCurrentContestId()
-    const res = await getProblemDetail(route.params.id, contestId)
+    const res = await getProblemDetail(route.params.id)
     if (res.code === 200) {
       problem.value = res.data
       // 确保样例存在，适配新API格式
@@ -166,7 +269,12 @@ const getShortLanguageName = (fullName) => {
   if (fullName.includes('Python')) return 'python'
   if (fullName.includes('C++')) return 'cpp'
   if (fullName.includes('Java')) return 'java'
-  if (fullName.includes('Go')) return 'go'
+  if (fullName.includes('Go')) {
+    // 区分不同版本的Go
+    if (fullName.includes('1.13')) return 'go1.13'
+    if (fullName.includes('1.18')) return 'go1.18'
+    return 'go'
+  }
   // 默认返回小写的语言名称
   return fullName.toLowerCase()
 }
@@ -268,55 +376,36 @@ const submitCode = async () => {
   
   try {
     isSubmitting.value = true
-    showJudgeAnimation.value = true
     judgeResult.value = null
+    showJudgeAnimation.value = true
     
-    // 缓存用户代码
+    // 保存代码到本地
     saveCodeToLocalStorage()
     
-    // 准备提交数据
-    const submitData = {
+    const params = {
       problem_id: Number(route.params.id),
       source_code: code.value,
-      language_id: languageId.value
+      language_id: languageId.value,
     }
     
-    // 如果是从竞赛中访问的题目，添加竞赛ID
-    const contestId = getCurrentContestId()
-    if (contestId) {
-      submitData.contest_id = contestId
-    }
+    const res = await submitCodeAPI(params)
     
-    const result = await submitCodeAPI(submitData)
-    
-    if (result.code === 200) {
-      judgeResult.value = {
-        status: result.data.status,
-        time: result.data.time,
-        memory: result.data.memory
-      }
+    if (res.code === 200) {
+      message.success('提交成功')
+      judgeResult.value = res.data
       
-      // 显示动画2秒后关闭
-      setTimeout(() => {
-        showJudgeAnimation.value = false
-        message.success(result.message)
-        // 刷新提交记录但不跳转页面
-        if (activeTab.value === 'submissions') {
-          fetchSubmissionList()
-        }
-      }, 2000)
+      // 不再跳转到提交记录选项卡
     } else {
-      showJudgeAnimation.value = false
-      message.error(result.message)
+      message.error(res.message || '提交失败')
     }
   } catch (error) {
-    console.error('提交代码出错:', error)
-    showJudgeAnimation.value = false
-    message.error(error.response?.data?.message || '提交代码失败')
+    console.error('提交代码失败:', error)
+    message.error('提交代码失败: ' + (error.message || '未知错误'))
   } finally {
+    isSubmitting.value = false
     setTimeout(() => {
-      isSubmitting.value = false
-    }, 2000)
+      showJudgeAnimation.value = false
+    }, 1500)
   }
 }
 
@@ -416,8 +505,11 @@ const formatDateTime = (dateStr) => {
 watch(() => activeTab.value, (newTab) => {
   if (newTab === 'submissions') {
     fetchSubmissions()
-  } else if (newTab === 'ranking' && isContestProblem.value) {
-    fetchRankList()
+  } else if (newTab === 'statistics') {
+    // 获取题目统计数据
+    fetchJudgeCount()
+    // 获取排行榜数据
+    fetchProblemRanking()
   }
 })
 
@@ -560,8 +652,11 @@ const switchTab = (tab) => {
   // 当切换到提交记录选项卡时获取提交记录
   if (tab === 'submissions') {
     fetchSubmissions()
-  } else if (tab === 'ranking' && isContestProblem.value) {
-    fetchRankList()
+  } else if (tab === 'statistics') {
+    // 获取题目统计数据
+    fetchJudgeCount()
+    // 获取排行榜数据
+    fetchProblemRanking()
   }
 }
 
@@ -716,6 +811,14 @@ onMounted(() => {
   if (getCurrentContestId()) {
     console.log('从竞赛页面跳转而来，竞赛ID:', getCurrentContestId())
   }
+  
+  // 卸载前移除事件监听器
+  return () => {
+    if (pieChart.value) {
+      window.removeEventListener('resize', pieChart.value.resize)
+      pieChart.value.dispose()
+    }
+  }
 })
 
 // 筛选当前用户在当前竞赛的提交记录
@@ -803,6 +906,144 @@ const getProblemStatusClass = (status) => {
       return ''
   }
 }
+
+// 初始化统计图表
+const initStatisticsCharts = () => {
+  // 确保DOM元素已经渲染完成
+  nextTick(() => {
+    // 确保DOM元素存在
+    const chartDom = document.getElementById('status-distribution-chart')
+    if (chartDom) {
+      // 如果已有实例，先销毁
+      if (pieChart.value) {
+        pieChart.value.dispose()
+      }
+      
+      // 初始化饼图
+      pieChart.value = echarts.init(chartDom)
+      
+      // 准备数据
+      const data = []
+      let totalCount = 0
+      
+      // 首先计算总提交数，排除count字段
+      for (const [status, count] of Object.entries(judgeCount.value)) {
+        if (status !== 'count') {
+          totalCount += parseInt(count)
+        }
+      }
+      
+      // 然后添加各状态的数据
+      for (const [status, count] of Object.entries(judgeCount.value)) {
+        if (status !== 'count') { // 排除count字段
+          data.push({
+            value: parseInt(count),
+            name: status,
+            itemStyle: {
+              color: statusColors[status] || '#8c8c8c'
+            }
+          })
+        }
+      }
+      
+      // 配置饼图选项
+      const option = {
+        title: {
+          text: '提交状态分布',
+          left: 'center'
+        },
+        tooltip: {
+          trigger: 'item',
+          formatter: '{a} <br/>{b}: {d}%'
+        },
+        legend: {
+          orient: 'vertical',
+          left: 'left',
+          data: Object.keys(judgeCount.value).filter(key => key !== 'count') // 从图例中排除count
+        },
+        series: [
+          {
+            name: '提交状态',
+            type: 'pie',
+            radius: ['40%', '70%'],
+            avoidLabelOverlap: false,
+            label: {
+              show: false,
+              position: 'center'
+            },
+            emphasis: {
+              label: {
+                show: true,
+                fontSize: '18',
+                fontWeight: 'bold',
+                formatter: '{b}: {d}%'
+              }
+            },
+            labelLine: {
+              show: false
+            },
+            data: data
+          }
+        ]
+      }
+      
+      // 应用配置
+      pieChart.value.setOption(option)
+      
+      // 处理窗口大小变化
+      window.addEventListener('resize', () => {
+        if (pieChart.value) {
+          pieChart.value.resize()
+        }
+      })
+    }
+  })
+}
+
+// 释放图表资源
+const disposeCharts = () => {
+  if (pieChart.value) {
+    pieChart.value.dispose()
+    pieChart.value = null
+  }
+}
+
+// 卸载组件时清理资源
+onUnmounted(() => {
+  disposeCharts()
+  window.removeEventListener('resize', () => {
+    if (pieChart.value) {
+      pieChart.value.resize()
+    }
+  })
+})
+
+// 自定义标签页状态
+const activeRankTab = ref('time')
+
+// 切换排行榜标签页
+const switchRankTab = (tab) => {
+  activeRankTab.value = tab
+}
+
+// 查看排行榜中的提交详情
+const viewRankSubmissionDetail = (submissionId) => {
+  if (!submissionId) return
+  
+  // 在排行榜中查找对应submissionId的数据
+  const submissionData = timeRanking.value.find(item => item.submissionId === submissionId)
+  
+  if (submissionData && submissionData.originalData) {
+    // 找到数据，展示弹窗
+    showSubmissionDetail.value = true
+    submissionDetailLoading.value = false
+    
+    // 直接使用原始完整数据
+    submissionDetail.value = submissionData.originalData
+  } else {
+    message.warning('未找到对应的提交详情')
+  }
+}
 </script>
 
 <template>
@@ -815,6 +1056,13 @@ const getProblemStatusClass = (status) => {
         @click="switchTab('problem')"
       >
         题目描述
+      </div>
+      <div 
+        class="tab-item" 
+        :class="{ active: activeTab === 'statistics' }"
+        @click="switchTab('statistics')"
+      >
+        统计
       </div>
       <div 
         class="tab-item" 
@@ -1069,7 +1317,7 @@ const getProblemStatusClass = (status) => {
               <div class="cell-language">{{ item.language }}</div>
               <div class="cell-time">{{ formatDateTime(item.CreatedAt) }}</div>
               <div class="cell-runtime">{{ item.time ? item.time + 's' : '-' }}</div>
-              <div class="cell-memory">{{ item.memory ? Math.round(item.memory / 1024) + 'MB' : '-' }}</div>
+              <div class="cell-memory">{{ item.memory ? Math.round(item.memory / 1024) + 'KB' : '-' }}</div>
               <div class="cell-actions">
                 <button 
                   class="view-code-btn" 
@@ -1151,6 +1399,143 @@ const getProblemStatusClass = (status) => {
               <div class="code-container">
                 <h4>源代码</h4>
                 <pre class="source-code">{{ submissionDetail?.source_code }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 统计选项卡 -->
+      <div v-else-if="activeTab === 'statistics'" class="tab-content statistics-tab">
+        <div v-if="statisticsLoading && rankingLoading" class="loading">加载中...</div>
+        <div v-else class="statistics-content">
+          <!-- 题目通过率信息卡片 -->
+          <div class="stat-card">
+            <h2>题目通过率</h2>
+            <div class="pass-rate-container">
+              <div class="pass-rate-circle" :style="{ background: `conic-gradient(#52c41a ${passRate}%, #f5f5f5 0)` }">
+                <div class="inner-circle">
+                  <span class="pass-rate-text">{{ passRate }}%</span>
+                </div>
+              </div>
+              <div class="pass-rate-info">
+                <div class="info-item">
+                  <div class="info-title">总提交数</div>
+                  <div class="info-value">{{ totalSubmissions }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-title">通过提交数</div>
+                  <div class="info-value">{{ acceptedSubmissions }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-title">难度级别</div>
+                  <div class="info-value">{{ problem.level === 'easy' ? '简单' : problem.level === 'mid' ? '中等' : '困难' }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 提交状态分布图表 -->
+          <div class="stat-card">
+            <h2>提交状态分布</h2>
+            <div v-if="statisticsLoading" class="chart-loading">加载中...</div>
+            <div v-else-if="Object.keys(judgeCount).length === 0" class="empty-chart">
+              暂无提交数据
+            </div>
+            <div v-else id="status-distribution-chart" class="chart-container"></div>
+          </div>
+          
+          <!-- 排行榜卡片 -->
+          <div class="stat-card ranking-section">
+            <h2>时间/空间排行榜</h2>
+            <div v-if="rankingLoading" class="chart-loading">加载中...</div>
+            <div v-else-if="timeRanking.length === 0" class="empty-chart">
+              暂无排行数据
+            </div>
+            <div v-else class="custom-tabs">
+              <div class="custom-tabs-header">
+                <div 
+                  class="custom-tab-item" 
+                  :class="{ active: activeRankTab === 'time' }"
+                  @click="switchRankTab('time')"
+                >
+                  时间排行
+                </div>
+                <div 
+                  class="custom-tab-item" 
+                  :class="{ active: activeRankTab === 'memory' }"
+                  @click="switchRankTab('memory')"
+                >
+                  内存排行
+                </div>
+              </div>
+              
+              <div class="custom-tabs-content">
+                <!-- 时间排行 -->
+                <div v-if="activeRankTab === 'time'" class="rank-table-wrapper">
+                  <table class="rank-table">
+                    <thead>
+                      <tr>
+                        <th class="rank-col">#</th>
+                        <th class="user-col">用户</th>
+                        <th class="stat-col">运行时间</th>
+                        <th class="stat-col">内存</th>
+                        <th class="lang-col">语言</th>
+                        <th class="action-col">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="item in timeRanking" :key="item.submissionId">
+                        <td class="rank-col">{{ item.rank }}</td>
+                        <td class="user-col">{{ item.username }}</td>
+                        <td class="stat-col highlight">{{ item.time }}</td>
+                        <td class="stat-col">{{ item.memory }}</td>
+                        <td class="lang-col">{{ item.language }}</td>
+                        <td class="action-col">
+                          <button 
+                            class="view-detail-btn" 
+                            @click.stop="viewRankSubmissionDetail(item.submissionId)"
+                          >
+                            查看详情
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <!-- 内存排行 -->
+                <div v-else-if="activeRankTab === 'memory'" class="rank-table-wrapper">
+                  <table class="rank-table">
+                    <thead>
+                      <tr>
+                        <th class="rank-col">#</th>
+                        <th class="user-col">用户</th>
+                        <th class="stat-col">运行时间</th>
+                        <th class="stat-col">内存</th>
+                        <th class="lang-col">语言</th>
+                        <th class="action-col">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="item in memoryRanking" :key="item.submissionId">
+                        <td class="rank-col">{{ item.rank }}</td>
+                        <td class="user-col">{{ item.username }}</td>
+                        <td class="stat-col">{{ item.time }}</td>
+                        <td class="stat-col highlight">{{ item.memory }}</td>
+                        <td class="lang-col">{{ item.language }}</td>
+                        <td class="action-col">
+                          <button 
+                            class="view-detail-btn" 
+                            @click.stop="viewRankSubmissionDetail(item.submissionId)"
+                          >
+                            查看详情
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -2716,5 +3101,269 @@ pre {
 
 .empty-text {
   font-size: 16px;
+}
+
+/* 统计页面样式 */
+.statistics-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+}
+
+.statistics-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  transition: box-shadow 0.3s;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card h2 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  color: #333;
+  padding-left: 12px;
+  position: relative;
+}
+
+.stat-card h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: #1890ff;
+  border-radius: 2px;
+}
+
+/* 通过率样式 */
+.pass-rate-container {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding: 20px;
+}
+
+.pass-rate-circle {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.inner-circle {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pass-rate-text {
+  font-size: 24px;
+  font-weight: bold;
+  color: #52c41a;
+}
+
+.pass-rate-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-title {
+  color: #666;
+}
+
+.info-value {
+  font-weight: 500;
+  color: #333;
+}
+
+/* 图表容器 */
+.chart-container {
+  height: 400px;
+  width: 100%;
+}
+
+/* 排行榜样式 */
+.ranking-section {
+  overflow: hidden;
+}
+
+.ranking-tabs {
+  margin-top: 16px;
+}
+
+.rank-table-wrapper {
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.rank-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rank-table th,
+.rank-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.rank-table th {
+  background: #fafafa;
+  font-weight: 500;
+  color: #333;
+}
+
+.rank-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+.rank-col {
+  width: 60px;
+  text-align: center;
+}
+
+.user-col {
+  width: 200px;
+}
+
+.stat-col {
+  width: 100px;
+  text-align: right;
+}
+
+.lang-col {
+  width: 80px;
+}
+
+.highlight {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .pass-rate-container {
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+  }
+  
+  .chart-container {
+    height: 300px;
+  }
+  
+  .rank-table th,
+  .rank-table td {
+    padding: 8px;
+  }
+}
+
+/* 自定义标签页样式 */
+.custom-tabs {
+  margin-top: 16px;
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.custom-tabs-header {
+  display: flex;
+  background-color: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.custom-tab-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.custom-tab-item:hover {
+  color: #1890ff;
+}
+
+.custom-tab-item.active {
+  color: #1890ff;
+  font-weight: 500;
+  position: relative;
+}
+
+.custom-tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #1890ff;
+}
+
+.custom-tabs-content {
+  padding: 16px;
+  background: white;
+}
+
+.chart-loading, .empty-chart {
+  height: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.action-col {
+  width: 100px;
+  text-align: center;
+}
+
+.view-detail-btn {
+  padding: 4px 8px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.3s;
+}
+
+.view-detail-btn:hover {
+  background: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 </style> 

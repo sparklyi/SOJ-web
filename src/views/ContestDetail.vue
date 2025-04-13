@@ -12,6 +12,7 @@ import {
 import { message, Modal } from 'ant-design-vue'
 import { getUserId } from '../utils/auth'
 import { useUserStore } from '../store/user'
+import { marked } from 'marked'
 
 const route = useRoute()
 const router = useRouter()
@@ -474,6 +475,17 @@ const getContestRemainingTime = computed(() => {
   return `剩余时间: ${hours}小时 ${minutes}分钟`
 })
 
+// 处理竞赛简介的Markdown格式
+const parsedContestDescription = computed(() => {
+  if (!contestDetail.value || !contestDetail.value.description) return ''
+  try {
+    return marked(contestDetail.value.description)
+  } catch (error) {
+    console.error('Markdown解析错误:', error)
+    return contestDetail.value.description
+  }
+})
+
 onMounted(() => {
   fetchContestDetail()
 })
@@ -615,11 +627,7 @@ onMounted(() => {
           <!-- 竞赛简介 -->
           <div v-if="activeTab === 'intro'" class="tab-pane">
             <div class="contest-description card">
-              <div v-if="contestDetail.description" v-html="contestDetail.description" class="description-content"></div>
-              <div v-else class="empty-description">
-                <div class="empty-icon">📝</div>
-                <div class="empty-text">暂无竞赛描述</div>
-              </div>
+              <div v-html="parsedContestDescription" class="description-content"></div>
             </div>
           </div>
           
@@ -1170,7 +1178,138 @@ onMounted(() => {
 }
 
 .description-content {
+  color: #333;
   line-height: 1.6;
+}
+
+/* Markdown内容样式 */
+.description-content:deep(.markdown-body) {
+  color: #333;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.description-content:deep(h1),
+.description-content:deep(h2),
+.description-content:deep(h3),
+.description-content:deep(h4),
+.description-content:deep(h5),
+.description-content:deep(h6) {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.description-content:deep(h1) {
+  font-size: 2em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #eaecef;
+}
+
+.description-content:deep(h2) {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #eaecef;
+}
+
+.description-content:deep(h3) {
+  font-size: 1.25em;
+}
+
+.description-content:deep(p) {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.description-content:deep(a) {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+.description-content:deep(a:hover) {
+  text-decoration: underline;
+}
+
+.description-content:deep(ul),
+.description-content:deep(ol) {
+  padding-left: 2em;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.description-content:deep(li) {
+  margin-top: 0.25em;
+}
+
+.description-content:deep(pre) {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #f6f8fa;
+  border-radius: 3px;
+  margin-bottom: 16px;
+}
+
+.description-content:deep(code) {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(27, 31, 35, 0.05);
+  border-radius: 3px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.description-content:deep(pre code) {
+  padding: 0;
+  margin: 0;
+  background-color: transparent;
+  border: 0;
+  word-break: normal;
+  white-space: pre;
+}
+
+.description-content:deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 16px;
+  overflow: auto;
+}
+
+.description-content:deep(table th),
+.description-content:deep(table td) {
+  padding: 6px 13px;
+  border: 1px solid #dfe2e5;
+}
+
+.description-content:deep(table tr) {
+  background-color: #fff;
+  border-top: 1px solid #c6cbd1;
+}
+
+.description-content:deep(table tr:nth-child(2n)) {
+  background-color: #f6f8fa;
+}
+
+.description-content:deep(img) {
+  max-width: 100%;
+  box-sizing: content-box;
+}
+
+.description-content:deep(hr) {
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  background-color: #e1e4e8;
+  border: 0;
+}
+
+.description-content:deep(blockquote) {
+  padding: 0 1em;
+  color: #6a737d;
+  border-left: 0.25em solid #dfe2e5;
+  margin: 0 0 16px 0;
 }
 
 .problems-list h2,

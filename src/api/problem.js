@@ -159,4 +159,20 @@ export function updateProblemTestCaseAPI(id, data) {
       content: data
     }
   })
+}
+
+// 获取题目判题统计数据
+export function getProblemJudgeCount(problemId) {
+  return request({
+    url: `/api/v1/problem/${problemId}/judge_count`,
+    method: 'get'
+  })
+}
+
+// 获取题目排行榜
+export function getProblemRanking(problemId) {
+  return request({
+    url: `/api/v1/submission/rank/${problemId}`,
+    method: 'get'
+  })
 } 
