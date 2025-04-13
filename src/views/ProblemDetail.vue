@@ -6,7 +6,9 @@ import { message, Tabs } from 'ant-design-vue'
 import * as echarts from 'echarts'
 import { marked } from 'marked'
 import { getUserId } from '../utils/auth'
-// import lottie from 'lottie-web'
+import MonacoEditor from 'monaco-editor-vue3'
+import lottie from 'lottie-web'
+// import { getUserId } from '../utils/auth'
 
 const TabPane = Tabs.TabPane
 
@@ -271,95 +273,102 @@ const getShortLanguageName = (fullName) => {
   if (fullName.includes('Java')) return 'java'
   if (fullName.includes('Go')) {
     // 区分不同版本的Go
-    if (fullName.includes('1.13')) return 'go1.13'
-    if (fullName.includes('1.18')) return 'go1.18'
+    if (fullName.includes('1.13')) return 'go'
+    if (fullName.includes('1.18')) return 'go'
     return 'go'
   }
   // 默认返回小写的语言名称
   return fullName.toLowerCase()
 }
 
+// 语言映射函数 - 将内部语言标识映射到 Monaco 支持的语言
+const mapMonacoLanguage = (lang) => {
+  const languageMap = {
+    'cpp': 'cpp',
+    'java': 'java',
+    'python': 'python',
+    'javascript': 'javascript',
+    'js': 'javascript',
+    'html': 'html',
+    'go': 'go',
+    'go1.13': 'go',
+    'go1.18': 'go'
+  }
+  return languageMap[lang] || lang
+}
+
+// 根据语言保存和获取本地存储的代码
+const getStorageKey = (langName) => {
+  return `code_${route.params.id}_${langName || language.value}`
+}
+
 // 设置默认代码
-const setDefaultCode = () => {
+const setDefaultCode = (langName) => {
   if (!problem.value) return
   
   // 先尝试从本地存储加载代码
-  if (loadCodeFromLocalStorage()) {
+  if (loadCodeFromLocalStorage(langName)) {
     return
   }
   
   // 根据选择的语言设置默认代码模板
-  switch (language.value) {
+  const langToUse = langName || language.value
+  switch (langToUse) {
     case 'cpp':
-      code.value = `#include <iostream>
-#include <vector>
-#include <string>
-using namespace std;
-
-// ${problem.value.name}
-${problem.value.description.split('\n').map(line => '// ' + line).join('\n')}
-
-int main() {
-    // 在这里编写代码
-    return 0;
-}`
+      code.value = `#include <iostream>\n#include <vector>\n#include <string>\nusing namespace std;\n\n// ${problem.value.name}\n\nint main() {\n    // 在这里编写代码\n    return 0;\n}`
       break
     case 'java':
-      code.value = `import java.util.*;
-
-public class Solution {
-    // ${problem.value.name}
-    ${problem.value.description.split('\n').map(line => '    // ' + line).join('\n')}
-    
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        // 在这里编写代码
-    }
-}`
+      code.value = `import java.util.*;\n\npublic class Solution {\n    // ${problem.value.name}\n    \n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        // 在这里编写代码\n    }\n}`
       break
     case 'python':
-      code.value = `# ${problem.value.name}
-${problem.value.description.split('\n').map(line => '# ' + line).join('\n')}
-
-# 在这里编写代码
-`
+      code.value = `# ${problem.value.name}\n\n# 在这里编写代码\n`
       break
     case 'go':
-      code.value = `package main
-
-import (
-    "fmt"
-)
-
-// ${problem.value.name}
-${problem.value.description.split('\n').map(line => '// ' + line).join('\n')}
-
-func main() {
-    // 在这里编写代码
-}
-`
+      code.value = `package main\n\nimport (\n    "fmt"\n)\n\n// ${problem.value.name}\n\nfunc main() {\n    // 在这里编写代码\n}\n`
       break
     default:
-      code.value = `// ${problem.value.name}
-${problem.value.description.split('\n').map(line => '// ' + line).join('\n')}
-
-// 在这里编写代码
-`
+      code.value = `// ${problem.value.name}\n\n// 在这里编写代码\n`
   }
+  
+  // 保存到本地存储
+  saveCodeToLocalStorage(langToUse)
 }
 
-// 更改编程语言
-const changeLanguage = (lang) => {
-  language.value = lang
-  // 更新语言ID
-  const selectedLang = languageOptions.value.find(opt => opt.value === lang)
-  if (selectedLang) {
-    languageId.value = selectedLang.id
-    // 尝试加载缓存的代码，如果没有则使用默认模板
-    if (!loadCodeFromLocalStorage()) {
-      setDefaultCode()
-    }
+// 保存代码到本地存储
+const saveCodeToLocalStorage = (langName) => {
+  if (!problem.value) return
+  const key = getStorageKey(langName)
+  localStorage.setItem(key, code.value)
+}
+
+// 在本地存储中加载代码
+const loadCodeFromLocalStorage = (langName) => {
+  if (!problem.value) return false
+  const key = getStorageKey(langName)
+  const savedCode = localStorage.getItem(key)
+  if (savedCode) {
+    code.value = savedCode
+    return true
   }
+  return false
+}
+
+// 切换编程语言
+const changeLanguage = (newLang) => {
+  // 先保存当前语言的代码
+  saveCodeToLocalStorage(language.value)
+  
+  // 更新语言选择
+  language.value = newLang
+  
+  // 获取对应的语言ID
+  const matchedLanguage = languageOptions.value.find(opt => opt.value === newLang)
+  if (matchedLanguage) {
+    languageId.value = matchedLanguage.id
+  }
+  
+  // 加载对应语言的代码或设置默认代码
+  loadCodeFromLocalStorage(newLang) || setDefaultCode(newLang)
 }
 
 // 提交代码
@@ -521,34 +530,6 @@ const useExampleInput = (index) => {
   }
 }
 
-// 代码缓存相关函数
-const getLocalStorageKey = () => {
-  return `soj_code_${route.params.id}_${languageId.value}`
-}
-
-const saveCodeToLocalStorage = () => {
-  try {
-    const key = getLocalStorageKey()
-    localStorage.setItem(key, code.value)
-  } catch (error) {
-    console.error('保存代码到本地失败:', error)
-  }
-}
-
-const loadCodeFromLocalStorage = () => {
-  try {
-    const key = getLocalStorageKey()
-    const savedCode = localStorage.getItem(key)
-    if (savedCode) {
-      code.value = savedCode
-      return true
-    }
-  } catch (error) {
-    console.error('从本地加载代码失败:', error)
-  }
-  return false
-}
-
 // 运行代码
 const runTestCode = async () => {
   if (!code.value.trim()) {
@@ -669,23 +650,6 @@ const switchTab = (tab) => {
     nextTick(() => {
       showSubmissionDetail.value = true
     })
-  }
-}
-
-// 处理Tab键
-const handleTabKey = (event) => {
-  if (event.key === 'Tab') {
-    event.preventDefault()
-    const cursorPosition = event.target.selectionStart
-    const cursorEnd = event.target.selectionEnd
-    
-    // 在光标位置插入Tab字符
-    code.value = code.value.slice(0, cursorPosition) + '\t' + code.value.slice(cursorEnd)
-    
-    // 手动更新光标位置
-    setTimeout(() => {
-      event.target.selectionStart = event.target.selectionEnd = cursorPosition + 1
-    }, 0)
   }
 }
 
@@ -1183,7 +1147,7 @@ const viewRankSubmissionDetail = (submissionId) => {
                 <select 
                   id="language-select"
                   v-model="language" 
-                  @change="changeLanguage(language)"
+                  @change="changeLanguage($event.target.value)"
                   class="language-select"
                 >
                   <option v-for="option in languageOptions" :key="option.value" :value="option.value">
@@ -1209,13 +1173,19 @@ const viewRankSubmissionDetail = (submissionId) => {
           </div>
           
           <div class="editor-container">
-            <textarea 
-              v-model="code" 
-              class="code-textarea" 
-              spellcheck="false"
-              placeholder="在此编写代码..."
-              @keydown="handleTabKey"
-            ></textarea>
+            <MonacoEditor
+              v-model:value="code"
+              :language="mapMonacoLanguage(language)"
+              theme="vs-dark"
+              @change="saveCodeToLocalStorage"
+              :options="{
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                minimap: { enabled: false },
+                fontSize: 14
+              }"
+              style="height: 100%;"
+            />
           </div>
           
           <!-- 自测面板 -->
@@ -1692,15 +1662,31 @@ const viewRankSubmissionDetail = (submissionId) => {
 
 .code-editor {
   flex: 1;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
   display: flex;
   flex-direction: column;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+}
+
+/* 移除原来的textarea样式 */
+.code-textarea {
+  display: none;
+}
+
+/* 为CodeMirror编辑器添加样式 */
+:deep(.cm-editor) {
   height: 100%;
-  width: 100%;
-  max-width: none;
+  font-size: 14px;
+}
+
+:deep(.cm-content) {
+  padding: 8px;
+}
+
+:deep(.cm-focused) {
+  outline: none;
 }
 
 /* 修复在移动端上的样式 */
@@ -1930,23 +1916,31 @@ pre {
 
 .editor-container {
   flex: 1;
-  background: #f5f5f5;
-  border-radius: 4px;
   overflow: hidden;
-  margin: 0;
+  position: relative;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
 }
 
+/* 移除原来的textarea样式 */
 .code-textarea {
-  width: 100%;
+  display: none;
+}
+
+/* 为CodeMirror编辑器添加样式 */
+:deep(.cm-editor) {
   height: 100%;
-  padding: 15px;
-  border: none;
-  resize: none;
-  font-family: 'Consolas', monospace;
   font-size: 14px;
-  line-height: 1.5;
-  background: #2d2d2d;
-  color: #ccc;
+}
+
+:deep(.cm-content) {
+  padding: 8px;
+}
+
+:deep(.cm-focused) {
+  outline: none;
 }
 
 /* 自测面板 */
