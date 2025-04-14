@@ -186,6 +186,12 @@ const routes = [
     component: () => import('../views/ContestCreate.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/contest-edit/:id',
+    name: 'ContestEdit',
+    component: () => import('../views/ContestEdit.vue'),
+    meta: { requiresAuth: true }
+  },
   // 通配符路由，匹配所有未定义的路径，必须放在最后
   {
     path: '/:pathMatch(.*)*',

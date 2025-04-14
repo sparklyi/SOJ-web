@@ -1,8 +1,9 @@
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { getSubmissionList, getSubmissionDetail, getLanguages } from '../api/problem'
 import { getUserId } from '../utils/auth'
+import { useRoute, useRouter } from 'vue-router'
 
 const submissions = ref([])
 const loading = ref(true)
@@ -170,6 +171,20 @@ const formatDateTime = (dateStr) => {
   })
 }
 
+// 格式化内存显示
+const formatMemory = (memoryInBytes) => {
+  if (memoryInBytes < 1024) {
+    return memoryInBytes + 'B'
+  } else if (memoryInBytes < 1024 * 1024) {
+    return (memoryInBytes / 1024).toFixed(2) + 'KB'
+  } else {
+    return (memoryInBytes / (1024 * 1024)).toFixed(2) + 'MB'
+  }
+}
+
+// 路由实例
+const route = useRoute()
+
 // 初始化
 onMounted(() => {
   fetchSubmissions(currentPage.value, pageSize.value)
@@ -262,7 +277,7 @@ onMounted(() => {
                 </td>
                 <td>{{ submission.language }}</td>
                 <td>{{ submission.time ? submission.time + 's' : '-' }}</td>
-                <td>{{ submission.memory ? Math.round(submission.memory / 1024) + 'MB' : '-' }}</td>
+                <td>{{ formatMemory(submission.memory) }}</td>
                 <td>{{ submission.contest_id || '-' }}</td>
                 <td>{{ formatDateTime(submission.CreatedAt) }}</td>
                 <td>
@@ -347,7 +362,7 @@ onMounted(() => {
             </div>
             <div class="detail-item" v-if="submissionDetail?.memory">
               <span class="label">内存占用:</span>
-              <span class="value">{{ Math.round(submissionDetail?.memory / 1024) }}MB</span>
+              <span class="value">{{ formatMemory(submissionDetail?.memory) }}</span>
             </div>
             <div class="detail-item" v-if="submissionDetail?.contest_id">
               <span class="label">竞赛:</span>
@@ -383,9 +398,12 @@ onMounted(() => {
 }
 
 h1 {
+  font-size: 28px;
   color: #333;
-  text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  font-weight: 600;
+  border-left: 4px solid #4CAF50;
+  padding-left: 15px;
 }
 
 .loading, .error, .empty {

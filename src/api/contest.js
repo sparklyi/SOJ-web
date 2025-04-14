@@ -89,7 +89,6 @@ export function getUserAppliedContests(params) {
   })
 }
 
-
 // 获取管理权限的竞赛列表
 export function getManageableContests(userId, params) {
   return request({
@@ -97,8 +96,34 @@ export function getManageableContests(userId, params) {
     method: 'post',
     data: {
       user_id: userId,
-      page:params.page,
-      page_size:params.page_size
+      page: params.page,
+      page_size: params.page_size
     }
+  })
+}
+
+// 创建或更新竞赛
+export function updateContest(data) {
+  return request({
+    url: '/api/v1/contest/update',
+    method: 'put',
+    data
+  })
+}
+
+// 创建新竞赛
+export function createContest(data) {
+  return request({
+    url: '/api/v1/contest/create',
+    method: 'post',
+    data
+  })
+}
+
+// 删除竞赛
+export function deleteContest(id) {
+  return request({
+    url: `/api/v1/contest/${Number(id)}`,
+    method: 'delete'
   })
 } 

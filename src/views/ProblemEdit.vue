@@ -429,15 +429,22 @@ const saveFormToLocal = () => {
     message.error('暂存表单数据失败')
   }
 }
+
+// 返回到题目管理页面
+const navigateBack = () => {
+  router.push('/problem-manage')
+}
 </script>
 
 <template>
   <div class="problem-edit-container">
     <div class="page-header">
       <h1>编辑题目</h1>
-      <div class="step-indicator">
-        步骤 {{ currentStep + 1 }}/{{ totalSteps }}
-      </div>
+      <button class="back-btn" @click="navigateBack">返回</button>
+    </div>
+    
+    <div class="step-indicator">
+      步骤 {{ currentStep + 1 }}/{{ totalSteps }}
     </div>
     
     <div v-if="loading" class="loading-container">
@@ -725,45 +732,41 @@ const saveFormToLocal = () => {
 
 <style scoped>
 .problem-edit-container {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
 }
 
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 400px;
-}
-
-.loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #1890ff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 16px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 .page-header {
+  margin-bottom: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
 }
 
 .page-header h1 {
-  font-size: 24px;
+  font-size: 28px;
   color: #333;
   margin: 0;
+  font-weight: 600;
+  border-left: 4px solid #4CAF50;
+  padding-left: 15px;
+}
+
+.back-btn {
+  padding: 8px 16px;
+  background-color: #f5f5f5;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: #333;
+}
+
+.back-btn:hover {
+  background-color: #e8e8e8;
+  color: #40a9ff;
+  border-color: #40a9ff;
 }
 
 .step-indicator {
