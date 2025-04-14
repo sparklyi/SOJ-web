@@ -6,6 +6,7 @@ import { getContestRank, getContestDetail } from '../api/contest'
 import { message } from 'ant-design-vue'
 import { marked } from 'marked'
 import { getUserId } from '../utils/auth'
+import MonacoEditor from 'monaco-editor-vue3'
 
 const route = useRoute()
 const router = useRouter()
@@ -87,17 +88,28 @@ const formatDuration = (ms) => {
   const seconds = Math.floor(ms / 1000)
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
   
-  const remainingHours = hours % 24
-  const remainingMinutes = minutes % 60
+  const h = hours % 24
+  const m = minutes % 60
+  const s = seconds % 60
   
-  let result = ''
-  if (days > 0) result += `${days}天 `
-  if (remainingHours > 0 || days > 0) result += `${remainingHours}小时 `
-  result += `${remainingMinutes}分钟`
+  const parts = []
+  if (h > 0) parts.push(`${h}小时`)
+  if (m > 0) parts.push(`${m}分钟`)
+  if (s > 0 || parts.length === 0) parts.push(`${s}秒`)
   
-  return result
+  return parts.join(' ')
+}
+
+// 格式化内存显示
+const formatMemory = (memoryInBytes) => {
+  if (memoryInBytes < 1024) {
+    return memoryInBytes + 'B'
+  } else if (memoryInBytes < 1024 * 1024) {
+    return (memoryInBytes / 1024).toFixed(2) + 'KB'
+  } else {
+    return (memoryInBytes / (1024 * 1024)).toFixed(2) + 'MB'
+  }
 }
 
 // 获取竞赛进度百分比
@@ -271,22 +283,52 @@ const getShortLanguageName = (fullName) => {
   if (fullName.includes('Python')) return 'python'
   if (fullName.includes('C++')) return 'cpp'
   if (fullName.includes('Java')) return 'java'
-  if (fullName.includes('Go')) return 'go'
+  if (fullName.includes('Go')) {
+    // 区分不同版本的Go
+    if (fullName.includes('1.13')) return 'go'
+    if (fullName.includes('1.18')) return 'go'
+    return 'go'
+  }
   // 默认返回小写的语言名称
   return fullName.toLowerCase()
 }
 
+// 根据语言保存和获取本地存储的代码
+const getStorageKey = (langName) => {
+  return `code_${problem.value.ID}_${langName || language.value}`
+}
+
+// 在本地存储中加载代码
+const loadCodeFromLocalStorage = (langName) => {
+  if (!problem.value) return false
+  const key = getStorageKey(langName)
+  const savedCode = localStorage.getItem(key)
+  if (savedCode) {
+    code.value = savedCode
+    return true
+  }
+  return false
+}
+
+// 保存代码到本地存储
+const saveCodeToLocalStorage = (langName) => {
+  if (!problem.value) return
+  const key = getStorageKey(langName)
+  localStorage.setItem(key, code.value)
+}
+
 // 设置默认代码
-const setDefaultCode = () => {
+const setDefaultCode = (langName) => {
   if (!problem.value) return
   
   // 先尝试从本地存储加载代码
-  if (loadCodeFromLocalStorage()) {
+  if (loadCodeFromLocalStorage(langName)) {
     return
   }
   
   // 根据选择的语言设置默认代码模板
-  switch (language.value) {
+  const langToUse = langName || language.value
+  switch (langToUse) {
     case 'cpp':
       code.value = `#include <iostream>\n#include <vector>\n#include <string>\nusing namespace std;\n\n// ${problem.value.name}\n\nint main() {\n    // 在这里编写代码\n    return 0;\n}`
       break
@@ -304,26 +346,26 @@ const setDefaultCode = () => {
   }
   
   // 保存到本地存储
+  saveCodeToLocalStorage(langToUse)
+}
+
+// 语言切换事件处理
+const handleLanguageChange = (event) => {
+  const newLang = event.target.value
+  // 先保存当前语言的代码
   saveCodeToLocalStorage()
-}
-
-// 保存代码到本地存储
-const saveCodeToLocalStorage = () => {
-  if (!problem.value) return
-  const key = `code_${problem.value.ID}_${language.value}`
-  localStorage.setItem(key, code.value)
-}
-
-// 从本地存储加载代码
-const loadCodeFromLocalStorage = () => {
-  if (!problem.value) return false
-  const key = `code_${problem.value.ID}_${language.value}`
-  const savedCode = localStorage.getItem(key)
-  if (savedCode) {
-    code.value = savedCode
-    return true
+  
+  // 更新语言
+  language.value = newLang
+  
+  // 更新语言ID
+  const selectedLang = languageOptions.value.find(opt => opt.value === newLang)
+  if (selectedLang) {
+    languageId.value = selectedLang.id
   }
-  return false
+  
+  // 加载新语言的代码或设置默认代码
+  loadCodeFromLocalStorage(newLang) || setDefaultCode(newLang)
 }
 
 // 切换自测面板
@@ -576,8 +618,6 @@ const showProblemAttempt = (status) => {
   return status && (status.status === 3 || status.status === 4 || status.attempts > 0)
 }
 
-
-
 // 格式化日期时间
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '-'
@@ -627,6 +667,22 @@ const useExampleInput = (index) => {
   }
 }
 
+// 语言映射函数 - 将内部语言标识映射到 Monaco 支持的语言
+const mapMonacoLanguage = (lang) => {
+  const languageMap = {
+    'cpp': 'cpp',
+    'java': 'java',
+    'python': 'python',
+    'javascript': 'javascript',
+    'js': 'javascript',
+    'html': 'html',
+    'go': 'go',
+    'go1.13': 'go',
+    'go1.18': 'go'
+  }
+  return languageMap[lang] || lang
+}
+
 // 生命周期钩子
 onMounted(async () => {
   // 先获取竞赛信息，再获取题目详情和语言
@@ -672,27 +728,6 @@ watch(language, (newLanguage) => {
 const isContestProblem = computed(() => {
   return !!getCurrentContestId()
 })
-
-/* 在合适的位置添加onKeyDown处理函数 */
-const handleEditorKeyDown = (e) => {
-  // 处理Tab键
-  if (e.key === 'Tab') {
-    e.preventDefault()
-    
-    // 获取当前光标位置
-    const start = e.target.selectionStart
-    const end = e.target.selectionEnd
-    
-    // 在光标位置插入制表符（2个空格）
-    const newValue = code.value.substring(0, start) + '  ' + code.value.substring(end)
-    code.value = newValue
-    
-    // 将光标位置移动到插入后的位置
-    nextTick(() => {
-      e.target.selectionStart = e.target.selectionEnd = start + 2
-    })
-  }
-}
 </script>
 
 <template>
@@ -802,7 +837,7 @@ const handleEditorKeyDown = (e) => {
           <div class="editor-header">
             <div class="editor-toolbar">
               <div class="language-selector">
-                <select id="language" v-model="language" @change="saveCodeToLocalStorage">
+                <select id="language" v-model="language" @change="handleLanguageChange">
                   <option v-for="lang in languageOptions" :key="lang.id" :value="lang.value">
                     {{ lang.label }}
                   </option>
@@ -812,14 +847,19 @@ const handleEditorKeyDown = (e) => {
           </div>
           
           <div class="code-editor">
-            <textarea 
-              v-model="code" 
-              @input="saveCodeToLocalStorage" 
-              @keydown="handleEditorKeyDown"
-              class="editor-textarea" 
-              spellcheck="false"
-              placeholder="在这里编写代码..."
-            ></textarea>
+            <MonacoEditor
+              v-model:value="code"
+              :language="mapMonacoLanguage(language)"
+              theme="vs-dark"
+              @change="saveCodeToLocalStorage"
+              :options="{
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                minimap: { enabled: false },
+                fontSize: 14
+              }"
+              style="height: 100%;"
+            />
           </div>
           
           <!-- 测试面板 -->
@@ -846,7 +886,7 @@ const handleEditorKeyDown = (e) => {
               </div>
               <div class="run-stats" v-if="runResult.time">
                 <span>运行耗时: {{ runResult.time }}s</span>
-                <span>内存使用: {{ Math.round(runResult.memory / 1024) }}MB</span>
+                <span>内存使用: {{ formatMemory(runResult.memory) }}</span>
               </div>
             </div>
             <div class="test-actions">
@@ -907,7 +947,7 @@ const handleEditorKeyDown = (e) => {
               <div class="cell-language">{{ item.language }}</div>
               <div class="cell-time">{{ formatDateTime(item.CreatedAt) }}</div>
               <div class="cell-runtime">{{ item.time ? item.time + 's' : '-' }}</div>
-              <div class="cell-memory">{{ item.memory ? Math.round(item.memory / 1024) + 'MB' : '-' }}</div>
+              <div class="cell-memory">{{ item.memory ? formatMemory(item.memory) : '-' }}</div>
               <div class="cell-actions">
                 <button 
                   class="view-code-btn" 
@@ -979,7 +1019,7 @@ const handleEditorKeyDown = (e) => {
                 </div>
                 <div class="detail-item" v-if="submissionDetail?.memory">
                   <span class="label">内存占用:</span>
-                  <span class="value">{{ Math.round(submissionDetail?.memory / 1024) }}MB</span>
+                  <span class="value">{{ formatMemory(submissionDetail?.memory) }}</span>
                 </div>
                 <div class="detail-item">
                   <span class="label">提交时间:</span>
@@ -1459,22 +1499,30 @@ const handleEditorKeyDown = (e) => {
 
 .code-editor {
   flex: 1;
-  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #1e1e1e;
+}
+
+/* 为CodeMirror编辑器添加样式 */
+:deep(.cm-editor) {
+  height: 100%;
+  font-size: 14px;
+}
+
+:deep(.cm-content) {
+  padding: 8px;
+}
+
+:deep(.cm-focused) {
+  outline: none;
 }
 
 .editor-textarea {
-  width: 100%;
-  height: 100%;
-  padding: 16px;
-  border: none;
-  resize: none;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #ccc; /* 亮色字体 */
-  background: #1e1e1e; /* 黑色背景 */
-  outline: none;
-  box-sizing: border-box;
+  display: none;
 }
 
 .test-panel {

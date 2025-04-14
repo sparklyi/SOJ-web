@@ -6,7 +6,9 @@ import { message, Tabs } from 'ant-design-vue'
 import * as echarts from 'echarts'
 import { marked } from 'marked'
 import { getUserId } from '../utils/auth'
-// import lottie from 'lottie-web'
+import MonacoEditor from 'monaco-editor-vue3'
+import lottie from 'lottie-web'
+// import { getUserId } from '../utils/auth'
 
 const TabPane = Tabs.TabPane
 
@@ -271,95 +273,102 @@ const getShortLanguageName = (fullName) => {
   if (fullName.includes('Java')) return 'java'
   if (fullName.includes('Go')) {
     // 区分不同版本的Go
-    if (fullName.includes('1.13')) return 'go1.13'
-    if (fullName.includes('1.18')) return 'go1.18'
+    if (fullName.includes('1.13')) return 'go'
+    if (fullName.includes('1.18')) return 'go'
     return 'go'
   }
   // 默认返回小写的语言名称
   return fullName.toLowerCase()
 }
 
+// 语言映射函数 - 将内部语言标识映射到 Monaco 支持的语言
+const mapMonacoLanguage = (lang) => {
+  const languageMap = {
+    'cpp': 'cpp',
+    'java': 'java',
+    'python': 'python',
+    'javascript': 'javascript',
+    'js': 'javascript',
+    'html': 'html',
+    'go': 'go',
+    'go1.13': 'go',
+    'go1.18': 'go'
+  }
+  return languageMap[lang] || lang
+}
+
+// 根据语言保存和获取本地存储的代码
+const getStorageKey = (langName) => {
+  return `code_${route.params.id}_${langName || language.value}`
+}
+
 // 设置默认代码
-const setDefaultCode = () => {
+const setDefaultCode = (langName) => {
   if (!problem.value) return
   
   // 先尝试从本地存储加载代码
-  if (loadCodeFromLocalStorage()) {
+  if (loadCodeFromLocalStorage(langName)) {
     return
   }
   
   // 根据选择的语言设置默认代码模板
-  switch (language.value) {
+  const langToUse = langName || language.value
+  switch (langToUse) {
     case 'cpp':
-      code.value = `#include <iostream>
-#include <vector>
-#include <string>
-using namespace std;
-
-// ${problem.value.name}
-${problem.value.description.split('\n').map(line => '// ' + line).join('\n')}
-
-int main() {
-    // 在这里编写代码
-    return 0;
-}`
+      code.value = `#include <iostream>\n#include <vector>\n#include <string>\nusing namespace std;\n\n// ${problem.value.name}\n\nint main() {\n    // 在这里编写代码\n    return 0;\n}`
       break
     case 'java':
-      code.value = `import java.util.*;
-
-public class Solution {
-    // ${problem.value.name}
-    ${problem.value.description.split('\n').map(line => '    // ' + line).join('\n')}
-    
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        // 在这里编写代码
-    }
-}`
+      code.value = `import java.util.*;\n\npublic class Solution {\n    // ${problem.value.name}\n    \n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        // 在这里编写代码\n    }\n}`
       break
     case 'python':
-      code.value = `# ${problem.value.name}
-${problem.value.description.split('\n').map(line => '# ' + line).join('\n')}
-
-# 在这里编写代码
-`
+      code.value = `# ${problem.value.name}\n\n# 在这里编写代码\n`
       break
     case 'go':
-      code.value = `package main
-
-import (
-    "fmt"
-)
-
-// ${problem.value.name}
-${problem.value.description.split('\n').map(line => '// ' + line).join('\n')}
-
-func main() {
-    // 在这里编写代码
-}
-`
+      code.value = `package main\n\nimport (\n    "fmt"\n)\n\n// ${problem.value.name}\n\nfunc main() {\n    // 在这里编写代码\n}\n`
       break
     default:
-      code.value = `// ${problem.value.name}
-${problem.value.description.split('\n').map(line => '// ' + line).join('\n')}
-
-// 在这里编写代码
-`
+      code.value = `// ${problem.value.name}\n\n// 在这里编写代码\n`
   }
+  
+  // 保存到本地存储
+  saveCodeToLocalStorage(langToUse)
 }
 
-// 更改编程语言
-const changeLanguage = (lang) => {
-  language.value = lang
-  // 更新语言ID
-  const selectedLang = languageOptions.value.find(opt => opt.value === lang)
-  if (selectedLang) {
-    languageId.value = selectedLang.id
-    // 尝试加载缓存的代码，如果没有则使用默认模板
-    if (!loadCodeFromLocalStorage()) {
-      setDefaultCode()
-    }
+// 保存代码到本地存储
+const saveCodeToLocalStorage = (langName) => {
+  if (!problem.value) return
+  const key = getStorageKey(langName)
+  localStorage.setItem(key, code.value)
+}
+
+// 在本地存储中加载代码
+const loadCodeFromLocalStorage = (langName) => {
+  if (!problem.value) return false
+  const key = getStorageKey(langName)
+  const savedCode = localStorage.getItem(key)
+  if (savedCode) {
+    code.value = savedCode
+    return true
   }
+  return false
+}
+
+// 切换编程语言
+const changeLanguage = (newLang) => {
+  // 先保存当前语言的代码
+  saveCodeToLocalStorage(language.value)
+  
+  // 更新语言选择
+  language.value = newLang
+  
+  // 获取对应的语言ID
+  const matchedLanguage = languageOptions.value.find(opt => opt.value === newLang)
+  if (matchedLanguage) {
+    languageId.value = matchedLanguage.id
+  }
+  
+  // 加载对应语言的代码或设置默认代码
+  loadCodeFromLocalStorage(newLang) || setDefaultCode(newLang)
 }
 
 // 提交代码
@@ -521,34 +530,6 @@ const useExampleInput = (index) => {
   }
 }
 
-// 代码缓存相关函数
-const getLocalStorageKey = () => {
-  return `soj_code_${route.params.id}_${languageId.value}`
-}
-
-const saveCodeToLocalStorage = () => {
-  try {
-    const key = getLocalStorageKey()
-    localStorage.setItem(key, code.value)
-  } catch (error) {
-    console.error('保存代码到本地失败:', error)
-  }
-}
-
-const loadCodeFromLocalStorage = () => {
-  try {
-    const key = getLocalStorageKey()
-    const savedCode = localStorage.getItem(key)
-    if (savedCode) {
-      code.value = savedCode
-      return true
-    }
-  } catch (error) {
-    console.error('从本地加载代码失败:', error)
-  }
-  return false
-}
-
 // 运行代码
 const runTestCode = async () => {
   if (!code.value.trim()) {
@@ -647,6 +628,10 @@ const formatCode = () => {
 
 // 切换选项卡
 const switchTab = (tab) => {
+  // 保存当前的弹窗状态
+  const wasSubmissionDetailVisible = showSubmissionDetail.value
+  const currentSubmissionDetail = submissionDetail.value
+  
   activeTab.value = tab
   
   // 当切换到提交记录选项卡时获取提交记录
@@ -658,22 +643,13 @@ const switchTab = (tab) => {
     // 获取排行榜数据
     fetchProblemRanking()
   }
-}
-
-// 处理Tab键
-const handleTabKey = (event) => {
-  if (event.key === 'Tab') {
-    event.preventDefault()
-    const cursorPosition = event.target.selectionStart
-    const cursorEnd = event.target.selectionEnd
-    
-    // 在光标位置插入Tab字符
-    code.value = code.value.slice(0, cursorPosition) + '\t' + code.value.slice(cursorEnd)
-    
-    // 手动更新光标位置
-    setTimeout(() => {
-      event.target.selectionStart = event.target.selectionEnd = cursorPosition + 1
-    }, 0)
+  
+  // 如果之前弹窗是开着的，确保切换后仍然显示
+  if (wasSubmissionDetailVisible && currentSubmissionDetail) {
+    submissionDetail.value = currentSubmissionDetail
+    nextTick(() => {
+      showSubmissionDetail.value = true
+    })
   }
 }
 
@@ -1034,12 +1010,18 @@ const viewRankSubmissionDetail = (submissionId) => {
   const submissionData = timeRanking.value.find(item => item.submissionId === submissionId)
   
   if (submissionData && submissionData.originalData) {
-    // 找到数据，展示弹窗
-    showSubmissionDetail.value = true
+    // 重要：先关闭可能已经打开的模态窗
+    showSubmissionDetail.value = false
+    
+    // 然后设置数据
+    submissionDetail.value = submissionData.originalData
     submissionDetailLoading.value = false
     
-    // 直接使用原始完整数据
-    submissionDetail.value = submissionData.originalData
+    // 使用nextTick确保DOM更新后再显示模态窗
+    nextTick(() => {
+      showSubmissionDetail.value = true
+      console.log('显示提交详情:', submissionId, showSubmissionDetail.value)
+    })
   } else {
     message.warning('未找到对应的提交详情')
   }
@@ -1127,10 +1109,6 @@ const viewRankSubmissionDetail = (submissionId) => {
               <div class="output-format markdown-body" v-html="parsedOutputFormat"></div>
             </div>
 
-            <div class="section" v-if="problem.remark">
-              <h2>备注</h2>
-              <div class="remark markdown-body" v-html="parsedRemark"></div>
-            </div>
 
             <div class="section">
               <h2>样例</h2>
@@ -1153,6 +1131,11 @@ const viewRankSubmissionDetail = (submissionId) => {
                 </div>
               </div>
             </div>
+            
+            <div class="section" v-if="problem.remark">
+              <h2>备注</h2>
+              <div class="remark markdown-body" v-html="parsedRemark"></div>
+            </div>
           </div>
         </div>
         
@@ -1164,7 +1147,7 @@ const viewRankSubmissionDetail = (submissionId) => {
                 <select 
                   id="language-select"
                   v-model="language" 
-                  @change="changeLanguage(language)"
+                  @change="changeLanguage($event.target.value)"
                   class="language-select"
                 >
                   <option v-for="option in languageOptions" :key="option.value" :value="option.value">
@@ -1190,13 +1173,19 @@ const viewRankSubmissionDetail = (submissionId) => {
           </div>
           
           <div class="editor-container">
-            <textarea 
-              v-model="code" 
-              class="code-textarea" 
-              spellcheck="false"
-              placeholder="在此编写代码..."
-              @keydown="handleTabKey"
-            ></textarea>
+            <MonacoEditor
+              v-model:value="code"
+              :language="mapMonacoLanguage(language)"
+              theme="vs-dark"
+              @change="saveCodeToLocalStorage"
+              :options="{
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                minimap: { enabled: false },
+                fontSize: 14
+              }"
+              style="height: 100%;"
+            />
           </div>
           
           <!-- 自测面板 -->
@@ -1317,7 +1306,7 @@ const viewRankSubmissionDetail = (submissionId) => {
               <div class="cell-language">{{ item.language }}</div>
               <div class="cell-time">{{ formatDateTime(item.CreatedAt) }}</div>
               <div class="cell-runtime">{{ item.time ? item.time + 's' : '-' }}</div>
-              <div class="cell-memory">{{ item.memory ? Math.round(item.memory / 1024) + 'KB' : '-' }}</div>
+              <div class="cell-memory">{{ item.memory ? formatMemory(item.memory) : '-' }}</div>
               <div class="cell-actions">
                 <button 
                   class="view-code-btn" 
@@ -1348,58 +1337,6 @@ const viewRankSubmissionDetail = (submissionId) => {
               >
                 下一页
               </button>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 提交详情对话框 -->
-        <div class="submission-detail-modal" v-if="showSubmissionDetail">
-          <div class="modal-overlay" @click="closeSubmissionDetail"></div>
-          <div class="modal-content">
-            <div class="modal-header">
-              <h3>提交详情 #{{ submissionDetail?.ID }}</h3>
-              <button class="close-btn" @click="closeSubmissionDetail">
-                <svg viewBox="0 0 24 24" width="20" height="20">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </button>
-            </div>
-            <div v-if="submissionDetailLoading" class="modal-loading">加载中...</div>
-            <div v-else class="modal-body">
-              <div class="detail-info">
-                <div class="detail-item">
-                  <span class="label">题目:</span>
-                  <span class="value">{{ submissionDetail?.problem_name }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="label">用户:</span>
-                  <span class="value">{{ submissionDetail?.user_name }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="label">语言:</span>
-                  <span class="value">{{ submissionDetail?.language }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="label">状态:</span>
-                  <span class="value" :class="getStatusClass(submissionDetail?.status)">{{ submissionDetail?.status }}</span>
-                </div>
-                <div class="detail-item" v-if="submissionDetail?.time">
-                  <span class="label">运行时间:</span>
-                  <span class="value">{{ submissionDetail?.time }}s</span>
-                </div>
-                <div class="detail-item" v-if="submissionDetail?.memory">
-                  <span class="label">内存占用:</span>
-                  <span class="value">{{ Math.round(submissionDetail?.memory / 1024) }}MB</span>
-                </div>
-                <div class="detail-item">
-                  <span class="label">提交时间:</span>
-                  <span class="value">{{ formatDateTime(submissionDetail?.CreatedAt) }}</span>
-                </div>
-              </div>
-              <div class="code-container">
-                <h4>源代码</h4>
-                <pre class="source-code">{{ submissionDetail?.source_code }}</pre>
-              </div>
             </div>
           </div>
         </div>
@@ -1447,96 +1384,41 @@ const viewRankSubmissionDetail = (submissionId) => {
           
           <!-- 排行榜卡片 -->
           <div class="stat-card ranking-section">
-            <h2>时间/空间排行榜</h2>
+            <h2>排行榜</h2>
             <div v-if="rankingLoading" class="chart-loading">加载中...</div>
             <div v-else-if="timeRanking.length === 0" class="empty-chart">
               暂无排行数据
             </div>
-            <div v-else class="custom-tabs">
-              <div class="custom-tabs-header">
-                <div 
-                  class="custom-tab-item" 
-                  :class="{ active: activeRankTab === 'time' }"
-                  @click="switchRankTab('time')"
-                >
-                  时间排行
-                </div>
-                <div 
-                  class="custom-tab-item" 
-                  :class="{ active: activeRankTab === 'memory' }"
-                  @click="switchRankTab('memory')"
-                >
-                  内存排行
-                </div>
-              </div>
-              
-              <div class="custom-tabs-content">
-                <!-- 时间排行 -->
-                <div v-if="activeRankTab === 'time'" class="rank-table-wrapper">
-                  <table class="rank-table">
-                    <thead>
-                      <tr>
-                        <th class="rank-col">#</th>
-                        <th class="user-col">用户</th>
-                        <th class="stat-col">运行时间</th>
-                        <th class="stat-col">内存</th>
-                        <th class="lang-col">语言</th>
-                        <th class="action-col">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="item in timeRanking" :key="item.submissionId">
-                        <td class="rank-col">{{ item.rank }}</td>
-                        <td class="user-col">{{ item.username }}</td>
-                        <td class="stat-col highlight">{{ item.time }}</td>
-                        <td class="stat-col">{{ item.memory }}</td>
-                        <td class="lang-col">{{ item.language }}</td>
-                        <td class="action-col">
-                          <button 
-                            class="view-detail-btn" 
-                            @click.stop="viewRankSubmissionDetail(item.submissionId)"
-                          >
-                            查看详情
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                
-                <!-- 内存排行 -->
-                <div v-else-if="activeRankTab === 'memory'" class="rank-table-wrapper">
-                  <table class="rank-table">
-                    <thead>
-                      <tr>
-                        <th class="rank-col">#</th>
-                        <th class="user-col">用户</th>
-                        <th class="stat-col">运行时间</th>
-                        <th class="stat-col">内存</th>
-                        <th class="lang-col">语言</th>
-                        <th class="action-col">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="item in memoryRanking" :key="item.submissionId">
-                        <td class="rank-col">{{ item.rank }}</td>
-                        <td class="user-col">{{ item.username }}</td>
-                        <td class="stat-col">{{ item.time }}</td>
-                        <td class="stat-col highlight">{{ item.memory }}</td>
-                        <td class="lang-col">{{ item.language }}</td>
-                        <td class="action-col">
-                          <button 
-                            class="view-detail-btn" 
-                            @click.stop="viewRankSubmissionDetail(item.submissionId)"
-                          >
-                            查看详情
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+            <div v-else class="rank-table-wrapper">
+              <table class="rank-table">
+                <thead>
+                  <tr>
+                    <th class="rank-col">#</th>
+                    <th class="user-col">用户</th>
+                    <th class="stat-col">运行时间</th>
+                    <th class="stat-col">内存</th>
+                    <th class="lang-col">语言</th>
+                    <th class="action-col">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in timeRanking" :key="item.submissionId">
+                    <td class="rank-col">{{ item.rank }}</td>
+                    <td class="user-col">{{ item.username }}</td>
+                    <td class="stat-col highlight">{{ item.time }}</td>
+                    <td class="stat-col">{{ item.memory }}</td>
+                    <td class="lang-col">{{ item.language }}</td>
+                    <td class="action-col">
+                      <button 
+                        class="view-detail-btn" 
+                        @click.stop="viewRankSubmissionDetail(item.submissionId)"
+                      >
+                        查看详情
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1585,6 +1467,58 @@ const viewRankSubmissionDetail = (submissionId) => {
       </div>
     </div>
     
+    <!-- 提交详情对话框 - 移到根级别 -->
+    <div class="submission-detail-modal" v-if="showSubmissionDetail">
+      <div class="modal-overlay" @click="closeSubmissionDetail"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>提交详情 #{{ submissionDetail?.ID }}</h3>
+          <button class="close-btn" @click="closeSubmissionDetail">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div v-if="submissionDetailLoading" class="modal-loading">加载中...</div>
+        <div v-else class="modal-body">
+          <div class="detail-info">
+            <div class="detail-item">
+              <span class="label">题目:</span>
+              <span class="value">{{ submissionDetail?.problem_name }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">用户:</span>
+              <span class="value">{{ submissionDetail?.user_name }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">语言:</span>
+              <span class="value">{{ submissionDetail?.language }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">状态:</span>
+              <span class="value" :class="getStatusClass(submissionDetail?.status)">{{ submissionDetail?.status }}</span>
+            </div>
+            <div class="detail-item" v-if="submissionDetail?.time">
+              <span class="label">运行时间:</span>
+              <span class="value">{{ submissionDetail?.time }}s</span>
+            </div>
+            <div class="detail-item" v-if="submissionDetail?.memory">
+              <span class="label">内存占用:</span>
+              <span class="value">{{ formatMemory(submissionDetail?.memory) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">提交时间:</span>
+              <span class="value">{{ formatDateTime(submissionDetail?.CreatedAt) }}</span>
+            </div>
+          </div>
+          <div class="code-container">
+            <h4>源代码</h4>
+            <pre class="source-code">{{ submissionDetail?.source_code }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <!-- 判题动画 -->
     <div class="judge-animation-container" v-if="showJudgeAnimation">
       <div class="judge-animation-overlay"></div>
@@ -1625,13 +1559,14 @@ const viewRankSubmissionDetail = (submissionId) => {
 
 <style scoped>
 .problem-detail-container {
-  width: 135%;
+  width: 120%;
   max-width: none;
   padding: 20px;
-  margin-left: -17%;
+  margin-left: -10%;
   background-color: #f6f8fa;
-  height: 100vh;
-  overflow: hidden;
+  height: calc(100vh - 68px);
+  overflow: hidden;  
+
   display: flex;
   flex-direction: column;
 }
@@ -1715,6 +1650,7 @@ const viewRankSubmissionDetail = (submissionId) => {
   width: 100%;
   max-width: none;
   padding: 0;
+  height: calc(100vh - 150px);
 }
 
 .problem-info {
@@ -1722,21 +1658,41 @@ const viewRankSubmissionDetail = (submissionId) => {
   overflow-y: auto;
   padding: 0;
   height: 100%;
-  width: 100%;
-  max-width: none;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .code-editor {
-  flex: 1;
+  flex: 1.2;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
-  width: 100%;
-  max-width: none;
+}
+
+/* 移除原来的textarea样式 */
+.code-textarea {
+  display: none;
+}
+
+/* 为CodeMirror编辑器添加样式 */
+:deep(.cm-editor) {
+  height: 100%;
+  font-size: 14px;
+}
+
+:deep(.cm-content) {
+  padding: 8px;
+}
+
+:deep(.cm-focused) {
+  outline: none;
 }
 
 /* 修复在移动端上的样式 */
@@ -1966,32 +1922,438 @@ pre {
 
 .editor-container {
   flex: 1;
-  background: #f5f5f5;
-  border-radius: 4px;
   overflow: hidden;
-  margin: 0;
+  position: relative;
+  height: calc(100% - 50px);
 }
 
+/* 移除原来的textarea样式 */
 .code-textarea {
-  width: 100%;
+  display: none;
+}
+
+/* 为CodeMirror编辑器添加样式 */
+:deep(.cm-editor) {
   height: 100%;
-  padding: 15px;
-  border: none;
-  resize: none;
-  font-family: 'Consolas', monospace;
   font-size: 14px;
-  line-height: 1.5;
-  background: #2d2d2d;
-  color: #ccc;
+}
+
+:deep(.cm-content) {
+  padding: 8px;
+}
+
+:deep(.cm-focused) {
+  outline: none;
 }
 
 /* 自测面板 */
 .test-panel {
-  background: white;
-  border-radius: 0;
-  padding: 16px;
+  height: 200px;
+  overflow-y: auto;
+  border-top: 1px solid #e8e8e8;
+  background-color: #fafafa;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.panel-header h3 {
   margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.run-stats {
+  font-size: 13px;
+  color: #666;
+}
+
+.stat-item {
+  margin-left: 10px;
+}
+
+.input-area, .output-area {
+  margin-bottom: 15px;
+}
+
+.test-input-textarea {
+  width: 100%;
+  height: 80px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  background: white;
+  transition: border-color 0.3s;
+}
+
+.test-input-textarea:focus {
+  border-color: #40a9ff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+}
+
+.run-output {
+  background: white;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  max-height: 150px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.panel-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.run-test-btn {
+  padding: 6px 16px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.run-test-btn:hover {
+  background: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+}
+
+.run-test-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fafafa;
   border-top: 1px solid #eaeaea;
+}
+
+.run-btn,
+.submit-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.run-btn {
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.run-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.submit-btn {
+  background: #40a9ff;
+  color: white;
+}
+
+.submit-btn:hover {
+  background: #4dabf8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+}
+
+.remark {
+  color: #666;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  background-color: #fff8e1;
+  padding: 15px;
+  border-radius: 4px;
+  border-left: 4px solid #ffc107;
+}
+
+/* 移动端适配 */
+.mobile-toggle {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .problem-detail-container {
+    padding: 10px;
+    height: 100vh;
+  }
+  
+  .problem-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-radius: 8px;
+  }
+}
+
+.problem-header {
+  margin-bottom: 10px;
+  padding: 15px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.problem-header h1 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 24px;
+}
+
+.problem-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.level-tag {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.level-tag.easy {
+  background: #e8f5e9;
+  color: #4caf50;
+}
+
+.level-tag.mid {
+  background: #fff3e0;
+  color: #ff9800;
+}
+
+.level-tag.hard {
+  background: #ffebee;
+  color: #f44336;
+}
+
+.create-time {
+  color: #666;
+  font-size: 14px;
+}
+
+.section {
+  margin-bottom: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s;
+  width: 100%;
+}
+
+.section:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.section h2 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.description,
+.input-format,
+.output-format {
+  color: #666;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  width: 100%;
+}
+
+.samples {
+  display: grid;
+  gap: 15px;
+}
+
+.sample {
+  background: #f9f9f9;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #eaeaea;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.sample:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.sample-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.sample-title {
+  color: #333;
+  font-weight: 500;
+}
+
+.use-example-btn {
+  padding: 4px 8px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.use-example-btn:hover {
+  background: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sample-content {
+  display: grid;
+  gap: 12px;
+}
+
+.sample-input,
+.sample-output {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #eaeaea;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.label {
+  color: #666;
+  font-size: 14px;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #eaeaea;
+}
+
+pre {
+  margin: 0;
+  padding: 12px;
+  background: white;
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.editor-header {
+  padding: 12px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selector-wrapper {
+  position: relative;
+  width: 180px;
+}
+
+.language-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background-color: white;
+  color: #333;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  outline: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 30px;
+}
+
+.select-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #888;
+}
+
+.language-select:hover {
+  border-color: #40a9ff;
+}
+
+.language-select:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.editor-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  height: calc(100% - 50px);
+}
+
+/* 移除原来的textarea样式 */
+.code-textarea {
+  display: none;
+}
+
+/* 为CodeMirror编辑器添加样式 */
+:deep(.cm-editor) {
+  height: 100%;
+  font-size: 14px;
+}
+
+:deep(.cm-content) {
+  padding: 8px;
+}
+
+:deep(.cm-focused) {
+  outline: none;
+}
+
+/* 自测面板 */
+.test-panel {
+  height: 200px;
+  overflow-y: auto;
+  border-top: 1px solid #e8e8e8;
+  background-color: #fafafa;
 }
 
 .panel-header {
@@ -3365,5 +3727,9 @@ pre {
   background: #40a9ff;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.problem-content {
+  padding: 20px;
 }
 </style> 

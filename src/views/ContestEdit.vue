@@ -1,25 +1,19 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { message, Modal, DatePicker, TimePicker } from 'ant-design-vue'
 import { useUserStore } from '../store/user'
 import request from '../utils/request'
+import { getContestDetail, updateContest } from '../api/contest'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const loading = ref(false)
+const contestId = route.params.id
 
 // 检查权限
 const hasPermission = computed(() => userStore.isAdmin)
-
-// 权限检查
-onMounted(() => {
-  if (!hasPermission.value) {
-    message.error('您没有创建比赛的权限')
-    router.push('/')
-    return
-  }
-})
 
 // 比赛表单数据
 const contestForm = reactive({
@@ -40,6 +34,61 @@ const contestTypes = [
   { value: 'ACM', label: 'ACM' },
   { value: 'OI', label: 'OI' },
 ]
+
+// 权限检查和数据加载
+onMounted(() => {
+  if (!hasPermission.value) {
+    message.error('您没有编辑比赛的权限')
+    router.push('/')
+    return
+  }
+  
+  // 加载比赛详情
+  fetchContestDetail()
+})
+
+// 获取比赛详情
+const fetchContestDetail = async () => {
+  loading.value = true
+  try {
+    const res = await getContestDetail(contestId)
+    if (res.code === 200 && res.data) {
+      const contest = res.data
+      
+      // 填充表单数据
+      contestForm.name = contest.name || ''
+      contestForm.tag = contest.tag || ''
+      contestForm.sponsor = contest.sponsor || ''
+      contestForm.description = contest.description || ''
+      
+      // 转换时间字符串为日期对象
+      if (contest.start_time) {
+        contestForm.start_time = new Date(contest.start_time)
+      }
+      if (contest.end_time) {
+        contestForm.end_time = new Date(contest.end_time)
+      }
+      if (contest.freeze_time) {
+        contestForm.freeze_time = new Date(contest.freeze_time)
+      }
+      
+      contestForm.public = contest.public || false
+      contestForm.type = contest.type || 'ACM'
+      contestForm.publish = contest.publish || false
+      
+      message.success('比赛信息加载成功')
+    } else {
+      message.error(res.message || '获取比赛详情失败')
+      router.push('/contests')
+    }
+  } catch (error) {
+    console.error('获取比赛详情失败:', error)
+    message.error('获取比赛详情失败')
+    router.push('/contests')
+  } finally {
+    loading.value = false
+  }
+}
 
 // 表单验证
 const validateForm = () => {
@@ -96,15 +145,6 @@ const validateForm = () => {
   return true
 }
 
-// 创建比赛API
-const createContestAPI = (data) => {
-  return request({
-    url: '/api/v1/contest/create',
-    method: 'post',
-    data
-  })
-}
-
 // 格式化时间为ISO字符串格式
 const formatTimeForAPI = (date) => {
   if (!date) return null
@@ -116,12 +156,13 @@ const formatTimeForAPI = (date) => {
   }
 }
 
-// 提交表单创建比赛
+// 提交表单更新比赛
 const submitForm = async () => {
   if (!validateForm()) return
   
   // 准备提交数据
   const formData = {
+    id: Number(contestId),  // 必须包含比赛ID
     name: contestForm.name,
     tag: contestForm.tag,
     sponsor: contestForm.sponsor,
@@ -132,64 +173,52 @@ const submitForm = async () => {
     public: contestForm.public,
     type: contestForm.type,
     publish: contestForm.publish,
-    problem_set: [], // 创建后再添加题目
   }
   
   loading.value = true
   try {
-    const res = await createContestAPI(formData)
+    const res = await updateContest(formData)
     if (res.code === 200) {
-      message.success('创建比赛成功')
-      Modal.confirm({
-        title: '比赛创建成功',
-        content: `比赛已创建成功，比赛代码为：${res.data.code}。是否立即前往比赛管理页面添加题目？`,
-        okText: '前往管理',
-        cancelText: '稍后处理',
-        onOk: () => {
-          router.push('/contest-manage')
-        },
-        onCancel: () => {
-          router.push('/contests')
-        }
-      })
+      message.success('更新比赛成功')
+      router.push('/contest-manage')
     } else {
-      message.error(res.message || '创建比赛失败')
+      message.error(res.message || '更新比赛失败')
     }
   } catch (error) {
-    console.error('创建比赛失败:', error)
-    message.error('创建比赛失败，请检查网络连接')
+    console.error('更新比赛失败:', error)
+    message.error('更新比赛失败，请检查网络连接')
   } finally {
     loading.value = false
   }
 }
 
-// 取消创建
+// 取消编辑
 const cancel = () => {
   Modal.confirm({
     title: '确认取消',
-    content: '确定要取消创建比赛吗？所有已填写的内容将丢失。',
+    content: '确定要取消编辑比赛吗？所有未保存的修改将丢失。',
     okText: '确认',
     cancelText: '继续编辑',
     onOk: () => {
-      router.push('/contests')
+      router.push('/contest-manage')
     }
   })
 }
 
-// 返回上一页或比赛列表页面
+// 返回上一页或比赛管理页面
 const navigateBack = () => {
-  router.push('/contests')
+  router.push('/contest-manage')
 }
 </script>
 
 <template>
-  <div class="contest-create-container">
+  <div class="contest-edit-container">
     <div class="page-header">
-      <h1>创建新比赛</h1>
+      <h1>编辑比赛</h1>
       <button class="back-btn" @click="navigateBack">返回</button>
     </div>
     
-    <div class="form-container">
+    <div class="form-container" v-loading="loading">
       <div class="form-section">
         <h2 class="section-title">基本信息</h2>
         
@@ -246,7 +275,6 @@ const navigateBack = () => {
             show-time
             format="YYYY-MM-DD HH:mm:ss"
             placeholder="选择开始时间"
-            :disabled-date="(current) => current && current < Date.now() - 8.64e7"
             style="width: 100%"
           />
         </div>
@@ -320,7 +348,7 @@ const navigateBack = () => {
               </label>
               <span class="status-text">{{ contestForm.publish ? '立即发布' : '保存为草稿' }}</span>
             </div>
-            <p class="status-desc">{{ contestForm.publish ? '创建后立即发布' : '创建后先保存为草稿状态' }}</p>
+            <p class="status-desc">{{ contestForm.publish ? '更新后立即发布' : '更新后保存为草稿状态' }}</p>
           </div>
         </div>
       </div>
@@ -332,7 +360,7 @@ const navigateBack = () => {
           @click="submitForm" 
           :disabled="loading"
         >
-          {{ loading ? '创建中...' : '创建比赛' }}
+          {{ loading ? '更新中...' : '更新比赛' }}
         </button>
       </div>
     </div>
@@ -340,7 +368,7 @@ const navigateBack = () => {
 </template>
 
 <style scoped>
-.contest-create-container {
+.contest-edit-container {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;

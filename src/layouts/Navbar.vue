@@ -48,16 +48,18 @@ const userStore = useUserStore()
 
 <style scoped>
 .navbar {
-  background: white;
-  padding: 0 20px;
-  height: 60px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 0 30px;
+  height: 68px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
   position: sticky;
   top: 0;
   z-index: 100;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
 }
 
 .nav-brand {
@@ -66,32 +68,51 @@ const userStore = useUserStore()
 }
 
 .brand-logo {
-  height: 40px;
+  height: 42px;
   width: auto;
+  transition: transform 0.3s;
+}
+
+.brand-logo:hover {
+  transform: scale(1.05);
 }
 
 .nav-links {
   display: flex;
-  gap: 20px;
+  gap: 24px;
 }
 
 .nav-link {
-  color: #666;
+  color: #555;
   text-decoration: none;
-  padding: 8px 12px;
-  border-radius: 4px;
+  padding: 8px 16px;
+  border-radius: 8px;
   transition: all 0.3s;
   position: relative;
+  font-weight: 500;
+  font-size: 15px;
 }
 
 .nav-link:hover {
   color: #4a90e2;
-  background: #f5f5f5;
+  background: rgba(74, 144, 226, 0.08);
 }
 
 .nav-link.active {
   color: #4a90e2;
-  background: #e6f7ff;
+  background: rgba(74, 144, 226, 0.1);
+}
+
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  background-color: #4a90e2;
+  border-radius: 3px;
 }
 
 .nav-link.coming-soon {
@@ -100,19 +121,20 @@ const userStore = useUserStore()
 }
 
 .nav-link.coming-soon:hover {
-  background: #f9f9f9;
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .coming-soon-tag {
   position: absolute;
   top: -8px;
   right: -10px;
-  background: #ffab00;
+  background: linear-gradient(135deg, #ffab00, #ff7e00);
   color: white;
   font-size: 10px;
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 10px;
   white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(255, 171, 0, 0.3);
 }
 
 .nav-auth {
@@ -122,15 +144,39 @@ const userStore = useUserStore()
 }
 
 .login-btn {
-  padding: 8px 16px;
-  background: #4a90e2;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #4a90e2, #357dd8);
   color: white;
-  border-radius: 4px;
+  border-radius: 8px;
   text-decoration: none;
   transition: all 0.3s;
+  box-shadow: 0 4px 8px rgba(74, 144, 226, 0.2);
+  font-weight: 500;
 }
 
 .login-btn:hover {
-  background: #357dd8;
+  background: linear-gradient(135deg, #357dd8, #2d6bc0);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(74, 144, 226, 0.3);
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 15px;
+    height: 60px;
+  }
+  
+  .nav-links {
+    gap: 10px;
+  }
+  
+  .nav-link {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  
+  .brand-logo {
+    height: 36px;
+  }
 }
 </style> 

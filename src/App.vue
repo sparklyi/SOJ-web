@@ -43,13 +43,21 @@ onMounted(() => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: #f9fafc;
 }
 
 .main-content {
   flex: 1;
-  padding: 20px;
-  max-width: 1200px;
+  padding: 24px;
+  max-width: 1280px;
   margin: 0 auto;
   width: 100%;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 20px 15px;
+  }
 }
 </style>

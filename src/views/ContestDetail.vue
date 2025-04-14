@@ -848,6 +848,14 @@ onMounted(() => {
   padding: 20px;
 }
 
+.contest-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
 .loading {
   text-align: center;
   padding: 60px;

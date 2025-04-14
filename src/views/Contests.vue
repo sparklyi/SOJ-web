@@ -715,6 +715,9 @@ h1 {
   margin-bottom: 30px;
   color: #333;
   font-size: 28px;
+  font-weight: 600;
+  border-left: 4px solid #4CAF50;
+  padding-left: 15px;
 }
 
 .filters {
@@ -726,7 +729,7 @@ h1 {
   background: #fff;
   padding: 16px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .search-box {
@@ -792,20 +795,20 @@ h1 {
 }
 
 .contest-card {
-  background: white;
+  background: #fff;
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 16px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .contest-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .contest-info {
@@ -1129,28 +1132,29 @@ h1 {
 }
 
 .pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-  background: white;
-  padding: 15px;
+  margin-top: 24px;
+  padding: 16px;
+  background: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
 }
 
 .page-btn {
-  padding: 6px 12px;
-  background: #f5f5f5;
-  border: 1px solid #d9d9d9;
+  padding: 8px 16px;
+  background: #fff;
+  border: 1px solid #ddd;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .page-btn:hover:not(:disabled) {
-  color: #1890ff;
-  border-color: #1890ff;
+  color: #40a9ff;
+  border-color: #40a9ff;
 }
 
 .page-btn:disabled {
