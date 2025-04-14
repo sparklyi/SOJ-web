@@ -459,9 +459,12 @@ onMounted(async () => {
 }
 
 h1 {
+  font-size: 28px;
   color: #333;
-  text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
+  font-weight: 600;
+  border-left: 4px solid #4CAF50;
+  padding-left: 15px;
 }
 
 .loading, .error {

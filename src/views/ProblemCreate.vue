@@ -264,6 +264,11 @@ const cancel = () => {
   router.push('/problem-manage')
 }
 
+// 返回到题目管理页面
+const navigateBack = () => {
+  router.push('/problem-manage')
+}
+
 // 新增方法
 const toggleAllLanguages = () => {
   if (selectedLanguages.value.length === languages.value.length) {
@@ -278,10 +283,12 @@ const toggleAllLanguages = () => {
 <template>
   <div class="problem-create-container">
     <div class="page-header">
-      <h1>创建新题目</h1>
-      <div class="step-indicator">
-        步骤 {{ currentStep + 1 }}/{{ totalSteps }}
-      </div>
+      <h1>创建题目</h1>
+      <button class="back-btn" @click="navigateBack">返回</button>
+    </div>
+    
+    <div class="step-indicator">
+      步骤 {{ currentStep + 1 }}/{{ totalSteps }}
     </div>
     
     <div class="steps-container">
@@ -557,22 +564,41 @@ const toggleAllLanguages = () => {
 
 <style scoped>
 .problem-create-container {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
 }
 
 .page-header {
+  margin-bottom: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
 }
 
 .page-header h1 {
-  font-size: 24px;
+  font-size: 28px;
   color: #333;
   margin: 0;
+  font-weight: 600;
+  border-left: 4px solid #4CAF50;
+  padding-left: 15px;
+}
+
+.back-btn {
+  padding: 8px 16px;
+  background-color: #f5f5f5;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: #333;
+}
+
+.back-btn:hover {
+  background-color: #e8e8e8;
+  color: #40a9ff;
+  border-color: #40a9ff;
 }
 
 .step-indicator {

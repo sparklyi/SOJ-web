@@ -75,6 +75,47 @@ const upcomingContests = ref([
   }
 ])
 
+// 热门讨论
+const hotDiscussions = ref([
+  {
+    id: 1,
+    title: '如何优化动态规划算法的空间复杂度',
+    author: '算法大师',
+    viewCount: 328,
+    date: '2024-05-06'
+  },
+  {
+    id: 2,
+    title: '分享一道有趣的回溯算法题及解题思路',
+    author: 'CodeWizard',
+    viewCount: 256,
+    date: '2024-05-03'
+  },
+  {
+    id: 3,
+    title: '图解红黑树原理及其应用',
+    author: '数据结构爱好者',
+    viewCount: 187,
+    date: '2024-04-28'
+  }
+])
+
+// 活动通知
+const activityNotices = ref([
+  {
+    id: 1,
+    title: '算法竞赛冲刺训练营',
+    date: '2024-05-15',
+    type: '线上活动'
+  },
+  {
+    id: 2,
+    title: 'ACM编程技巧分享会',
+    date: '2024-05-22',
+    type: '线上讲座'
+  }
+])
+
 // 跳转到题目详情
 const goToProblem = (id) => {
   router.push(`/problem/${id}`)
@@ -94,6 +135,11 @@ const goToProblems = () => {
 const goToContests = () => {
   router.push('/contests')
 }
+
+// 跳转到讨论详情
+const goToDiscussion = (id) => {
+  router.push(`/discussion/${id}`)
+}
 </script>
 
 <template>
@@ -111,7 +157,7 @@ const goToContests = () => {
     </section>
     
     <div class="main-content">
-      <!-- 左侧内容：热门题目和近期竞赛 -->
+      <!-- 左侧内容：热门题目 -->
       <div class="left-content">
         <!-- 热门题目 -->
         <section class="card popular-problems">
@@ -143,7 +189,10 @@ const goToContests = () => {
             </div>
           </div>
         </section>
-        
+      </div>
+      
+      <!-- 中间内容：竞赛和活动 -->
+      <div class="middle-content">
         <!-- 近期竞赛 -->
         <section class="card upcoming-contests">
           <div class="card-header">
@@ -176,9 +225,27 @@ const goToContests = () => {
             </div>
           </div>
         </section>
+
+        <!-- 活动通知 -->
+        <section class="card activity-notices">
+          <div class="card-header">
+            <h2>活动通知</h2>
+          </div>
+          <div class="activity-list">
+            <div v-for="activity in activityNotices" :key="activity.id" class="activity-item">
+              <div class="activity-info">
+                <h3 class="activity-title">{{ activity.title }}</h3>
+                <div class="activity-meta">
+                  <span class="activity-date">日期: {{ activity.date }}</span>
+                  <span class="activity-type">{{ activity.type }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
       
-      <!-- 右侧内容：公告栏 -->
+      <!-- 右侧内容：公告栏和热门讨论 -->
       <div class="right-content">
         <section class="card announcement-board">
           <div class="card-header">
@@ -202,6 +269,31 @@ const goToContests = () => {
             </div>
           </div>
         </section>
+
+        <!-- 热门讨论 -->
+        <section class="card hot-discussions">
+          <div class="card-header">
+            <h2>热门讨论</h2>
+          </div>
+          <div class="discussion-list">
+            <div 
+              v-for="discussion in hotDiscussions" 
+              :key="discussion.id" 
+              class="discussion-item"
+              @click="goToDiscussion(discussion.id)"
+            >
+              <h3 class="discussion-title">{{ discussion.title }}</h3>
+              <div class="discussion-meta">
+                <span class="discussion-author">{{ discussion.author }}</span>
+                <span class="discussion-views">
+                  <i class="view-icon"></i>
+                  {{ discussion.viewCount }}
+                </span>
+                <span class="discussion-date">{{ discussion.date }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   </div>
@@ -216,24 +308,40 @@ const goToContests = () => {
 
 /* 主横幅 */
 .hero-section {
-  background: linear-gradient(135deg, #4a90e2, #6773e5);
-  border-radius: 12px;
-  padding: 60px 40px;
-  margin: 20px 0 30px;
+  background: linear-gradient(135deg, #4a90e2, #6773e5, #7e5de5);
+  border-radius: 16px;
+  padding: 70px 40px;
+  margin: 30px 0 40px;
   color: white;
   text-align: center;
-  box-shadow: 0 10px 25px rgba(74, 144, 226, 0.3);
+  box-shadow: 0 15px 30px rgba(74, 144, 226, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-section::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+  transform: rotate(30deg);
 }
 
 .hero-content {
   max-width: 700px;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-section h1 {
-  font-size: 2.5rem;
+  font-size: 3rem;
   font-weight: 700;
   margin-bottom: 16px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .hero-subtitle {
@@ -282,26 +390,34 @@ const goToContests = () => {
 /* 主内容区域 */
 .main-content {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 30px;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  gap: 20px;
   margin-bottom: 30px;
 }
 
 /* 卡片通用样式 */
 .card {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.03), 0 6px 6px rgba(0, 0, 0, 0.02);
   overflow: hidden;
   margin-bottom: 30px;
+  transition: transform 0.3s, box-shadow 0.3s;
+  border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.05), 0 10px 10px rgba(0, 0, 0, 0.03);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 24px 28px;
   border-bottom: 1px solid #f0f0f0;
+  background: linear-gradient(to right, #fcfcfc, #ffffff);
 }
 
 .card-header h2 {
@@ -334,10 +450,10 @@ const goToContests = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 20px 28px;
   border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.2s;
 }
 
 .problem-item:last-child {
@@ -346,6 +462,7 @@ const goToContests = () => {
 
 .problem-item:hover {
   background: #f8f9fa;
+  transform: translateX(5px);
 }
 
 .problem-title {
@@ -486,6 +603,7 @@ const goToContests = () => {
 /* 公告栏 */
 .announcement-board {
   height: 100%;
+  border-left: 4px solid #4a90e2;
 }
 
 .announcement-list {
@@ -495,6 +613,12 @@ const goToContests = () => {
 .announcement-item {
   padding: 16px 24px;
   border-bottom: 1px solid #f0f0f0;
+  transition: transform 0.2s;
+}
+
+.announcement-item:hover {
+  transform: translateX(5px);
+  background-color: #f9f9f9;
 }
 
 .announcement-item:last-child {
@@ -503,6 +627,8 @@ const goToContests = () => {
 
 .announcement-item.important {
   background-color: #fff8e1;
+  border-left: 3px solid #ffab00;
+  margin-left: -3px;
 }
 
 .announcement-header {
@@ -541,10 +667,127 @@ const goToContests = () => {
   margin: 0;
 }
 
+/* 活动通知 */
+.activity-list {
+  padding: 0;
+}
+
+.activity-item {
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.2s;
+}
+
+.activity-item:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-2px);
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-title {
+  font-size: 1rem;
+  margin: 0 0 8px;
+  color: #333;
+}
+
+.activity-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #666;
+}
+
+.activity-type {
+  padding: 2px 8px;
+  background: #e6f7ff;
+  color: #4a90e2;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+/* 热门讨论 */
+.hot-discussions {
+  margin-top: 20px;
+}
+
+.discussion-list {
+  padding: 0;
+}
+
+.discussion-item {
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.discussion-item:hover {
+  background-color: #f8f9fa;
+  transform: translateX(5px);
+}
+
+.discussion-item:last-child {
+  border-bottom: none;
+}
+
+.discussion-title {
+  font-size: 1rem;
+  margin: 0 0 8px;
+  color: #333;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.discussion-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #999;
+}
+
+.discussion-author {
+  color: #666;
+  font-weight: 500;
+}
+
+.discussion-views {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.view-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M12,4.5C7,4.5,2.73,7.61,1,12c1.73,4.39,6,7.5,11,7.5s9.27-3.11,11-7.5C21.27,7.61,17,4.5,12,4.5z M12,17c-2.76,0-5-2.24-5-5s2.24-5,5-5s5,2.24,5,5S14.76,17,12,17z M12,9c-1.66,0-3,1.34-3,3s1.34,3,3,3s3-1.34,3-3S13.66,9,12,9z'/%3E%3C/svg%3E");
+  background-size: contain;
+}
+
 /* 响应式设计 */
+@media (max-width: 1200px) {
+  .main-content {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .right-content {
+    grid-column: span 2;
+  }
+}
+
 @media (max-width: 900px) {
   .main-content {
     grid-template-columns: 1fr;
+  }
+  
+  .middle-content, .right-content {
+    grid-column: span 1;
   }
   
   .hero-section {

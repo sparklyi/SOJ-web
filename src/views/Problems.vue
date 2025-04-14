@@ -29,6 +29,53 @@ const levelOptions = [
   { value: 'hard', label: '困难' }
 ]
 
+// 近期竞赛
+const upcomingContests = ref([
+  {
+    id: 1,
+    title: '2024春季算法竞赛',
+    startTime: '2024-05-20 10:00',
+    duration: '3小时',
+    type: '个人赛'
+  },
+  {
+    id: 2,
+    title: '2024程序设计能力挑战赛',
+    startTime: '2024-06-15 14:00',
+    duration: '4小时',
+    type: '团队赛'
+  },
+  {
+    id: 3,
+    title: '前端编程竞赛',
+    startTime: '2024-05-30 15:00',
+    duration: '2小时',
+    type: '个人赛'
+  }
+])
+
+// 活动通知
+const activityNotices = ref([
+  {
+    id: 1,
+    title: '算法竞赛冲刺训练营',
+    date: '2024-05-15',
+    type: '线上活动'
+  },
+  {
+    id: 2,
+    title: 'ACM编程技巧分享会',
+    date: '2024-05-22',
+    type: '线上讲座'
+  },
+  {
+    id: 3,
+    title: '高效编程工作坊',
+    date: '2024-06-05',
+    type: '线下活动'
+  }
+])
+
 // 获取题目列表
 const fetchProblems = async () => {
   loading.value = true
@@ -177,6 +224,11 @@ const goToProblemDetail = (problemId) => {
   router.push(`/problem/${problemId}`)
 }
 
+// 跳转到竞赛详情
+const goToContest = (id) => {
+  router.push(`/contest/${id}`)
+}
+
 // 处理页码变化
 const handlePageChange = (page) => {
   currentPage.value = page
@@ -199,88 +251,153 @@ onMounted(() => {
     <h1>题库</h1>
     
     <!-- 搜索和筛选区域 -->
-    <div class="filters">
-      <div class="search-box">
-        <input 
-          v-model="filters.name" 
-          type="text" 
-          placeholder="搜索题目..."
-          @input="handleSearch"
-        >
+    <div class="filters-section">
+      <div class="filters-row">
+        <!-- 搜索框 -->
+        <div class="search-box">
+          <input 
+            v-model="filters.name" 
+            type="text" 
+            placeholder="搜索题目..."
+            @input="handleSearch"
+          />
+        </div>
+        
+        <!-- 难度选择 -->
+        <div class="filter-box">
+          <select v-model="filters.level" @change="handleSearch">
+            <option value="">所有难度</option>
+            <option value="easy">简单</option>
+            <option value="mid">中等</option>
+            <option value="hard">困难</option>
+          </select>
+        </div>
+        
+        <!-- 重置按钮 -->
+        <button class="reset-btn" @click="resetFilters">重置</button>
       </div>
-      <div class="filter-box">
-        <select v-model="filters.level" @change="handleSearch">
-          <option value="">所有难度</option>
-          <option value="easy">简单</option>
-          <option value="mid">中等</option>
-          <option value="hard">困难</option>
-        </select>
-      </div>
-      <div class="filter-box">
-        <select v-model="filters.page_size" @change="handlePageSizeChange">
-          <option :value="10">10条/页</option>
-          <option :value="20">20条/页</option>
-          <option :value="50">50条/页</option>
-          <option :value="100">100条/页</option>
-        </select>
-      </div>
-      <button class="reset-btn" @click="resetFilters">重置</button>
     </div>
 
-    <!-- 题目列表 -->
-    <div class="problems-list">
-      <div v-if="loading" class="loading">加载中...</div>
-      <div v-else-if="!problems || problems.length === 0" class="empty">暂无题目</div>
-      <div v-else>
-        <div v-for="problem in problems" 
-             :key="problem.ID" 
-             class="problem-card"
-             @click="goToProblemDetail(problem.ID)">
-          <div class="problem-header">
-            <div class="problem-title-wrapper">
-              <span class="problem-id">{{ problem.ID }}</span>
-              <span class="problem-title">{{ problem.name }}</span>
-            </div>
-            <div class="problem-meta">
-              <span :class="['level-tag', getLevelClass(problem.level)]">
-                {{ getLevelText(problem.level) }}
-              </span>
-              <span :class="['status-tag', problem.status ? 'active' : 'inactive']">
-                {{ problem.status ? '公开' : '私有' }}
-              </span>
-            </div>
-          </div>
-          <div class="problem-footer">
-            <div class="problem-stats">
-              <span class="pass-rate">
-                通过率: {{ getPassRateText(problem.ID) }}
-              </span>
+    <div class="content-layout">
+      <!-- 左侧题目列表 -->
+      <div class="problem-list-container">
+        <!-- 题目列表 -->
+        <div class="problems-list">
+          <div v-if="loading" class="loading">加载中...</div>
+          <div v-else-if="!problems || problems.length === 0" class="empty">暂无题目</div>
+          <div v-else>
+            <div v-for="problem in problems" 
+                :key="problem.ID" 
+                class="problem-card"
+                @click="goToProblemDetail(problem.ID)">
+              <div class="problem-header">
+                <div class="problem-title-wrapper">
+                  <span class="problem-id">{{ problem.ID }}</span>
+                  <span class="problem-title">{{ problem.name }}</span>
+                </div>
+                <div class="problem-meta">
+                  <span :class="['level-tag', getLevelClass(problem.level)]">
+                    {{ getLevelText(problem.level) }}
+                  </span>
+                  <span :class="['status-tag', problem.status ? 'active' : 'inactive']">
+                    {{ problem.status ? '公开' : '私有' }}
+                  </span>
+                </div>
+              </div>
+              <div class="problem-footer">
+                <div class="problem-stats">
+                  <span class="pass-rate">
+                    通过率: {{ getPassRateText(problem.ID) }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- 分页 -->
-    <div class="pagination" v-if="total > 0">
-      <button 
-        :disabled="currentPage === 1"
-        @click="handlePageChange(currentPage - 1)"
-      >
-        上一页
-      </button>
-      <span class="page-info">
-        第 {{ currentPage }} 页 / 共 {{ Math.ceil(total / filters.page_size) }} 页
-      </span>
-      <button 
-        :disabled="currentPage >= Math.ceil(total / filters.page_size)"
-        @click="handlePageChange(currentPage + 1)"
-      >
-        下一页
-      </button>
-      <span class="total-info">
-        共 {{ total }} 条记录
-      </span>
+        <!-- 分页 -->
+        <div class="pagination" v-if="total > 0">
+          <button 
+            :disabled="currentPage === 1"
+            @click="handlePageChange(currentPage - 1)"
+          >
+            上一页
+          </button>
+          <div class="filter-box page-size-filter">
+            <select v-model="filters.page_size" @change="handlePageSizeChange">
+              <option :value="10">10条/页</option>
+              <option :value="20">20条/页</option>
+              <option :value="50">50条/页</option>
+              <option :value="100">100条/页</option>
+            </select>
+          </div>
+          <span class="page-info">
+            第 {{ currentPage }} 页 / 共 {{ Math.ceil(total / filters.page_size) }} 页
+          </span>
+          <button 
+            :disabled="currentPage >= Math.ceil(total / filters.page_size)"
+            @click="handlePageChange(currentPage + 1)"
+          >
+            下一页
+          </button>
+          <span class="total-info">
+            共 {{ total }} 条记录
+          </span>
+        </div>
+      </div>
+
+      <!-- 右侧信息区 -->
+      <div class="sidebar-container">
+        <!-- 近期竞赛 -->
+        <section class="card upcoming-contests">
+          <div class="card-header">
+            <h2>近期竞赛</h2>
+          </div>
+          <div class="contest-list">
+            <div 
+              v-for="contest in upcomingContests" 
+              :key="contest.id" 
+              class="contest-item"
+              @click="goToContest(contest.id)"
+            >
+              <div class="contest-info">
+                <h3 class="contest-title">{{ contest.title }}</h3>
+                <div class="contest-meta">
+                  <div class="contest-time">
+                    <i class="time-icon"></i>
+                    <span>{{ contest.startTime }}</span>
+                  </div>
+                  <div class="contest-details">
+                    <span class="contest-duration">时长: {{ contest.duration }}</span>
+                    <span class="contest-type">{{ contest.type }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="arrow-icon">
+                <i class="arrow-right"></i>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 活动通知 -->
+        <section class="card activity-notices">
+          <div class="card-header">
+            <h2>活动通知</h2>
+          </div>
+          <div class="activity-list">
+            <div v-for="activity in activityNotices" :key="activity.id" class="activity-item">
+              <div class="activity-info">
+                <h3 class="activity-title">{{ activity.title }}</h3>
+                <div class="activity-meta">
+                  <span class="activity-date">日期: {{ activity.date }}</span>
+                  <span class="activity-type">{{ activity.type }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 </template>
@@ -293,16 +410,26 @@ onMounted(() => {
 }
 
 h1 {
-  font-size: 24px;
+  font-size: 28px;
   color: #333;
   margin-bottom: 24px;
+  font-weight: 600;
+  border-left: 4px solid #4CAF50;
+  padding-left: 15px;
 }
 
-.filters {
+.filters-section {
+  margin-bottom: 24px;
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.filters-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
 }
 
 .search-box {
@@ -318,7 +445,7 @@ h1 {
 .filter-box select {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
 }
@@ -337,11 +464,59 @@ h1 {
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .reset-btn:hover {
+  background: #e8e8e8;
   color: #40a9ff;
   border-color: #40a9ff;
+}
+
+@media (max-width: 992px) {
+  .filters-row {
+    flex-wrap: wrap;
+  }
+  
+  .search-box {
+    width: 100%;
+    margin-bottom: 12px;
+  }
+  
+  .filter-box {
+    width: calc(50% - 6px);
+  }
+}
+
+@media (max-width: 576px) {
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-box, 
+  .search-box, 
+  .reset-btn {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+}
+
+/* 整体布局 */
+.content-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+.problem-list-container {
+  min-height: 500px;
+}
+
+.sidebar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .loading, .empty {
@@ -464,6 +639,10 @@ h1 {
   align-items: center;
   justify-content: center;
   gap: 16px;
+  background: white;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .pagination button {
@@ -485,6 +664,15 @@ h1 {
   cursor: not-allowed;
 }
 
+.page-size-filter {
+  width: 120px;
+  margin: 0;
+}
+
+.page-size-filter select {
+  height: 36px;
+}
+
 .page-info, .total-info {
   color: #666;
   font-size: 14px;
@@ -495,20 +683,151 @@ h1 {
   color: #999;
 }
 
-@media (max-width: 768px) {
-  .problem-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .problem-meta {
-    margin-top: 8px;
-  }
-  
-  .problem-footer {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+/* 右侧卡片样式 */
+.card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  background: linear-gradient(to right, #fcfcfc, #ffffff);
+}
+
+.card-header h2 {
+  font-size: 18px;
+  color: #333;
+  margin: 0;
+}
+
+/* 竞赛列表 */
+.contest-list {
+  padding: 0;
+}
+
+.contest-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.contest-item:last-child {
+  border-bottom: none;
+}
+
+.contest-item:hover {
+  background: #f8f9fa;
+  transform: translateX(5px);
+}
+
+.contest-title {
+  font-size: 16px;
+  margin: 0 0 8px;
+  color: #333;
+}
+
+.contest-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.contest-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #666;
+  font-size: 14px;
+}
+
+.time-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M12,2C6.5,2,2,6.5,2,12s4.5,10,10,10s10-4.5,10-10S17.5,2,12,2z M12,20c-4.4,0-8-3.6-8-8s3.6-8,8-8s8,3.6,8,8S16.4,20,12,20z'/%3E%3Cpath d='M12.5,7H11v6l5.2,3.1l0.8-1.2l-4.5-2.7V7z'/%3E%3C/svg%3E");
+  background-size: contain;
+}
+
+.contest-details {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: #666;
+}
+
+.contest-type {
+  padding: 2px 8px;
+  background: #e6f7ff;
+  color: #4a90e2;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.arrow-icon {
+  color: #ccc;
+  transition: transform 0.2s;
+}
+
+.arrow-right {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid #4a90e2;
+  border-right: 2px solid #4a90e2;
+  transform: rotate(45deg);
+}
+
+/* 活动通知 */
+.activity-list {
+  padding: 0;
+}
+
+.activity-item {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.2s;
+}
+
+.activity-item:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-2px);
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-title {
+  font-size: 16px;
+  margin: 0 0 8px;
+  color: #333;
+}
+
+.activity-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #666;
+}
+
+.activity-type {
+  padding: 2px 8px;
+  background: #e6f7ff;
+  color: #4a90e2;
+  border-radius: 12px;
+  font-size: 12px;
 }
 </style> 

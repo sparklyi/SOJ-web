@@ -452,9 +452,12 @@ onMounted(() => {
 }
 
 h1 {
-  color: #333;
   font-size: 28px;
-  margin: 0;
+  color: #333;
+  margin-bottom: 24px;
+  font-weight: 600;
+  border-left: 4px solid #4CAF50;
+  padding-left: 15px;
 }
 
 .create-btn {

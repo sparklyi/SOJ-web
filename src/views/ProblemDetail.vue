@@ -1559,13 +1559,14 @@ const viewRankSubmissionDetail = (submissionId) => {
 
 <style scoped>
 .problem-detail-container {
-  width: 135%;
+  width: 120%;
   max-width: none;
   padding: 20px;
-  margin-left: -17%;
+  margin-left: -10%;
   background-color: #f6f8fa;
-  height: 100vh;
-  overflow: hidden;
+  height: calc(100vh - 68px);
+  overflow: hidden;  
+
   display: flex;
   flex-direction: column;
 }
@@ -1649,6 +1650,7 @@ const viewRankSubmissionDetail = (submissionId) => {
   width: 100%;
   max-width: none;
   padding: 0;
+  height: calc(100vh - 150px);
 }
 
 .problem-info {
@@ -1656,18 +1658,22 @@ const viewRankSubmissionDetail = (submissionId) => {
   overflow-y: auto;
   padding: 0;
   height: 100%;
-  width: 100%;
-  max-width: none;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .code-editor {
-  flex: 1;
+  flex: 1.2;
   overflow: hidden;
   position: relative;
   border: 1px solid #e8e8e8;
-  border-radius: 4px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  height: 100%;
 }
 
 /* 移除原来的textarea样式 */
@@ -1918,10 +1924,7 @@ pre {
   flex: 1;
   overflow: hidden;
   position: relative;
-  border: 1px solid #e8e8e8;
-  border-radius: 4px;
-  display: flex;
-  flex-direction: column;
+  height: calc(100% - 50px);
 }
 
 /* 移除原来的textarea样式 */
@@ -1945,11 +1948,412 @@ pre {
 
 /* 自测面板 */
 .test-panel {
-  background: white;
-  border-radius: 0;
-  padding: 16px;
+  height: 200px;
+  overflow-y: auto;
+  border-top: 1px solid #e8e8e8;
+  background-color: #fafafa;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.panel-header h3 {
   margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.run-stats {
+  font-size: 13px;
+  color: #666;
+}
+
+.stat-item {
+  margin-left: 10px;
+}
+
+.input-area, .output-area {
+  margin-bottom: 15px;
+}
+
+.test-input-textarea {
+  width: 100%;
+  height: 80px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  background: white;
+  transition: border-color 0.3s;
+}
+
+.test-input-textarea:focus {
+  border-color: #40a9ff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+}
+
+.run-output {
+  background: white;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  max-height: 150px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.panel-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.run-test-btn {
+  padding: 6px 16px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.run-test-btn:hover {
+  background: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+}
+
+.run-test-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fafafa;
   border-top: 1px solid #eaeaea;
+}
+
+.run-btn,
+.submit-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.run-btn {
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.run-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.submit-btn {
+  background: #40a9ff;
+  color: white;
+}
+
+.submit-btn:hover {
+  background: #4dabf8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+}
+
+.remark {
+  color: #666;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  background-color: #fff8e1;
+  padding: 15px;
+  border-radius: 4px;
+  border-left: 4px solid #ffc107;
+}
+
+/* 移动端适配 */
+.mobile-toggle {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .problem-detail-container {
+    padding: 10px;
+    height: 100vh;
+  }
+  
+  .problem-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-radius: 8px;
+  }
+}
+
+.problem-header {
+  margin-bottom: 10px;
+  padding: 15px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.problem-header h1 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 24px;
+}
+
+.problem-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.level-tag {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.level-tag.easy {
+  background: #e8f5e9;
+  color: #4caf50;
+}
+
+.level-tag.mid {
+  background: #fff3e0;
+  color: #ff9800;
+}
+
+.level-tag.hard {
+  background: #ffebee;
+  color: #f44336;
+}
+
+.create-time {
+  color: #666;
+  font-size: 14px;
+}
+
+.section {
+  margin-bottom: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s;
+  width: 100%;
+}
+
+.section:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.section h2 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.description,
+.input-format,
+.output-format {
+  color: #666;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  width: 100%;
+}
+
+.samples {
+  display: grid;
+  gap: 15px;
+}
+
+.sample {
+  background: #f9f9f9;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #eaeaea;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.sample:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.sample-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.sample-title {
+  color: #333;
+  font-weight: 500;
+}
+
+.use-example-btn {
+  padding: 4px 8px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.use-example-btn:hover {
+  background: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sample-content {
+  display: grid;
+  gap: 12px;
+}
+
+.sample-input,
+.sample-output {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #eaeaea;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.label {
+  color: #666;
+  font-size: 14px;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #eaeaea;
+}
+
+pre {
+  margin: 0;
+  padding: 12px;
+  background: white;
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.editor-header {
+  padding: 12px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selector-wrapper {
+  position: relative;
+  width: 180px;
+}
+
+.language-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background-color: white;
+  color: #333;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  outline: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 30px;
+}
+
+.select-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #888;
+}
+
+.language-select:hover {
+  border-color: #40a9ff;
+}
+
+.language-select:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.editor-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  height: calc(100% - 50px);
+}
+
+/* 移除原来的textarea样式 */
+.code-textarea {
+  display: none;
+}
+
+/* 为CodeMirror编辑器添加样式 */
+:deep(.cm-editor) {
+  height: 100%;
+  font-size: 14px;
+}
+
+:deep(.cm-content) {
+  padding: 8px;
+}
+
+:deep(.cm-focused) {
+  outline: none;
+}
+
+/* 自测面板 */
+.test-panel {
+  height: 200px;
+  overflow-y: auto;
+  border-top: 1px solid #e8e8e8;
+  background-color: #fafafa;
 }
 
 .panel-header {
@@ -3323,5 +3727,9 @@ pre {
   background: #40a9ff;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.problem-content {
+  padding: 20px;
 }
 </style> 
