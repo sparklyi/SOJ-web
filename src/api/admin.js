@@ -3,7 +3,7 @@ import request from '../utils/request'
 // 管理面板 - 获取题目列表
 export function getAdminProblems(params) {
   return request({
-    url: '/api/v1/problem/user',
+    url: '/api/v1/problem',
     method: 'post',
     data: {
       ...params,
@@ -51,6 +51,7 @@ export function getAdminUsers(params) {
     data: {
       page: params.page || 1,
       page_size: params.page_size || 10,
+      id: params.id || undefined,
       ...params
     }
   })
@@ -71,5 +72,30 @@ export function updateAdminUserRole(userId, role) {
     url: `/api/v1/user/${userId}/role`,
     method: 'put',
     data: { role }
+  })
+}
+
+// 管理面板 - 重置用户密码
+export function resetUserPassword(email) {
+  return request({
+    url: `/api/v1/user/${email}`,
+    method: 'put'
+  })
+}
+
+// 管理面板 - 更新用户信息
+export function updateUserInfo(userData) {
+  return request({
+    url: '/api/v1/user/update',
+    method: 'put',
+    data: userData
+  })
+}
+
+// 管理面板 - 删除用户
+export function deleteUser(userId) {
+  return request({
+    url: `/api/v1/user/${userId}`,
+    method: 'delete'
   })
 } 
