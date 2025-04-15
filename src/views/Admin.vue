@@ -1,7 +1,27 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch, h, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { 
+  getAdminProblems, 
+  deleteAdminProblem, 
+  getAdminContests,
+  deleteAdminContest,
+  getAdminUsers,
+  resetUserPassword,
+  updateUserInfo,
+  deleteUser
+} from '../api/admin'
+import { useUserStore } from '../store/user'
+import { Modal, message, Button, Table, Input, Tag, Space, Popconfirm } from 'ant-design-vue'
 
+const router = useRouter()
+const userStore = useUserStore()
 const activeTab = ref('problems')
+
+// 搜索ID
+const searchId = ref('')
+const searchContestId = ref('')
+const searchUserId = ref('')
 
 const tabs = [
   { key: 'problems', label: '题目管理' },
@@ -9,49 +29,555 @@ const tabs = [
   { key: 'users', label: '用户管理' }
 ]
 
-const problems = ref([
-  {
-    id: 1,
-    title: '两数之和',
-    difficulty: '简单',
-    category: '数组',
-    status: '已发布'
+// 题目管理
+const problems = ref([])
+const problemLoading = ref(false)
+
+// 竞赛管理
+const contests = ref([])
+const contestLoading = ref(false)
+
+// 用户管理
+const users = ref([])
+const userLoading = ref(false)
+
+// 定义表格列
+const problemColumns = [
+  { title: 'ID', dataIndex: 'ID', key: 'id', width: 80 },
+  { title: '标题', dataIndex: 'name', key: 'name' },
+  { 
+    title: '难度', 
+    dataIndex: 'level', 
+    key: 'level',
+    customRender: ({ text }) => {
+      const color = text === 'easy' ? 'success' : text === 'mid' ? 'warning' : 'error';
+      const label = getDifficultyText(text);
+      return h(Tag, { color }, () => label);
+    } 
+  },
+  { 
+    title: '创建时间', 
+    dataIndex: 'CreatedAt', 
+    key: 'created_at',
+    customRender: ({ text }) => formatDate(text) 
+  },
+  { 
+    title: '更新时间', 
+    dataIndex: 'UpdatedAt', 
+    key: 'updated_at',
+    customRender: ({ text }) => formatDate(text) 
+  },
+  { 
+    title: '状态', 
+    dataIndex: 'status', 
+    key: 'status',
+    customRender: ({ text }) => {
+      return h(Tag, { color: text ? 'success' : 'default' }, () => text ? '已发布' : '草稿');
+    } 
   },
   {
-    id: 2,
-    title: '最长回文子串',
-    difficulty: '中等',
-    category: '字符串',
-    status: '草稿'
+    title: '操作',
+    key: 'action',
+    fixed: 'right',
+    width: 250,
+    customRender: ({ record }) => {
+      return h(Space, {}, () => [
+        h(Button, { 
+          type: 'primary', 
+          size: 'small',
+          onClick: () => editProblem(record.ID)
+        }, () => '编辑'),
+        h(Button, { 
+          type: 'default', 
+          size: 'small',
+          onClick: () => editTestCase(record.ID)
+        }, () => '测试点'),
+        h(Popconfirm, {
+          title: '确定要删除此题目吗？',
+          description: '此操作不可逆，请谨慎操作',
+          onConfirm: () => deleteProblem(record.ID),
+          okText: '确认',
+          cancelText: '取消'
+        }, () => h(Button, { danger: true, size: 'small' }, () => '删除'))
+      ]);
+    }
   }
-])
+];
 
-const contests = ref([
-  {
-    id: 1,
-    title: '2024春季算法竞赛',
-    startTime: '2024-03-01 10:00',
-    endTime: '2024-03-01 14:00',
-    status: '未开始'
-  }
-])
-
-const users = ref([
-  {
-    id: 1,
-    username: 'admin',
-    email: 'admin@example.com',
-    role: '管理员',
-    status: '正常'
+const contestColumns = [
+  { title: 'ID', dataIndex: 'ID', key: 'id', width: 80 },
+  { title: '标题', dataIndex: 'name', key: 'name' },
+  { 
+    title: '开始时间', 
+    dataIndex: 'start_time', 
+    key: 'start_time',
+    customRender: ({ text }) => formatDate(text) 
+  },
+  { 
+    title: '结束时间', 
+    dataIndex: 'end_time', 
+    key: 'end_time',
+    customRender: ({ text }) => formatDate(text) 
+  },
+  { 
+    title: '状态', 
+    key: 'status',
+    customRender: ({ record }) => {
+      const status = getContestStatusText(record.start_time, record.end_time);
+      const color = status === '进行中' ? 'success' : status === '未开始' ? 'processing' : 'default';
+      return h(Tag, { color }, () => status);
+    }
   },
   {
-    id: 2,
-    username: 'user1',
-    email: 'user1@example.com',
-    role: '普通用户',
-    status: '正常'
+    title: '操作',
+    key: 'action',
+    fixed: 'right',
+    width: 160,
+    customRender: ({ record }) => {
+      return h(Space, {}, () => [
+        h(Button, { 
+          type: 'primary', 
+          size: 'small',
+          onClick: () => editContest(record.ID)
+        }, () => '编辑'),
+        h(Popconfirm, {
+          title: '确定要删除此竞赛吗？',
+          description: '此操作不可逆，请谨慎操作',
+          onConfirm: () => deleteContestItem(record.ID),
+          okText: '确认',
+          cancelText: '取消'
+        }, () => h(Button, { danger: true, size: 'small' }, () => '删除'))
+      ]);
+    }
   }
-])
+];
+
+const userColumns = [
+  { title: 'ID', dataIndex: 'ID', key: 'id', width: 80 },
+  { title: '用户名', dataIndex: 'username', key: 'username' },
+  { title: '邮箱', dataIndex: 'email', key: 'email' },
+  { 
+    title: '角色', 
+    dataIndex: 'role', 
+    key: 'role',
+    customRender: ({ text }) => {
+      const { label, color } = getUserRoleTagInfo(text);
+      return h(Tag, { color }, () => label);
+    }
+  },
+  { 
+    title: '创建时间', 
+    dataIndex: 'CreatedAt', 
+    key: 'created_at',
+    customRender: ({ text }) => formatDate(text) 
+  },
+  {
+    title: '操作',
+    key: 'action',
+    fixed: 'right',
+    width: 280,
+    customRender: ({ record }) => {
+      return h(Space, {}, () => [
+        h(Button, { 
+          type: 'primary', 
+          size: 'small',
+          onClick: () => editUserInfo(record)
+        }, () => '编辑'),
+        h(Button, { 
+          type: 'default', 
+          size: 'small',
+          onClick: () => updateUserRole(record)
+        }, () => '权限设置'),
+        h(Button, { 
+          size: 'small',
+          onClick: () => resetPassword(record.email)
+        }, () => '重置密码'),
+        h(Popconfirm, {
+          title: '确定要删除此用户吗？',
+          description: '此操作不可逆，请谨慎操作',
+          onConfirm: () => deleteUserItem(record.ID),
+          okText: '确认',
+          cancelText: '取消'
+        }, () => h(Button, { danger: true, size: 'small' }, () => '删除'))
+      ]);
+    }
+  }
+];
+
+// 权限检查
+const hasPermission = computed(() => {
+  return userStore.isAdmin || userStore.userInfo?.role >= 2
+})
+
+// 数据加载状态
+const isInitialized = ref(false)
+
+// 加载题目列表
+const fetchProblems = async () => {
+  if (!hasPermission.value) {
+    message.error('您没有管理员权限')
+    router.push('/')
+    return
+  }
+
+  problemLoading.value = true
+  try {
+    const res = await getAdminProblems({
+      user_id: userStore.isAdmin ? undefined : userStore.userInfo.ID,
+      page: 1,
+      page_size: 10,
+      id: searchId.value || undefined
+    })
+    if (res.code === 200) {
+      problems.value = res.data.detail || []
+    } else {
+      message.error(res.message || '获取题目列表失败')
+    }
+  } catch (error) {
+    console.error('获取题目列表失败:', error)
+    message.error('获取题目列表失败，请检查网络连接')
+  } finally {
+    problemLoading.value = false
+    isInitialized.value = true
+  }
+}
+
+// 加载竞赛列表
+const fetchContests = async () => {
+  if (!hasPermission.value) {
+    message.error('您没有管理员权限')
+    router.push('/')
+    return
+  }
+
+  contestLoading.value = true
+  try {
+    const res = await getAdminContests(
+      userStore.isAdmin ? undefined : userStore.userInfo.ID,
+      {
+        page: 1,
+        page_size: 10,
+        id: searchContestId.value || undefined
+      }
+    )
+    if (res.code === 200) {
+      contests.value = res.data.detail || []
+    } else {
+      message.error(res.message || '获取竞赛列表失败')
+    }
+  } catch (error) {
+    console.error('获取竞赛列表失败:', error)
+    message.error('获取竞赛列表失败，请检查网络连接')
+  } finally {
+    contestLoading.value = false
+    isInitialized.value = true
+  }
+}
+
+// 加载用户列表
+const fetchUsers = async () => {
+  if (!hasPermission.value) {
+    message.error('您没有管理员权限')
+    router.push('/')
+    return
+  }
+
+  userLoading.value = true
+  try {
+    const res = await getAdminUsers({
+      page: 1,
+      page_size: 10,
+      id: searchUserId.value || undefined
+    })
+    if (res.code === 200) {
+      users.value = res.data || []
+    } else {
+      message.error(res.message || '获取用户列表失败')
+    }
+  } catch (error) {
+    console.error('获取用户列表失败:', error)
+    message.error('获取用户列表失败，请检查网络连接')
+  } finally {
+    userLoading.value = false
+    isInitialized.value = true
+  }
+}
+
+// 编辑题目
+const editProblem = (problemId) => {
+  router.push(`/problem-edit/${problemId}`)
+}
+
+// 编辑测试点
+const editTestCase = (problemId) => {
+  router.push(`/problem-testcase/${problemId}`)
+}
+
+// 删除题目
+const deleteProblem = async (problemId) => {
+  try {
+    const res = await deleteAdminProblem(problemId)
+    if (res.code === 200) {
+      message.success('删除题目成功')
+      fetchProblems()
+    } else {
+      message.error(res.message || '删除题目失败')
+    }
+  } catch (error) {
+    console.error('删除题目失败:', error)
+    message.error('删除题目失败')
+  }
+}
+
+// 编辑竞赛
+const editContest = (contestId) => {
+  router.push(`/contest-edit/${contestId}`)
+}
+
+// 删除竞赛
+const deleteContestItem = async (contestId) => {
+  try {
+    const res = await deleteAdminContest(contestId)
+    if (res.code === 200) {
+      message.success('删除竞赛成功')
+      fetchContests()
+    } else {
+      message.error(res.message || '删除竞赛失败')
+    }
+  } catch (error) {
+    console.error('删除竞赛失败:', error)
+    message.error('删除竞赛失败')
+  }
+}
+
+// 编辑用户信息
+const editUserInfo = (user) => {
+  let formUsername = user.username
+  let formProfile = user.profile || ''
+
+  Modal.confirm({
+    title: '编辑用户信息',
+    content: h => {
+      return h('div', {}, [
+        h('div', { style: 'margin-bottom: 16px' }, [
+          h('div', { style: 'margin-bottom: 8px' }, '用户名:'),
+          h(Input, { 
+            value: formUsername,
+            onChange: (e) => { formUsername = e.target.value }
+          })
+        ]),
+        h('div', {}, [
+          h('div', { style: 'margin-bottom: 8px' }, '个人简介:'),
+          h(Input.TextArea, { 
+            value: formProfile, 
+            rows: 3,
+            onChange: (e) => { formProfile = e.target.value }
+          })
+        ])
+      ])
+    },
+    onOk: () => {
+      if (!formUsername) {
+        message.error('用户名不能为空')
+        return Promise.reject('用户名不能为空')
+      }
+      
+      return updateUserInfoData({
+        id: user.ID,
+        username: formUsername,
+        profile: formProfile,
+        role: user.role
+      })
+    },
+    okText: '保存',
+    cancelText: '取消'
+  })
+}
+
+// 重置用户密码
+const resetPassword = async (email) => {
+  if (!email) return
+  
+  try {
+    const res = await resetUserPassword(email)
+    if (res.code === 200) {
+      message.success('密码重置成功')
+    } else {
+      message.error(res.message || '密码重置失败')
+    }
+  } catch (error) {
+    console.error('密码重置失败:', error)
+    message.error('密码重置失败')
+  }
+}
+
+// 更新用户角色
+const updateUserRole = (user) => {
+  let selectedRole = user.role
+
+  Modal.confirm({
+    title: '设置用户权限',
+    content: h => {
+      return h('div', {}, [
+        h('p', {}, `当前用户: ${user.username}`),
+        h('p', {}, `当前权限: ${getUserRoleText(user.role)}`),
+        h('div', { style: 'margin-top: 16px' }, [
+          h('div', { style: 'margin-bottom: 8px' }, '选择新权限:'),
+          h('select', { 
+            style: 'width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #d9d9d9;',
+            value: selectedRole,
+            onChange: (e) => { selectedRole = Number(e.target.value) }
+          }, [
+            h('option', { value: -1, selected: user.role === -1 }, '封禁'),
+            h('option', { value: 1, selected: user.role === 1 }, '普通用户'),
+            h('option', { value: 2, selected: user.role === 2 }, '管理员'),
+            h('option', { value: 3, selected: user.role === 3 }, '超级管理员')
+          ])
+        ])
+      ])
+    },
+    onOk: () => {
+      return updateUserInfoData({
+        id: user.ID,
+        username: user.username,
+        profile: user.profile || '',
+        role: selectedRole
+      })
+    },
+    okText: '保存',
+    cancelText: '取消'
+  })
+}
+
+// 更新用户信息
+const updateUserInfoData = async (userData) => {
+  try {
+    const res = await updateUserInfo(userData)
+    if (res.code === 200) {
+      message.success('用户信息更新成功')
+      await fetchUsers()
+      return Promise.resolve()
+    } else {
+      message.error(res.message || '更新用户信息失败')
+      return Promise.reject(res.message || '更新用户信息失败')
+    }
+  } catch (error) {
+    console.error('更新用户信息失败:', error)
+    message.error('更新用户信息失败')
+    return Promise.reject(error)
+  }
+}
+
+// 删除用户
+const deleteUserItem = async (userId) => {
+  try {
+    const res = await deleteUser(userId)
+    if (res.code === 200) {
+      message.success('删除用户成功')
+      fetchUsers()
+    } else {
+      message.error(res.message || '删除用户失败')
+    }
+  } catch (error) {
+    console.error('删除用户失败:', error)
+    message.error('删除用户失败')
+  }
+}
+
+// 获取用户角色文本
+const getUserRoleText = (role) => {
+  if (role === -1) return '封禁'
+  if (role === 1) return '普通用户'
+  if (role === 2) return '管理员' 
+  if (role === 3) return '超级管理员'
+  return '未知'
+}
+
+// 获取用户角色标签信息
+const getUserRoleTagInfo = (role) => {
+  if (role === -1) return { label: '封禁', color: 'error' }
+  if (role === 1) return { label: '普通用户', color: 'default' }
+  if (role === 2) return { label: '管理员', color: 'success' }
+  if (role === 3) return { label: '超级管理员', color: 'purple' }
+  return { label: '未知', color: 'default' }
+}
+
+// 监听标签切换 - 优化性能
+const handleTabChange = (tabKey) => {
+  if (activeTab.value === tabKey) return // 避免重复加载
+  
+  activeTab.value = tabKey
+  
+  if (tabKey === 'problems' && (!isInitialized.value || problems.value.length === 0)) {
+    fetchProblems()
+  } else if (tabKey === 'contests' && (!isInitialized.value || contests.value.length === 0)) {
+    fetchContests()
+  } else if (tabKey === 'users' && (!isInitialized.value || users.value.length === 0)) {
+    fetchUsers()
+  }
+}
+
+// 监听搜索ID变化
+watch([searchId, searchContestId, searchUserId], ([newProblemId, newContestId, newUserId], [oldProblemId, oldContestId, oldUserId]) => {
+  if (newProblemId !== oldProblemId && activeTab.value === 'problems') {
+    fetchProblems()
+  }
+  if (newContestId !== oldContestId && activeTab.value === 'contests') {
+    fetchContests()
+  }
+  if (newUserId !== oldUserId && activeTab.value === 'users') {
+    fetchUsers()
+  }
+})
+
+// 获取题目难度文本
+const getDifficultyText = (level) => {
+  if (level === 'easy') return '简单'
+  if (level === 'mid') return '中等'
+  if (level === 'hard') return '困难'
+  return '未知'
+}
+
+// 获取竞赛状态文本
+const getContestStatusText = (startTime, endTime) => {
+  const now = new Date()
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+  
+  if (now < start) return '未开始'
+  if (now > end) return '已结束'
+  return '进行中'
+}
+
+// 格式化时间
+const formatDate = (dateString) => {
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// 初始化: 权限检查和数据加载
+onMounted(() => {
+  if (!hasPermission.value) {
+    message.error('您没有管理员权限')
+    router.push('/')
+    return
+  }
+  
+  if (activeTab.value === 'problems') {
+    fetchProblems()
+  } else if (activeTab.value === 'contests') {
+    fetchContests()
+  } else if (activeTab.value === 'users') {
+    fetchUsers()
+  }
+})
 </script>
 
 <template>
@@ -63,7 +589,7 @@ const users = ref([
         v-for="tab in tabs"
         :key="tab.key"
         :class="['tab-item', { active: activeTab === tab.key }]"
-        @click="activeTab = tab.key"
+        @click="handleTabChange(tab.key)"
       >
         {{ tab.label }}
       </div>
@@ -73,106 +599,73 @@ const users = ref([
       <!-- 题目管理 -->
       <div v-if="activeTab === 'problems'" class="tab-content">
         <div class="header">
-          <h2>题目列表</h2>
-          <button class="add-btn">添加题目</button>
+          <div class="header-left">
+            <h2>题目列表</h2>
+            <a-input-search
+              v-model:value="searchId"
+              placeholder="输入ID搜索"
+              enter-button
+              @search="fetchProblems"
+              style="width: 250px"
+            />
+          </div>
         </div>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>标题</th>
-                <th>难度</th>
-                <th>分类</th>
-                <th>状态</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="problem in problems" :key="problem.id">
-                <td>{{ problem.id }}</td>
-                <td>{{ problem.title }}</td>
-                <td>{{ problem.difficulty }}</td>
-                <td>{{ problem.category }}</td>
-                <td>{{ problem.status }}</td>
-                <td>
-                  <button class="action-btn edit">编辑</button>
-                  <button class="action-btn delete">删除</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <a-table
+          :dataSource="problems"
+          :columns="problemColumns"
+          :rowKey="record => record.ID"
+          :loading="problemLoading"
+          :pagination="{ pageSize: 10, showSizeChanger: false }"
+          bordered
+        />
       </div>
 
       <!-- 竞赛管理 -->
       <div v-if="activeTab === 'contests'" class="tab-content">
         <div class="header">
-          <h2>竞赛列表</h2>
-          <button class="add-btn">创建竞赛</button>
+          <div class="header-left">
+            <h2>竞赛列表</h2>
+            <a-input-search
+              v-model:value="searchContestId"
+              placeholder="输入ID搜索"
+              enter-button
+              @search="fetchContests"
+              style="width: 250px"
+            />
+          </div>
         </div>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>标题</th>
-                <th>开始时间</th>
-                <th>结束时间</th>
-                <th>状态</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="contest in contests" :key="contest.id">
-                <td>{{ contest.id }}</td>
-                <td>{{ contest.title }}</td>
-                <td>{{ contest.startTime }}</td>
-                <td>{{ contest.endTime }}</td>
-                <td>{{ contest.status }}</td>
-                <td>
-                  <button class="action-btn edit">编辑</button>
-                  <button class="action-btn delete">删除</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <a-table
+          :dataSource="contests"
+          :columns="contestColumns"
+          :rowKey="record => record.ID"
+          :loading="contestLoading"
+          :pagination="{ pageSize: 10, showSizeChanger: false }"
+          bordered
+        />
       </div>
 
       <!-- 用户管理 -->
       <div v-if="activeTab === 'users'" class="tab-content">
         <div class="header">
-          <h2>用户列表</h2>
-          <button class="add-btn">添加用户</button>
+          <div class="header-left">
+            <h2>用户列表</h2>
+            <a-input-search
+              v-model:value="searchUserId"
+              placeholder="输入ID搜索"
+              enter-button
+              @search="fetchUsers"
+              style="width: 250px"
+            />
+          </div>
         </div>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>用户名</th>
-                <th>邮箱</th>
-                <th>角色</th>
-                <th>状态</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="user in users" :key="user.id">
-                <td>{{ user.id }}</td>
-                <td>{{ user.username }}</td>
-                <td>{{ user.email }}</td>
-                <td>{{ user.role }}</td>
-                <td>{{ user.status }}</td>
-                <td>
-                  <button class="action-btn edit">编辑</button>
-                  <button class="action-btn delete">删除</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <a-table
+          :dataSource="users"
+          :columns="userColumns"
+          :rowKey="record => record.ID"
+          :loading="userLoading"
+          :pagination="{ pageSize: 10, showSizeChanger: false }"
+          bordered
+        />
       </div>
     </div>
   </div>
@@ -186,8 +679,12 @@ const users = ref([
 }
 
 h1 {
-  margin-bottom: 30px;
+  font-size: 28px;
   color: #333;
+  margin-bottom: 24px;
+  font-weight: 600;
+  border-left: 4px solid #1890ff;
+  padding-left: 15px;
 }
 
 .tabs {
@@ -207,12 +704,12 @@ h1 {
 }
 
 .tab-item:hover {
-  color: #4caf50;
+  color: #1890ff;
 }
 
 .tab-item.active {
-  color: #4caf50;
-  background: #e8f5e9;
+  color: #1890ff;
+  background: #e6f7ff;
 }
 
 .content {
@@ -229,72 +726,16 @@ h1 {
   margin-bottom: 20px;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .header h2 {
   margin: 0;
   color: #333;
-}
-
-.add-btn {
-  padding: 8px 24px;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.add-btn:hover {
-  background: #45a049;
-}
-
-.table-container {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-th {
-  background: #f5f5f5;
-  color: #666;
-  font-weight: 500;
-}
-
-.action-btn {
-  padding: 4px 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-right: 8px;
-  font-size: 14px;
-  transition: all 0.3s;
-}
-
-.action-btn.edit {
-  background: #e3f2fd;
-  color: #2196f3;
-}
-
-.action-btn.edit:hover {
-  background: #bbdefb;
-}
-
-.action-btn.delete {
-  background: #ffebee;
-  color: #f44336;
-}
-
-.action-btn.delete:hover {
-  background: #ffcdd2;
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {
@@ -313,11 +754,13 @@ th {
   .header {
     flex-direction: column;
     gap: 10px;
-    text-align: center;
+    align-items: flex-start;
   }
   
-  .add-btn {
+  .header-left {
     width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style> 
