@@ -11,6 +11,7 @@ const route = useRoute()
 const userStore = useUserStore()
 const loading = ref(false)
 const contestId = route.params.id
+const savingDraft = ref(false)
 
 // 检查权限
 const hasPermission = computed(() => userStore.isAdmin)
@@ -39,12 +40,15 @@ const contestTypes = [
 onMounted(() => {
   if (!hasPermission.value) {
     message.error('您没有编辑比赛的权限')
-    router.push('/')
+    router.push('/admin')
     return
   }
   
   // 加载比赛详情
   fetchContestDetail()
+  
+  // 尝试加载本地保存的草稿
+  loadDraftFromLocal()
 })
 
 // 获取比赛详情
@@ -79,12 +83,12 @@ const fetchContestDetail = async () => {
       message.success('比赛信息加载成功')
     } else {
       message.error(res.message || '获取比赛详情失败')
-      router.push('/contests')
+      router.push('/admin')
     }
   } catch (error) {
     console.error('获取比赛详情失败:', error)
     message.error('获取比赛详情失败')
-    router.push('/contests')
+    router.push('/admin')
   } finally {
     loading.value = false
   }
@@ -141,6 +145,26 @@ const validateForm = () => {
     message.error('封榜时间不能晚于结束时间')
     return false
   }
+
+  if (freezeTime < startTime) {
+    message.error('封榜时间不能早于开始时间')
+    return false
+  }
+
+  // 检查时间间隔是否合理
+  const minDuration = 30 * 60 * 1000 // 最小30分钟
+  const maxDuration = 7 * 24 * 60 * 60 * 1000 // 最大7天
+  
+  const duration = endTime - startTime
+  if (duration < minDuration) {
+    message.error('比赛时长不能少于30分钟')
+    return false
+  }
+  
+  if (duration > maxDuration) {
+    message.error('比赛时长不能超过7天')
+    return false
+  }
   
   return true
 }
@@ -180,7 +204,9 @@ const submitForm = async () => {
     const res = await updateContest(formData)
     if (res.code === 200) {
       message.success('更新比赛成功')
-      router.push('/contest-manage')
+      // 清除本地草稿
+      clearLocalDraft()
+      router.push('/admin')
     } else {
       message.error(res.message || '更新比赛失败')
     }
@@ -192,6 +218,68 @@ const submitForm = async () => {
   }
 }
 
+// 暂存草稿到本地
+const saveDraft = () => {
+  try {
+    savingDraft.value = true
+    const draftData = {
+      ...contestForm,
+      start_time: contestForm.start_time ? contestForm.start_time.toISOString() : null,
+      end_time: contestForm.end_time ? contestForm.end_time.toISOString() : null,
+      freeze_time: contestForm.freeze_time ? contestForm.freeze_time.toISOString() : null
+    }
+    localStorage.setItem(`contest_edit_draft_${contestId}`, JSON.stringify(draftData))
+    message.success('已保存草稿')
+    setTimeout(() => {
+      savingDraft.value = false
+    }, 1000)
+  } catch (error) {
+    console.error('保存草稿失败:', error)
+    message.error('保存草稿失败')
+    savingDraft.value = false
+  }
+}
+
+// 从本地加载草稿
+const loadDraftFromLocal = () => {
+  try {
+    const draftData = localStorage.getItem(`contest_edit_draft_${contestId}`)
+    if (draftData) {
+      Modal.confirm({
+        title: '发现本地草稿',
+        content: '是否加载上次编辑的草稿？',
+        okText: '加载草稿',
+        cancelText: '不需要',
+        onOk: () => {
+          const draft = JSON.parse(draftData)
+          
+          // 转换时间字符串为日期对象
+          if (draft.start_time) {
+            draft.start_time = new Date(draft.start_time)
+          }
+          if (draft.end_time) {
+            draft.end_time = new Date(draft.end_time)
+          }
+          if (draft.freeze_time) {
+            draft.freeze_time = new Date(draft.freeze_time)
+          }
+          
+          Object.assign(contestForm, draft)
+          message.success('草稿加载成功')
+        }
+      })
+    }
+  } catch (error) {
+    console.error('加载草稿失败:', error)
+    message.error('加载草稿失败')
+  }
+}
+
+// 清除本地草稿
+const clearLocalDraft = () => {
+  localStorage.removeItem(`contest_edit_draft_${contestId}`)
+}
+
 // 取消编辑
 const cancel = () => {
   Modal.confirm({
@@ -200,14 +288,69 @@ const cancel = () => {
     okText: '确认',
     cancelText: '继续编辑',
     onOk: () => {
-      router.push('/contest-manage')
+      router.push('/admin')
     }
   })
 }
 
 // 返回上一页或比赛管理页面
 const navigateBack = () => {
-  router.push('/contest-manage')
+  if (hasUnsavedChanges()) {
+    Modal.confirm({
+      title: '未保存的更改',
+      content: '您有未保存的更改，是否保存为草稿？',
+      okText: '保存草稿',
+      cancelText: '放弃更改',
+      onOk: () => {
+        saveDraft()
+        router.push('/admin')
+      },
+      onCancel: () => {
+        router.push('/admin')
+      }
+    })
+  } else {
+    router.push('/admin')
+  }
+}
+
+// 检查是否有未保存的更改
+const hasUnsavedChanges = () => {
+  const draftData = localStorage.getItem(`contest_edit_draft_${contestId}`)
+  if (!draftData) return false
+  
+  try {
+    const draft = JSON.parse(draftData)
+    const currentForm = {
+      ...contestForm,
+      start_time: contestForm.start_time ? contestForm.start_time.toISOString() : null,
+      end_time: contestForm.end_time ? contestForm.end_time.toISOString() : null,
+      freeze_time: contestForm.freeze_time ? contestForm.freeze_time.toISOString() : null
+    }
+    
+    return JSON.stringify(draft) !== JSON.stringify(currentForm)
+  } catch (error) {
+    console.error('检查未保存更改失败:', error)
+    return false
+  }
+}
+
+// 监听页面离开事件
+const beforeUnload = (e) => {
+  if (hasUnsavedChanges()) {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
+
+// 挂载页面离开监听器
+onMounted(() => {
+  window.addEventListener('beforeunload', beforeUnload)
+})
+
+// 卸载页面离开监听器
+const onUnmounted = () => {
+  window.removeEventListener('beforeunload', beforeUnload)
 }
 </script>
 
@@ -215,10 +358,20 @@ const navigateBack = () => {
   <div class="contest-edit-container">
     <div class="page-header">
       <h1>编辑比赛</h1>
-      <button class="back-btn" @click="navigateBack">返回</button>
+      <div class="header-actions">
+        <button class="draft-btn" @click="saveDraft" :disabled="savingDraft">
+          {{ savingDraft ? '保存中...' : '保存草稿' }}
+        </button>
+        <button class="back-btn" @click="navigateBack">返回</button>
+      </div>
     </div>
     
-    <div class="form-container" v-loading="loading">
+    <div class="form-container" :class="{ 'is-loading': loading }">
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>加载中...</p>
+      </div>
+      
       <div class="form-section">
         <h2 class="section-title">基本信息</h2>
         
@@ -301,6 +454,7 @@ const navigateBack = () => {
             :disabled-date="(current) => current && (current < contestForm.start_time || current > contestForm.end_time)"
             style="width: 100%"
           />
+          <div class="form-help">封榜时间必须在比赛开始和结束时间之间</div>
         </div>
       </div>
       
@@ -355,13 +509,18 @@ const navigateBack = () => {
       
       <div class="form-actions">
         <button class="cancel-btn" @click="cancel">取消</button>
-        <button 
-          class="submit-btn" 
-          @click="submitForm" 
-          :disabled="loading"
-        >
-          {{ loading ? '更新中...' : '更新比赛' }}
-        </button>
+        <div class="right-actions">
+          <button class="draft-btn" @click="saveDraft" :disabled="savingDraft">
+            {{ savingDraft ? '保存中...' : '保存草稿' }}
+          </button>
+          <button 
+            class="submit-btn" 
+            @click="submitForm" 
+            :disabled="loading"
+          >
+            {{ loading ? '更新中...' : '更新比赛' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -390,7 +549,12 @@ const navigateBack = () => {
   padding-left: 15px;
 }
 
-.back-btn {
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.back-btn, .draft-btn {
   padding: 8px 16px;
   background-color: #f5f5f5;
   border: 1px solid #d9d9d9;
@@ -406,11 +570,62 @@ const navigateBack = () => {
   border-color: #40a9ff;
 }
 
+.draft-btn {
+  background-color: #e6f7ff;
+  color: #1890ff;
+  border-color: #91d5ff;
+}
+
+.draft-btn:hover:not(:disabled) {
+  background-color: #bae7ff;
+  border-color: #1890ff;
+}
+
+.draft-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .form-container {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   padding: 24px;
+  position: relative;
+}
+
+.is-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #1890ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .form-section {
@@ -422,6 +637,7 @@ const navigateBack = () => {
 .form-section:last-of-type {
   border-bottom: none;
   margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .section-title {
@@ -434,6 +650,10 @@ const navigateBack = () => {
 
 .form-group {
   margin-bottom: 20px;
+}
+
+.form-group:last-of-type {
+  margin-bottom: 0;
 }
 
 .form-group label {
@@ -485,6 +705,12 @@ const navigateBack = () => {
   margin-bottom: 20px;
 }
 
+.form-help {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #999;
+}
+
 .radio-group {
   display: flex;
   gap: 16px;
@@ -501,8 +727,8 @@ const navigateBack = () => {
 }
 
 .radio-label.active {
-  border-color: #4a90e2;
-  color: #4a90e2;
+  border-color: #1890ff;
+  color: #1890ff;
   background: #e6f7ff;
 }
 
@@ -560,11 +786,11 @@ const navigateBack = () => {
 }
 
 input:checked + .slider {
-  background-color: #4a90e2;
+  background-color: #1890ff;
 }
 
 input:focus + .slider {
-  box-shadow: 0 0 1px #4a90e2;
+  box-shadow: 0 0 1px #1890ff;
 }
 
 input:checked + .slider:before {
@@ -583,11 +809,16 @@ input:checked + .slider:before {
 
 .form-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 32px;
   padding-top: 20px;
   border-top: 1px solid #f0f0f0;
+}
+
+.right-actions {
+  display: flex;
+  gap: 12px;
 }
 
 .cancel-btn, .submit-btn {
@@ -611,12 +842,12 @@ input:checked + .slider:before {
 }
 
 .submit-btn {
-  background: #4a90e2;
+  background: #1890ff;
   color: white;
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #357dd8;
+  background: #096dd9;
 }
 
 .submit-btn:disabled {
@@ -651,12 +882,17 @@ input:checked + .slider:before {
     width: 100%;
   }
   
-  .form-actions {
+  .form-actions, .right-actions {
     flex-direction: column;
   }
   
-  .form-actions button {
+  .form-actions button, .right-actions button {
     width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  .header-actions {
+    display: none;
   }
 }
 </style> 

@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { isAuthenticated } from './utils/auth'
 import { useUserStore } from './store/user'
 import Navbar from './layouts/Navbar.vue'
+import Footer from './layouts/Footer.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -35,6 +36,7 @@ onMounted(() => {
     <main class="main-content">
       <router-view></router-view>
     </main>
+    <Footer />
   </div>
 </template>
 

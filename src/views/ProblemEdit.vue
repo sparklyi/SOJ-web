@@ -401,7 +401,7 @@ const submitForm = async () => {
 
 // 取消编辑，返回题目管理页面
 const cancel = () => {
-  router.push('/problem-manage')
+  router.push('/admin')
 }
 
 // 添加全选/取消全选方法
@@ -432,7 +432,7 @@ const saveFormToLocal = () => {
 
 // 返回到题目管理页面
 const navigateBack = () => {
-  router.push('/problem-manage')
+  router.push('/admin')
 }
 </script>
 

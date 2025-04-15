@@ -270,30 +270,7 @@ const goToDiscussion = (id) => {
           </div>
         </section>
 
-        <!-- 热门讨论 -->
-        <section class="card hot-discussions">
-          <div class="card-header">
-            <h2>热门讨论</h2>
-          </div>
-          <div class="discussion-list">
-            <div 
-              v-for="discussion in hotDiscussions" 
-              :key="discussion.id" 
-              class="discussion-item"
-              @click="goToDiscussion(discussion.id)"
-            >
-              <h3 class="discussion-title">{{ discussion.title }}</h3>
-              <div class="discussion-meta">
-                <span class="discussion-author">{{ discussion.author }}</span>
-                <span class="discussion-views">
-                  <i class="view-icon"></i>
-                  {{ discussion.viewCount }}
-                </span>
-                <span class="discussion-date">{{ discussion.date }}</span>
-              </div>
-            </div>
-          </div>
-        </section>
+       
       </div>
     </div>
   </div>
