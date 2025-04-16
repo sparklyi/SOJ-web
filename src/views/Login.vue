@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { setToken } from '../utils/auth'
 import { loginByEmail, loginByPassword, register, sendVerifyCode, getCaptcha, getUserInfo } from '../api/user'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { useUserStore } from '../store/user'
 
 const router = useRouter()
@@ -14,13 +14,32 @@ const loading = ref(false)
 const countdown = ref(0)
 const loginMode = ref('code') // 'code' 或 'password'
 
+// 用于显示用户协议
+const showTerms = () => {
+  Modal.info({
+    title: '用户协议',
+    content: '用户在使用SOJ在线评测系统服务时需遵守以下条款：1. 不得上传含有恶意代码的程序；2. 不得尝试攻击或破坏系统；3. 不得抄袭他人代码或作弊；4. 遵守相关法律法规及道德规范。',
+    okText: '我知道了'
+  })
+}
+
+// 用于显示隐私政策
+const showPrivacyPolicy = () => {
+  Modal.info({
+    title: '隐私条款',
+    content: 'SOJ在线评测系统将收集的用户信息仅用于系统功能实现、服务改进及用户体验优化。我们承诺保护用户信息安全，不会向第三方泄露用户的个人敏感信息。',
+    okText: '我知道了'
+  })
+}
+
 // 表单数据
 const formData = ref({
   email: '',
   password: '',
   verifyCode: '',
   captcha: '',
-  captcha_id: ''
+  captcha_id: '',
+  agreeTerms: false  // 添加用户协议勾选项
 })
 
 // 表单验证
@@ -28,6 +47,7 @@ const emailError = ref('')
 const passwordError = ref('')
 const verifyCodeError = ref('')
 const captchaError = ref('')
+const termsError = ref('') // 添加协议错误提示
 
 // 验证码图片
 const captchaImg = ref('')
@@ -55,13 +75,15 @@ const toggleMode = () => {
     password: '',
     verifyCode: '',
     captcha_id: '',
-    captcha: ''
+    captcha: '',
+    agreeTerms: false
   }
   // 清空错误信息
   emailError.value = ''
   passwordError.value = ''
   verifyCodeError.value = ''
   captchaError.value = ''
+  termsError.value = ''
   // 重新获取验证码
   getCaptchaImage()
 }
@@ -81,6 +103,7 @@ const clearErrors = () => {
   passwordError.value = ''
   verifyCodeError.value = ''
   captchaError.value = ''
+  termsError.value = ''
 }
 
 // 获取验证码
@@ -194,6 +217,11 @@ const validateForm = () => {
       verifyCodeError.value = '请输入验证码'
       isValid = false
     }
+    // 注册时必须同意用户协议
+    if (!formData.value.agreeTerms) {
+      termsError.value = '请阅读并同意用户协议和隐私条款'
+      isValid = false
+    }
   }
 
   return isValid
@@ -202,6 +230,12 @@ const validateForm = () => {
 // 提交表单
 const handleSubmit = async () => {
   if (loading.value || !validateForm()) return
+  
+  // 确保用户已勾选用户协议
+  if (!formData.value.agreeTerms) {
+    termsError.value = '请阅读并同意用户协议和隐私条款'
+    return
+  }
   
   loading.value = true
   try {
@@ -440,6 +474,26 @@ getCaptchaImage()
           </div>
           <div class="error-message" v-if="verifyCodeError">{{ verifyCodeError }}</div>
         </template>
+        
+        <!-- 用户协议勾选框 -->
+        <div class="form-group terms-agreement">
+          <div class="checkbox-container">
+            <input 
+              type="checkbox" 
+              id="terms" 
+              v-model="formData.agreeTerms"
+              @change="termsError = ''"
+              class="custom-checkbox"
+            />
+            <label for="terms" class="terms-label">
+              我已阅读并同意
+              <a href="#" @click.prevent="showTerms">《用户协议》</a>
+              和
+              <a href="#" @click.prevent="showPrivacyPolicy">《隐私条款》</a>
+            </label>
+          </div>
+          <div v-if="termsError" class="error-message">{{ termsError }}</div>
+        </div>
         
         <!-- 提交按钮 -->
         <button
@@ -802,5 +856,45 @@ h2 {
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
+}
+
+.terms-agreement {
+  margin-top: 15px;
+  text-align: left;
+  width: 100%;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+
+.custom-checkbox {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.terms-label {
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: normal;
+  cursor: pointer;
+  user-select: none;
+  flex: 1;
+}
+
+.terms-label a {
+  color: #4CAF50;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.terms-label a:hover {
+  text-decoration: underline;
 }
 </style> 
