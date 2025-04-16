@@ -22,6 +22,7 @@ import ProblemEdit from '../views/ProblemEdit.vue'
 import NotFound from '../views/NotFound.vue'
 import ProblemTestCase from '../views/ProblemTestCase.vue'
 import { isAuthenticated, getUserId, getAccessToken } from '../utils/auth'
+import { message } from 'ant-design-vue'
 
 // 简单的管理员权限检查函数
 async function checkAdminPermission() {
@@ -81,8 +82,7 @@ const routes = [
   {
     path: '/contests',
     name: 'Contests',
-    component: Contests,
-    meta: { requiresAuth: true }
+    component: Contests
   },
   {
     path: '/contest/:id',
@@ -264,6 +264,14 @@ router.beforeEach(async (to, from, next) => {
         return
       }
     }
+  }
+  
+  // 对于需要登录提示的页面，检查登录状态并显示提示，但允许访问
+  if ((to.path.startsWith('/contests') || to.path.startsWith('/problem/')) && !isAuthenticated()) {
+    // 使用setTimeout确保在页面加载后显示提示
+    setTimeout(() => {
+      message.info('登录后可参与竞赛及提交代码')
+    }, 500)
   }
 
   // 如果已登录但尝试访问登录页，重定向到首页或目标页面

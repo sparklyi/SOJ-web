@@ -432,6 +432,18 @@ const fetchSubmissionList = async () => {
     if (res.code === 200) {
       submissionList.value = res.data.detail || []
       submissionTotal.value = res.data.count || 0
+      
+      // 检查页码合法性
+      if (submissionTotal.value === 0) {
+        currentPage.value = 1
+      } else {
+        const maxPage = Math.max(Math.ceil(submissionTotal.value / pageSize.value), 1)
+        if (currentPage.value > maxPage) {
+          currentPage.value = maxPage
+          fetchSubmissionList() // 重新获取正确页码的数据
+          return
+        }
+      }
     } else {
       message.error(res.message)
     }
@@ -820,6 +832,18 @@ const fetchSubmissions = async () => {
     if (res.code === 200) {
       submissionList.value = res.data.detail || []
       submissionTotal.value = res.data.count || 0
+      
+      // 检查页码合法性
+      if (submissionTotal.value === 0) {
+        currentPage.value = 1
+      } else {
+        const maxPage = Math.max(Math.ceil(submissionTotal.value / pageSize.value), 1)
+        if (currentPage.value > maxPage) {
+          currentPage.value = maxPage
+          fetchSubmissions() // 重新获取正确页码的数据
+          return
+        }
+      }
     } else {
       console.error('获取提交记录失败:', res.message)
       message.error(res.message || '获取提交记录失败')

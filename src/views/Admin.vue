@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, h, computed } from 'vue'
+import { ref, onMounted, watch, h, computed, createVNode } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   getAdminProblems, 
@@ -226,7 +226,7 @@ const fetchProblems = async () => {
       user_id: userStore.isAdmin ? undefined : userStore.userInfo.ID,
       page: 1,
       page_size: 10,
-      id: searchId.value || undefined
+      id: searchId.value ? parseInt(searchId.value) : undefined
     })
     if (res.code === 200) {
       problems.value = res.data.detail || []
@@ -257,7 +257,7 @@ const fetchContests = async () => {
       {
         page: 1,
         page_size: 10,
-        id: searchContestId.value || undefined
+        id: searchContestId.value ? parseInt(searchContestId.value) : undefined
       }
     )
     if (res.code === 200) {
@@ -287,7 +287,7 @@ const fetchUsers = async () => {
     const res = await getAdminUsers({
       page: 1,
       page_size: 10,
-      id: searchUserId.value || undefined
+      id: searchUserId.value ? parseInt(searchUserId.value) : undefined
     })
     if (res.code === 200) {
       users.value = res.data || []
@@ -353,38 +353,50 @@ const deleteContestItem = async (contestId) => {
 // 编辑用户信息
 const editUserInfo = (user) => {
   let formUsername = user.username
+  let formEmail = user.email
   let formProfile = user.profile || ''
 
   Modal.confirm({
     title: '编辑用户信息',
-    content: h => {
-      return h('div', {}, [
-        h('div', { style: 'margin-bottom: 16px' }, [
-          h('div', { style: 'margin-bottom: 8px' }, '用户名:'),
-          h(Input, { 
-            value: formUsername,
-            onChange: (e) => { formUsername = e.target.value }
-          })
-        ]),
-        h('div', {}, [
-          h('div', { style: 'margin-bottom: 8px' }, '个人简介:'),
-          h(Input.TextArea, { 
-            value: formProfile, 
-            rows: 3,
-            onChange: (e) => { formProfile = e.target.value }
-          })
-        ])
+    content: createVNode('div', {}, [
+      createVNode('div', { style: 'margin-bottom: 16px' }, [
+        createVNode('div', { style: 'margin-bottom: 8px' }, '用户名:'),
+        createVNode(Input, { 
+          value: formUsername,
+          onChange: (e) => { formUsername = e.target.value }
+        })
+      ]),
+      createVNode('div', { style: 'margin-bottom: 16px' }, [
+        createVNode('div', { style: 'margin-bottom: 8px' }, '邮箱:'),
+        createVNode(Input, { 
+          value: formEmail,
+          onChange: (e) => { formEmail = e.target.value }
+        })
+      ]),
+      createVNode('div', {}, [
+        createVNode('div', { style: 'margin-bottom: 8px' }, '个人简介:'),
+        createVNode(Input.TextArea, { 
+          value: formProfile, 
+          rows: 3,
+          onChange: (e) => { formProfile = e.target.value }
+        })
       ])
-    },
+    ]),
     onOk: () => {
       if (!formUsername) {
         message.error('用户名不能为空')
         return Promise.reject('用户名不能为空')
       }
       
+      if (!formEmail) {
+        message.error('邮箱不能为空')
+        return Promise.reject('邮箱不能为空')
+      }
+      
       return updateUserInfoData({
         id: user.ID,
         username: formUsername,
+        email: formEmail,
         profile: formProfile,
         role: user.role
       })
@@ -417,25 +429,23 @@ const updateUserRole = (user) => {
 
   Modal.confirm({
     title: '设置用户权限',
-    content: h => {
-      return h('div', {}, [
-        h('p', {}, `当前用户: ${user.username}`),
-        h('p', {}, `当前权限: ${getUserRoleText(user.role)}`),
-        h('div', { style: 'margin-top: 16px' }, [
-          h('div', { style: 'margin-bottom: 8px' }, '选择新权限:'),
-          h('select', { 
-            style: 'width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #d9d9d9;',
-            value: selectedRole,
-            onChange: (e) => { selectedRole = Number(e.target.value) }
-          }, [
-            h('option', { value: -1, selected: user.role === -1 }, '封禁'),
-            h('option', { value: 1, selected: user.role === 1 }, '普通用户'),
-            h('option', { value: 2, selected: user.role === 2 }, '管理员'),
-            h('option', { value: 3, selected: user.role === 3 }, '超级管理员')
-          ])
+    content: createVNode('div', {}, [
+      createVNode('p', {}, `当前用户: ${user.username}`),
+      createVNode('p', {}, `当前权限: ${getUserRoleText(user.role)}`),
+      createVNode('div', { style: 'margin-top: 16px' }, [
+        createVNode('div', { style: 'margin-bottom: 8px' }, '选择新权限:'),
+        createVNode('select', { 
+          style: 'width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #d9d9d9;',
+          value: selectedRole,
+          onChange: (e) => { selectedRole = Number(e.target.value) }
+        }, [
+          createVNode('option', { value: -1, selected: user.role === -1 }, '封禁'),
+          createVNode('option', { value: 1, selected: user.role === 1 }, '普通用户'),
+          createVNode('option', { value: 2, selected: user.role === 2 }, '管理员'),
+          createVNode('option', { value: 3, selected: user.role === 3 }, '超级管理员')
         ])
       ])
-    },
+    ]),
     onOk: () => {
       return updateUserInfoData({
         id: user.ID,
