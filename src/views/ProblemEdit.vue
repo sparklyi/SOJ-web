@@ -19,6 +19,10 @@ const selectedLanguages = ref([])
 const currentStep = ref(0)
 const totalSteps = 4
 
+// 用来保存之前的页面路径
+let previousPage = route.query.from;
+
+
 // 检查权限
 const hasPermission = computed(() => userStore.isAdmin)
 
@@ -401,7 +405,8 @@ const submitForm = async () => {
 
 // 取消编辑，返回题目管理页面
 const cancel = () => {
-  router.push('/admin')
+  console.log(previousPage)
+  router.push(previousPage)
 }
 
 // 添加全选/取消全选方法
@@ -430,17 +435,13 @@ const saveFormToLocal = () => {
   }
 }
 
-// 返回到题目管理页面
-const navigateBack = () => {
-  router.push('/admin')
-}
 </script>
 
 <template>
   <div class="problem-edit-container">
     <div class="page-header">
       <h1>编辑题目</h1>
-      <button class="back-btn" @click="navigateBack">返回</button>
+      
     </div>
     
     <div class="step-indicator">
@@ -618,16 +619,17 @@ const navigateBack = () => {
             <div class="languages-header">
               <div class="languages-title-row">
                 <h3>编程语言限制</h3>
-                <div class="select-all-container">
-                  <label class="select-all-label">
-                    <input 
-                      type="checkbox" 
-                      :checked="selectedLanguages.length === languages.length"
-                      @change="toggleAllLanguages"
-                    />
-                    <span>全选/取消全选</span>
-                  </label>
-                </div>
+                <div class="toggle-switch-container">
+  <label class="switch">
+    <input 
+      type="checkbox" 
+      :checked="selectedLanguages.length === languages.length"
+      @change="toggleAllLanguages"
+    />
+    <span class="slider round"></span>
+  </label>
+  <span class="switch-label">全选</span>
+</div>
               </div>
               <p class="languages-description">请选择支持的编程语言，并设置对应的时间和内存限制</p>
             </div>
@@ -1029,11 +1031,7 @@ const navigateBack = () => {
   margin-top: 15px;
 }
 
-.select-all-label {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-}
+
 
 .select-all-label input {
   margin-right: 8px;
@@ -1208,7 +1206,12 @@ const navigateBack = () => {
 .mt-4 {
   margin-top: 24px;
 }
-
+.toggle-switch-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
 /* 可见性开关样式 */
 .status-toggle {
   display: flex;

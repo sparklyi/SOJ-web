@@ -1353,10 +1353,10 @@ const viewRankSubmissionDetail = (submissionId) => {
               >
                 上一页
               </button>
-              <span class="page-info">{{ currentPage }} / {{ Math.ceil(submissionTotal / pageSize) }}</span>
+              <span class="page-info">{{ currentPage }} / {{ Math.floor(submissionTotal / pageSize) }}</span>
               <button 
                 class="page-btn" 
-                :disabled="currentPage >= Math.ceil(submissionTotal / pageSize)"
+                :disabled="currentPage >= Math.floor(submissionTotal / pageSize)"
                 @click="handlePageChange(currentPage + 1)"
               >
                 下一页
