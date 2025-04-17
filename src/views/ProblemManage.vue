@@ -142,9 +142,11 @@ const createProblem = () => {
 
 // 编辑题目
 const editProblem = (problemId) => {
-  router.push(`/problem-edit/${problemId}`)
+  router.push({
+    path: `/problem-edit/${problemId}`,  // 跳转到编辑页面
+    query: { from: router.currentRoute.value.fullPath }      // 将当前页面的路径作为 'from' 参数传递
+  })
 }
-
 // 编辑测试点
 const editTestCase = (problemId) => {
   router.push(`/problem-testcase/${problemId}`)
