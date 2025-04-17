@@ -434,7 +434,7 @@ h1 {
 
 .search-box {
   flex: 1;
-  min-width: 200px;
+  width: 100px;
 }
 
 .filter-box {

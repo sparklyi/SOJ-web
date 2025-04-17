@@ -77,7 +77,8 @@ const routes = [
   {
     path: '/problem/:id',
     name: 'ProblemDetail',
-    component: ProblemDetail
+    component: ProblemDetail,
+    meta: { requiresAuth: true }
   },
   {
     path: '/contests',
@@ -89,12 +90,14 @@ const routes = [
     name: 'ContestDetail',
     component: ContestDetail,
     meta: { requiresAuth: true },
-    props: true
+    props: true,
+    meta: { requiresAuth: true }
   },
   {
     path: '/contest-problem/:id',
     name: 'ContestProblemDetail',
-    component: ContestProblemDetail
+    component: ContestProblemDetail,
+    meta: { requiresAuth: true }
   },
   {
     path: '/contest/:id/waiting',
@@ -186,12 +189,7 @@ const routes = [
     component: () => import('../views/ContestCreate.vue'),
     meta: { requiresAuth: true }
   },
-  {
-    path: '/contest-edit/:id',
-    name: 'ContestEdit',
-    component: () => import('../views/ContestEdit.vue'),
-    meta: { requiresAuth: true }
-  },
+
   // 通配符路由，匹配所有未定义的路径，必须放在最后
   {
     path: '/:pathMatch(.*)*',
@@ -242,13 +240,13 @@ const updateDynamicTitle = async (to) => {
   }
 }
 
-// 修改现有的路由守卫
 router.beforeEach(async (to, from, next) => {
   // 检查是否需要身份验证
+  console.log('当前访问路由:', to.fullPath)
+  console.log('是否需要登录:', to.matched.some(record => record.meta.requiresAuth))
+  console.log('当前是否已登录:', isAuthenticated())
   if (to.matched.some(record => record.meta.requiresAuth)) {
-    // 使用 auth.js 的 isAuthenticated 方法检查令牌
     if (!isAuthenticated()) {
-      // 如果没有令牌，重定向到登录页
       next({
         path: '/login',
         query: { redirect: to.fullPath }
@@ -256,7 +254,6 @@ router.beforeEach(async (to, from, next) => {
       return
     }
 
-    // 如果需要管理员权限
     if (to.matched.some(record => record.meta.requiresAdmin)) {
       const isAdmin = await checkAdminPermission()
       if (!isAdmin) {
@@ -264,14 +261,6 @@ router.beforeEach(async (to, from, next) => {
         return
       }
     }
-  }
-  
-  // 对于需要登录提示的页面，检查登录状态并显示提示，但允许访问
-  if ((to.path.startsWith('/contests') || to.path.startsWith('/problem/')) && !isAuthenticated()) {
-    // 使用setTimeout确保在页面加载后显示提示
-    setTimeout(() => {
-      message.info('登录后可参与竞赛及提交代码')
-    }, 500)
   }
 
   // 如果已登录但尝试访问登录页，重定向到首页或目标页面
@@ -284,43 +273,32 @@ router.beforeEach(async (to, from, next) => {
     return
   }
 
-  // 基础标题
+  // 设置默认标题
   let title = 'SOJ - 在线评测系统'
-
-  // 根据路由动态设置标题
   if (to.meta.title) {
-    // 如果路由自己定义了标题，直接使用
     title = to.meta.title
   } else if (to.name === 'ProblemDetail' && to.params.id) {
-    // 题目详情页 - 先设置基础标题，后续异步更新
     title = `SOJ - 题目 #${to.params.id}`
   } else if (to.name === 'ContestProblemDetail' && to.params.id) {
-    // 竞赛题目详情页 - 先设置基础标题，后续异步更新
     title = `SOJ - 竞赛题目 #${to.params.id}`
   } else if (to.name === 'ContestDetail' && to.params.id) {
-    // 竞赛详情页
     title = `SOJ - 竞赛 #${to.params.id}`
   } else if (to.name === 'Contests') {
-    // 竞赛列表页
     title = `SOJ - 竞赛列表`
   } else if (to.name === 'Problems') {
-    // 题目列表页
     title = `SOJ - 题库`
   } else if (to.name === 'Login') {
-    // 登录页
     title = `SOJ - 登录`
   } else if (to.name === 'Register') {
-    // 注册页
     title = `SOJ - 注册`
   } else if (to.name === 'Profile') {
-    // 个人资料页
     title = `SOJ - 个人资料`
   }
 
-  // 设置页面标题
   document.title = title
   next()
 })
+
 
 // 路由后置钩子，用于异步更新标题
 router.afterEach((to) => {
