@@ -6,6 +6,15 @@ export const MAIN_MENU_ITEMS = [
   { path: '/ranking', label: '排行榜', comingSoon: true }
 ]
 
+// 用户角色定义
+export const USER_ROLES = {
+  BAN: -1,   // 封禁用户
+  USER: 1,   // 普通用户
+  ADMIN: 2,  // 管理员
+  ROOT: 3    // 超级管理员
+}
+
+// 用户菜单项
 export const USER_MENU_ITEMS = [
   { key: 'profile', label: '个人主页' },
   { key: 'avatar', label: '上传头像' },
@@ -15,19 +24,12 @@ export const USER_MENU_ITEMS = [
     label: '个人比赛',
     children: [
       { key: 'contest-applies', label: '个人报名比赛' },
-      { key: 'contest-manage', label: '比赛管理' }
+      { key: 'contest-manage', label: '比赛管理', requireAuth: USER_ROLES.ADMIN }
     ]
   },
-  { key: 'problem-manage', label: '题目管理' },
+  { key: 'problem-manage', label: '题目管理', requireAuth: USER_ROLES.ADMIN },
   { key: 'logout', label: '退出登录' }
 ]
-
-export const USER_ROLES = {
-  BAN: -1,   // 封禁用户
-  USER: 1,   // 普通用户
-  ADMIN: 2,  // 管理员
-  ROOT: 3    // 超级管理员
-}
 
 export const USER_ROLE_COLORS = {
   [USER_ROLES.BAN]: '#999999',   // 封禁用户 - 灰色

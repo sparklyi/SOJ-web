@@ -206,7 +206,7 @@ const userColumns = [
 
 // 权限检查
 const hasPermission = computed(() => {
-  return userStore.isAdmin || userStore.userInfo?.role >= 2
+  return userStore.userInfo?.role === 3
 })
 
 // 数据加载状态
