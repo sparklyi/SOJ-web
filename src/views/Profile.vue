@@ -255,7 +255,7 @@ onMounted(async () => {
         <div class="profile-layout">
           <!-- 左侧头像区域 -->
           <div class="left-section">
-            <img :src="userInfo.avatar" alt="用户头像" class="avatar" />
+            <img :src="userInfo.avatar || '/assets/default_user_avatar.gif'" alt="用户头像" class="avatar" />
             <h2>{{ userInfo.username }}</h2>
             <div class="user-role">
               <span :style="{ color: getRoleColor(userInfo.role) }">{{ getRoleName(userInfo.role) }}</span>

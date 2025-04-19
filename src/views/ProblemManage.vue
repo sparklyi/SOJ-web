@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getUserProblems, deleteProblemAPI, updateProblemAPI, getProblemDetail } from '../api/problem'
+import { getUserProblems, deleteProblemAPI, updateProblemAPI, getProblemDetail, getProblemJudgeCount } from '../api/problem'
 import { message, Modal } from 'ant-design-vue'
 import { getUserId } from '../utils/auth'
 import { useUserStore } from '../store/user'
@@ -43,6 +43,27 @@ const statusOptions = [
   { value: 'public', label: '公开' },
   { value: 'private', label: '私有' }
 ]
+
+// 组件内添加statsMap和fetchProblemStats方法
+// 存储每个题目的统计数据
+const statsMap = ref({})
+
+// 获取题目统计信息
+const fetchProblemStats = async (problemId) => {
+  if (!problemId) return
+  
+  try {
+    const res = await getProblemJudgeCount(problemId)
+    if (res.code === 200) {
+      statsMap.value[problemId] = {
+        accept_count: parseInt(res.data['Accepted'] || 0),
+        submit_count: parseInt(res.data['count'] || 0)
+      }
+    }
+  } catch (error) {
+    console.error(`获取题目 ${problemId} 统计数据失败:`, error)
+  }
+}
 
 // 监听筛选条件变化
 watch(filters, () => {
@@ -86,6 +107,11 @@ const fetchUserProblems = async () => {
           difficulty: problem.difficulty || problem.level || 1
         }))
         total.value = res.data.count || 0
+        
+        // 获取题目统计数据
+        userProblems.value.forEach(problem => {
+          fetchProblemStats(problem.ID)
+        })
       } else if (res.data && Array.isArray(res.data)) {
         // 处理直接返回数组的情况
         userProblems.value = res.data.map(problem => ({
@@ -95,6 +121,11 @@ const fetchUserProblems = async () => {
           difficulty: problem.difficulty || problem.level || 1
         }))
         total.value = res.data.length
+        
+        // 获取题目统计数据
+        userProblems.value.forEach(problem => {
+          fetchProblemStats(problem.ID)
+        })
       } else {
         userProblems.value = []
         total.value = 0
@@ -149,7 +180,11 @@ const editProblem = (problemId) => {
 }
 // 编辑测试点
 const editTestCase = (problemId) => {
-  router.push(`/problem-testcase/${problemId}`)
+  router.push({
+    path: `/problem-testcase/${problemId}`,  // 跳转到编辑页面
+    query: { from: router.currentRoute.value.fullPath }      // 将当前页面的路径作为 'from' 参数传递
+  })
+  
 }
 
 // 删除题目
@@ -272,10 +307,7 @@ const formatDate = (dateStr) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
-// 跳转到测试点管理页面
-const manageTestCase = (id) => {
-  router.push(`/problem-testcase/${id}`)
-}
+
 
 onMounted(() => {
   fetchUserProblems()
@@ -331,7 +363,7 @@ onMounted(() => {
             <div class="problem-header">
               <h2 class="problem-title">
                 <span class="problem-id">ID: {{ problem.ID }}</span>
-                {{ problem.title }}
+                <a class="problem-link" @click="viewProblem(problem.ID)">{{ problem.title }}</a>
               </h2>
               <div class="problem-tags">
                 <span :class="['difficulty-tag', getDifficultyTag(problem.difficulty).class]">
@@ -356,25 +388,27 @@ onMounted(() => {
             <div class="problem-stats">
               <div class="stat-item">
                 <span class="stat-label">通过率:</span>
-                <span class="stat-value">{{ problem.accept_count ? ((problem.accept_count / problem.submit_count) * 100).toFixed(2) : 0 }}%</span>
+                <span class="stat-value">
+                {{
+                  statsMap[problem.ID]
+                    ? isNaN((statsMap[problem.ID].accept_count / statsMap[problem.ID].submit_count) * 100)
+                      ? 0
+                      : ((statsMap[problem.ID].accept_count / statsMap[problem.ID].submit_count) * 100).toFixed(2)
+                    : 0
+                }}%
+              </span>
               </div>
               <div class="stat-item">
                 <span class="stat-label">提交数:</span>
-                <span class="stat-value">{{ problem.submit_count || 0 }}</span>
+                <span class="stat-value">{{ statsMap[problem.ID]?.submit_count || 0 }}</span>
               </div>
               <div class="stat-item">
                 <span class="stat-label">通过数:</span>
-                <span class="stat-value">{{ problem.accept_count || 0 }}</span>
+                <span class="stat-value">{{ statsMap[problem.ID]?.accept_count || 0 }}</span>
               </div>
             </div>
           </div>
           <div class="problem-action">
-            <button 
-              class="view-btn" 
-              @click="viewProblem(problem.ID)"
-            >
-              查看题目
-            </button>
             <button 
               class="edit-btn" 
               @click="editProblem(problem.ID)"
@@ -383,7 +417,7 @@ onMounted(() => {
             </button>
             <button 
               class="testcase-btn" 
-              @click="manageTestCase(problem.ID)"
+              @click="editTestCase(problem.ID)"
             >
               编辑测试点
             </button>
@@ -391,8 +425,16 @@ onMounted(() => {
               class="toggle-btn" 
               @click="toggleProblemPublic(problem)"
               :class="problem.public ? 'private-action' : 'public-action'"
+              v-if="problem.public"
             >
-              {{ problem.public ? '设为私有' : '公开题目' }}
+              设为私有
+            </button>
+            <button 
+              class="toggle-btn public-action" 
+              @click="toggleProblemPublic(problem)"
+              v-else
+            >
+              公开题目
             </button>
             <button 
               class="delete-btn" 
@@ -581,6 +623,16 @@ h1 {
   color: #4a90e2;
 }
 
+.problem-link {
+  cursor: pointer;
+  text-decoration: none;
+  color: #4a90e2;
+}
+
+.problem-link:hover {
+  text-decoration: underline;
+}
+
 .problem-tags {
   display: flex;
   gap: 8px;
@@ -664,7 +716,6 @@ h1 {
   min-width: 120px;
 }
 
-.view-btn,
 .edit-btn,
 .testcase-btn,
 .toggle-btn,
@@ -677,15 +728,6 @@ h1 {
   cursor: pointer;
   transition: all 0.3s;
   white-space: nowrap;
-}
-
-.view-btn {
-  background: #4a90e2;
-  color: white;
-}
-
-.view-btn:hover {
-  background: #357dd8;
 }
 
 .edit-btn {

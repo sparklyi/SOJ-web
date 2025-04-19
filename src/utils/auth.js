@@ -2,6 +2,25 @@
 const ACCESS_TOKEN_KEY = 'SOJ-Access-Token'
 const REFRESH_TOKEN_KEY = 'SOJ-Refresh-Token'
 const USER_ID_KEY = 'SOJ-User-ID'
+const USER_AUTH_KEY = 'SOJ-User-Auth'
+
+// 解析JWT token
+function parseToken(token) {
+  try {
+    if (!token) return null;
+    
+    // 获取第二部分（payload）
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    // 解码base64
+    const payload = JSON.parse(atob(parts[1]));
+    return payload;
+  } catch (error) {
+    console.error('解析token失败:', error);
+    return null;
+  }
+}
 
 // 设置 token
 export function setToken(data) {
@@ -10,15 +29,30 @@ export function setToken(data) {
   if (data['SOJ-Refresh-Token']) {
     localStorage.setItem(REFRESH_TOKEN_KEY, data['SOJ-Refresh-Token'])
   }
-  // 如果有用户ID也存储
-  if (data.id) {
-    localStorage.setItem(USER_ID_KEY, data.id.toString())
+  
+  // 从token中解析用户ID和Auth
+  const token = data['SOJ-Access-Token'];
+  const decoded = parseToken(token);
+  
+  if (decoded) {
+    localStorage.setItem(USER_ID_KEY, decoded.ID.toString());
+    localStorage.setItem(USER_AUTH_KEY, decoded.Auth.toString());
+  } else if (data.id) {
+    // 兼容旧方式
+    localStorage.setItem(USER_ID_KEY, data.id.toString());
   }
 }
 
 // 更新访问令牌
 export function updateAccessToken(token) {
   localStorage.setItem(ACCESS_TOKEN_KEY, token)
+  
+  // 从token中更新用户ID和Auth
+  const decoded = parseToken(token);
+  if (decoded) {
+    localStorage.setItem(USER_ID_KEY, decoded.ID.toString());
+    localStorage.setItem(USER_AUTH_KEY, decoded.Auth.toString());
+  }
 }
 
 // 获取 access token
@@ -37,11 +71,30 @@ export function getUserId() {
   return userId ? Number(userId) : null
 }
 
+// 获取用户权限等级
+export function getUserAuth() {
+  const userAuth = localStorage.getItem(USER_AUTH_KEY)
+  return userAuth ? Number(userAuth) : null
+}
+
+// 判断用户是否为管理员
+export function isAdmin() {
+  const userAuth = getUserAuth();
+  return userAuth !== null && userAuth >= 2;
+}
+
+// 判断用户是否为超级管理员
+export function isSuperAdmin() {
+  const userAuth = getUserAuth();
+  return userAuth !== null && userAuth === 3;
+}
+
 // 移除 token
 export function removeToken() {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
   localStorage.removeItem(USER_ID_KEY)
+  localStorage.removeItem(USER_AUTH_KEY)
 }
 
 // 刷新 token - 使用原生 fetch API 避免循环依赖
@@ -111,4 +164,5 @@ export function clearLocalStorage() {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
   localStorage.removeItem(USER_ID_KEY)
+  localStorage.removeItem(USER_AUTH_KEY)
 } 

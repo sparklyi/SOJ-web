@@ -29,7 +29,7 @@ const userStore = useUserStore()
         <span v-if="item.comingSoon" class="coming-soon-tag">即将上线</span>
       </router-link>
       <router-link
-        v-if="userStore.isAdmin"
+        v-if="userStore.userInfo.role === 3"
         to="/admin"
         class="nav-link"
         :class="{ active: route.path === '/admin' }"

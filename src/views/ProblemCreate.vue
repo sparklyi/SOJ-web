@@ -86,8 +86,8 @@ const fetchLanguages = async () => {
         // 使用数字类型的ID作为键
         const langId = Number(lang.id);
         problemForm.lang_limit[langId] = {
-          time_limit: defaultTimeLimit,
-          memory_limit: defaultMemoryLimit
+          cpu_time_limit: defaultTimeLimit,
+          cpu_memory_limit: defaultMemoryLimit
         }
       })
     } else {
@@ -188,6 +188,7 @@ const submitForm = async () => {
     output_description: problemForm.output_description,
     level: problemForm.level,
     example: examples.value,
+    lang_limit:problemForm.lang_limit,
     remark: problemForm.remark,
     visible: problemForm.visible,
     owner: problemForm.owner
@@ -456,15 +457,16 @@ const toggleAllLanguages = () => {
           <div class="languages-header">
             <div class="languages-title-row">
               <h3>编程语言限制</h3>
-              <div class="select-all-container">
-                <label class="select-all-label">
+              <div class="toggle-switch-container">
+                <label class="switch">
                   <input 
                     type="checkbox" 
                     :checked="selectedLanguages.length === languages.length"
                     @change="toggleAllLanguages"
                   />
-                  <span>全选/取消全选</span>
+                  <span class="slider round"></span>
                 </label>
+                <span class="switch-label">全选</span>
               </div>
             </div>
             <p class="languages-description">请选择支持的编程语言，并设置对应的时间和内存限制</p>
@@ -498,7 +500,7 @@ const toggleAllLanguages = () => {
                   <div class="time-limit">
                     <input 
                       type="number" 
-                      v-model.number="problemForm.lang_limit[Number(lang.id)].time_limit" 
+                      v-model.number="problemForm.lang_limit[Number(lang.id)].cpu_time_limit" 
                       :disabled="!selectedLanguages.includes(Number(lang.id))"
                       min="0.5"
                       step="0.5"
@@ -509,7 +511,7 @@ const toggleAllLanguages = () => {
                   <div class="memory-limit">
                     <input 
                       type="number" 
-                      v-model.number="problemForm.lang_limit[Number(lang.id)].memory_limit" 
+                      v-model.number="problemForm.lang_limit[Number(lang.id)].cpu_memory_limit" 
                       :disabled="!selectedLanguages.includes(Number(lang.id))"
                       min="65536"
                       step="65536"

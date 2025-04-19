@@ -153,8 +153,7 @@ const uploadAvatar = async () => {
         <div class="current-avatar">
           <h3>当前头像</h3>
           <div class="avatar-preview">
-            <img :src="userInfo.avatar" alt="当前头像" v-if="userInfo.avatar" />
-            <div class="no-avatar" v-else>暂无头像</div>
+            <img :src="userInfo.avatar || '/assets/default_user_avatar.gif'" alt="当前头像" />
           </div>
         </div>
         

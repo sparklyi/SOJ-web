@@ -16,7 +16,7 @@ export const useUserStore = defineStore('user', {
     role: (state) => state.userInfo.role || 0,
     isLoggedIn: (state) => !!state.userInfo.ID,
     username: (state) => state.userInfo.username || '',
-    avatar: (state) => state.userInfo.avatar || '',
+    avatar: (state) => state.userInfo.avatar || '/assets/default_user_avatar.gif',
     notify: (state) => state.userInfo.notify || 1,
     roleColor: (state) => {
       switch (state.userInfo.role) {
