@@ -21,35 +21,17 @@ import ProblemCreate from '../views/ProblemCreate.vue'
 import ProblemEdit from '../views/ProblemEdit.vue'
 import NotFound from '../views/NotFound.vue'
 import ProblemTestCase from '../views/ProblemTestCase.vue'
-import { isAuthenticated, getUserId, getAccessToken } from '../utils/auth'
+import { isAuthenticated, getUserId, getAccessToken, getUserAuth, isSuperAdmin } from '../utils/auth'
 import { message } from 'ant-design-vue'
 
-// 简单的管理员权限检查函数
-async function checkAdminPermission() {
+// 权限检查函数 - 只允许Auth=3的超级管理员访问管理面板
+async function checkSuperAdminPermission() {
   try {
-    // 简单检查是否有权限，使用原生 fetch，避免循环依赖
-    const userId = getUserId()
-    const token = getAccessToken()
-    
-    if (!userId || !token) {
-      return false
-    }
-    
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/user/${Number(userId)}`, {
-      headers: {
-        'SOJ-Access-Token': token
-      }
-    })
-    
-    const data = await response.json()
-    if (data.code === 200 && data.data && data.data.role >= 2) {
-      return true
-    }
-    
-    return false
+    const userAuth = getUserAuth();
+    return userAuth === 3; // 只有Auth=3的用户才能访问
   } catch (error) {
-    console.error('检查管理员权限失败:', error)
-    return false
+    console.error('检查超级管理员权限失败:', error);
+    return false;
   }
 }
 
@@ -110,7 +92,7 @@ const routes = [
     path: '/admin',
     name: 'Admin',
     component: Admin,
-    meta: { requiresAuth: true, requiresAdmin: true }
+    meta: { requiresAuth: true, requiresSuperAdmin: true }
   },
   {
     path: '/profile',
@@ -254,9 +236,11 @@ router.beforeEach(async (to, from, next) => {
       return
     }
 
-    if (to.matched.some(record => record.meta.requiresAdmin)) {
-      const isAdmin = await checkAdminPermission()
-      if (!isAdmin) {
+    // 检查超级管理员权限
+    if (to.matched.some(record => record.meta.requiresSuperAdmin)) {
+      const isSuperAdminUser = await checkSuperAdminPermission()
+      if (!isSuperAdminUser) {
+        message.error('您没有足够的权限访问此页面')
         next('/')
         return
       }

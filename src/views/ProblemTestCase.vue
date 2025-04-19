@@ -140,10 +140,11 @@ const saveTestCases = async () => {
     submitting.value = false
   }
 }
-
+let previousPage = route.query.from;
 // 返回题目管理页
 const goBack = () => {
-  router.push('/problem-manage')
+  console.log(previousPage)
+  router.push(previousPage)
 }
 </script>
 
