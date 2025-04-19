@@ -74,12 +74,12 @@ const setTimeLimit = (langId, value) => {
   // 确保对象存在
   if (!problemForm.lang_limit[id]) {
     problemForm.lang_limit[id] = {
-      time_limit: 1,
-      memory_limit: 262144
+      cpu_time_limit: 1,
+      cpu_memory_limit: 262144
     };
   }
   // 设置新值
-  problemForm.lang_limit[id].time_limit = Number(value);
+  problemForm.lang_limit[id].cpu_time_limit = Number(value);
 }
 
 // 设置内存限制
@@ -88,19 +88,19 @@ const setMemoryLimit = (langId, value) => {
   // 确保对象存在
   if (!problemForm.lang_limit[id]) {
     problemForm.lang_limit[id] = {
-      time_limit: 1,
-      memory_limit: 262144
+      cpu_time_limit: 1,
+      cpu_memory_limit: 262144
     };
   }
   // 设置新值
-  problemForm.lang_limit[id].memory_limit = Number(value);
+  problemForm.lang_limit[id].cpu_memory_limit = Number(value);
 }
 
 // 获取时间限制
 const getTimeLimit = (langId) => {
   const id = Number(langId);
-  if (problemForm.lang_limit[id] && problemForm.lang_limit[id].time_limit !== undefined) {
-    return problemForm.lang_limit[id].time_limit;
+  if (problemForm.lang_limit[id] && problemForm.lang_limit[id].cpu_time_limit !== undefined) {
+    return problemForm.lang_limit[id].cpu_time_limit;
   }
   return 1; // 默认值
 }
@@ -108,8 +108,8 @@ const getTimeLimit = (langId) => {
 // 获取内存限制
 const getMemoryLimit = (langId) => {
   const id = Number(langId);
-  if (problemForm.lang_limit[id] && problemForm.lang_limit[id].memory_limit !== undefined) {
-    return problemForm.lang_limit[id].memory_limit;
+  if (problemForm.lang_limit[id] && problemForm.lang_limit[id].cpu_memory_limit !== undefined) {
+    return problemForm.lang_limit[id].cpu_memory_limit;
   }
   return 262144; // 默认值
 }
@@ -146,8 +146,8 @@ const fetchProblemDetail = async () => {
         Object.keys(problem.lang_limit).forEach(id => {
           const numId = Number(id);
           problemForm.lang_limit[numId] = {
-            time_limit: problem.lang_limit[id].time_limit || 1,
-            memory_limit: problem.lang_limit[id].memory_limit || 262144
+            cpu_time_limit: problem.lang_limit[id].cpu_time_limit || 1,
+            cpu_memory_limit: problem.lang_limit[id].cpu_memory_limit || 262144
           };
         });
         
@@ -205,8 +205,8 @@ const fetchLanguages = async () => {
         // 仅当该语言不在已有配置中时添加默认值
         if (!problemForm.lang_limit[langId]) {
           problemForm.lang_limit[langId] = {
-            time_limit: defaultTimeLimit,
-            memory_limit: defaultMemoryLimit
+            cpu_time_limit: defaultTimeLimit,
+            cpu_memory_limit: defaultMemoryLimit
           }
         }
       })
@@ -324,8 +324,8 @@ const loadFormFromLocal = () => {
             Object.keys(loadedForm.lang_limit).forEach(id => {
               const numId = Number(id);
               newLangLimit[numId] = {
-                time_limit: loadedForm.lang_limit[id].time_limit || 1,
-                memory_limit: loadedForm.lang_limit[id].memory_limit || 262144
+                cpu_time_limit: loadedForm.lang_limit[id].cpu_time_limit || 1,
+                cpu_memory_limit: loadedForm.lang_limit[id].cpu_memory_limit || 262144
               };
             });
             loadedForm.lang_limit = newLangLimit;
@@ -405,7 +405,6 @@ const submitForm = async () => {
 
 // 取消编辑，返回题目管理页面
 const cancel = () => {
-  console.log(previousPage)
   router.push(previousPage)
 }
 
@@ -434,6 +433,24 @@ const saveFormToLocal = () => {
     message.error('暂存表单数据失败')
   }
 }
+
+// 添加为选中的语言应用统一的时间限制方法
+const applyTimeLimit = (value) => {
+  selectedLanguages.value.forEach(langId => {
+    if (problemForm.lang_limit[langId]) {
+      problemForm.lang_limit[langId].cpu_time_limit = Number(value);
+    }
+  });
+};
+
+// 为选中的语言应用统一的内存限制
+const applyMemoryLimit = (value) => {
+  selectedLanguages.value.forEach(langId => {
+    if (problemForm.lang_limit[langId]) {
+      problemForm.lang_limit[langId].cpu_memory_limit = Number(value);
+    }
+  });
+};
 
 </script>
 
@@ -632,6 +649,31 @@ const saveFormToLocal = () => {
 </div>
               </div>
               <p class="languages-description">请选择支持的编程语言，并设置对应的时间和内存限制</p>
+            </div>
+            
+            <div class="quick-apply-container">
+              <div class="quick-apply-item">
+                <span>批量设置时间限制 (s):</span>
+                <input 
+                  type="number" 
+                  class="quick-apply-input" 
+                  placeholder="时间限制" 
+                  min="0.5" 
+                  step="0.5" 
+                />
+                <button class="apply-btn" @click="e => applyTimeLimit(e.target.previousElementSibling.value)">应用</button>
+              </div>
+              <div class="quick-apply-item">
+                <span>批量设置内存限制 (KB):</span>
+                <input 
+                  type="number" 
+                  class="quick-apply-input" 
+                  placeholder="内存限制" 
+                  min="65536" 
+                  step="65536" 
+                />
+                <button class="apply-btn" @click="e => applyMemoryLimit(e.target.previousElementSibling.value)">应用</button>
+              </div>
             </div>
             
             <div class="language-table">
@@ -1031,8 +1073,6 @@ const saveFormToLocal = () => {
   margin-top: 15px;
 }
 
-
-
 .select-all-label input {
   margin-right: 8px;
 }
@@ -1384,5 +1424,37 @@ input:checked + .slider:before {
 .languages-list {
   max-height: 400px;
   overflow-y: auto;
+}
+
+.quick-apply-container {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.quick-apply-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.quick-apply-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+}
+
+.apply-btn {
+  background: #4a90e2;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 8px;
+}
+
+.apply-btn:hover {
+  background: #357dd8;
 }
 </style>

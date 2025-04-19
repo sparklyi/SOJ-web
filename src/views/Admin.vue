@@ -312,7 +312,11 @@ const editProblem = (problemId) => {
 }
 // 编辑测试点
 const editTestCase = (problemId) => {
-  router.push(`/problem-testcase/${problemId}`)
+  router.push({
+    path: `/problem-testcase/${problemId}`,  // 跳转到编辑页面
+    query: { from: router.currentRoute.value.fullPath }      // 将当前页面的路径作为 'from' 参数传递
+  })
+  
 }
 
 // 删除题目
