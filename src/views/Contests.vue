@@ -27,7 +27,8 @@ const filters = reactive({
   name: '',
   tag: '',
   type: '',
-  public: ''
+  public: '',
+  publish: true
 })
 
 // tag选项
