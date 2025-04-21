@@ -636,8 +636,10 @@ onMounted(() => {
             <div class="problems-list card">
               <h2>题目列表</h2>
               
-              <div v-if="loading" class="loading">加载中...</div>
-              <div v-else-if="contestDetail.problemList.length === 0" class="empty">暂无题目</div>
+              <!-- 题目列表 -->
+              <div v-if="loading" class="loading">加载题目中...</div>
+              <!-- 修正条件：先检查 problemList 是否存在 -->
+              <div v-else-if="!contestDetail.problemList || contestDetail.problemList.length === 0" class="empty">暂无题目</div>
               <div v-else class="problems-table">
                 <table>
                   <thead>
