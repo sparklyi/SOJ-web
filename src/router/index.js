@@ -65,7 +65,8 @@ const routes = [
   {
     path: '/contests',
     name: 'Contests',
-    component: Contests
+    component: Contests,
+    meta: { requiresAuth: true },
   },
   {
     path: '/contest/:id',
@@ -169,6 +170,12 @@ const routes = [
     path: '/contest-create',
     name: 'ContestCreate',
     component: () => import('../views/ContestCreate.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/contest-edit/:id',
+    name: 'ContestEdit',
+    component: () => import('../views/ContestEdit.vue'),
     meta: { requiresAuth: true }
   },
 
