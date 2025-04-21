@@ -616,7 +616,7 @@ onMounted(() => {
       <div v-if="activeTab === 'problems'" class="tab-content">
         <div class="header">
           <div class="header-left">
-            <h2>题目列表</h2>
+          <h2>题目列表</h2>
             <a-input-search
               v-model:value="searchId"
               placeholder="输入ID搜索"
@@ -624,7 +624,7 @@ onMounted(() => {
               @search="fetchProblems"
               style="width: 250px"
             />
-          </div>
+        </div>
         </div>
         <a-table
           :dataSource="problems"
@@ -640,7 +640,7 @@ onMounted(() => {
       <div v-if="activeTab === 'contests'" class="tab-content">
         <div class="header">
           <div class="header-left">
-            <h2>竞赛列表</h2>
+          <h2>竞赛列表</h2>
             <a-input-search
               v-model:value="searchContestId"
               placeholder="输入ID搜索"
@@ -648,7 +648,7 @@ onMounted(() => {
               @search="fetchContests"
               style="width: 250px"
             />
-          </div>
+        </div>
         </div>
         <a-table
           :dataSource="contests"
@@ -664,7 +664,7 @@ onMounted(() => {
       <div v-if="activeTab === 'users'" class="tab-content">
         <div class="header">
           <div class="header-left">
-            <h2>用户列表</h2>
+          <h2>用户列表</h2>
             <a-input-search
               v-model:value="searchUserId"
               placeholder="输入ID搜索"
@@ -672,7 +672,7 @@ onMounted(() => {
               @search="fetchUsers"
               style="width: 250px"
             />
-          </div>
+        </div>
         </div>
         <a-table
           :dataSource="users"

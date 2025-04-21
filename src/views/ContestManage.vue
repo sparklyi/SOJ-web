@@ -152,10 +152,7 @@ onMounted(() => {
                 <span class="time-value">{{ formatDate(contest.CreatedAt) }}</span>
               </div>
             </div>
-            <div class="contest-desc">
-              <div class="desc-label">描述:</div>
-              <div class="desc-content">{{ contest.description || '暂无描述' }}</div>
-            </div>
+           
           </div>
           <div class="contest-action">
             <button 

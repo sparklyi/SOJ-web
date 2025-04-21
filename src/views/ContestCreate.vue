@@ -38,7 +38,7 @@ const contestForm = reactive({
 // 比赛类型选项
 const contestTypes = [
   { value: 'ACM', label: 'ACM' },
-  { value: 'OI', label: 'OI' },
+  //{ value: 'OI', label: 'OI' },
 ]
 
 // 表单验证
@@ -171,14 +171,14 @@ const cancel = () => {
     okText: '确认',
     cancelText: '继续编辑',
     onOk: () => {
-      router.push('/contests')
+      router.push('/contest-manage')
     }
   })
 }
 
 // 返回上一页或比赛列表页面
 const navigateBack = () => {
-  router.push('/contests')
+  router.push('/contest-manage')
 }
 </script>
 
