@@ -72,7 +72,7 @@ const problemColumns = [
     dataIndex: 'status', 
     key: 'status',
     customRender: ({ text }) => {
-      return h(Tag, { color: text ? 'success' : 'default' }, () => text ? '已发布' : '草稿');
+      return h(Tag, { color: text ? 'success' : 'default' }, () => text ? '已发布' : '私有');
     } 
   },
   {
@@ -337,7 +337,10 @@ const deleteProblem = async (problemId) => {
 
 // 编辑竞赛
 const editContest = (contestId) => {
-  router.push(`/contest-edit/${contestId}`)
+  router.push({
+    path: `/contest-edit/${contestId}`,
+    query: { from: router.currentRoute.value.fullPath }  
+})
 }
 
 // 删除竞赛

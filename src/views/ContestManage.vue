@@ -68,11 +68,13 @@ const enterContest = (contestId) => {
   router.push(`/contest/${contestId}`)
 }
 
-// 编辑比赛
+// 编辑竞赛
 const editContest = (contestId) => {
-  router.push(`/contest-edit/${contestId}`)
+  router.push({
+    path: `/contest-edit/${contestId}`,
+    query: { from: router.currentRoute.value.fullPath }  
+})
 }
-
 // 进入比赛管理页面
 const manageContest = (contestId) => {
   router.push(`/contest-management/${contestId}`)

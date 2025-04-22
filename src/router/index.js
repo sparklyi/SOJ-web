@@ -23,6 +23,8 @@ import NotFound from '../views/NotFound.vue'
 import ProblemTestCase from '../views/ProblemTestCase.vue'
 import { isAuthenticated, getUserId, getAccessToken, getUserAuth, isSuperAdmin } from '../utils/auth'
 import { message } from 'ant-design-vue'
+import ContestEdit from '../views/ContestEdit.vue'
+import ContestDetailsManage from '../views/ContestDetailsManage.vue'
 
 // 权限检查函数 - 只允许Auth=3的超级管理员访问管理面板
 async function checkSuperAdminPermission() {
@@ -175,8 +177,14 @@ const routes = [
   {
     path: '/contest-edit/:id',
     name: 'ContestEdit',
-    component: () => import('../views/ContestEdit.vue'),
+    component: ContestEdit,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/contest-management/:id',
+    name: 'ContestDetailsManage',
+    component: ContestDetailsManage,
+    meta: { requiresAuth: true, requiresAdmin: true }
   },
 
   // 通配符路由，匹配所有未定义的路径，必须放在最后
@@ -248,7 +256,7 @@ router.beforeEach(async (to, from, next) => {
       const isSuperAdminUser = await checkSuperAdminPermission()
       if (!isSuperAdminUser) {
         message.error('您没有足够的权限访问此页面')
-        next('/')
+        next('/') // Or redirect to a suitable page
         return
       }
     }

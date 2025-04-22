@@ -3,7 +3,7 @@ import request from '../utils/request'
 // 管理面板 - 获取题目列表
 export function getAdminProblems(params) {
   return request({
-    url: '/api/v1/problem',
+    url: '/api/v1/problem/list',
     method: 'post',
     data: {
       ...params,
