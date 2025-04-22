@@ -86,14 +86,14 @@ const searchProblem = async (query) => {
   try {
     // 使用getProblems API搜索题目
     const res = await getProblemsByToken({ 
-      ID: Number( query), 
+      ID: Number(query), 
       page: 1, 
       page_size: 10 
     })
     
     if (res.code === 200 && res.data) {
       // 根据API返回数据结构调整取值方式
-      searchResults.value = res.data.list || []
+      searchResults.value = res.data.detail || []
     } else {
       searchResults.value = []
     }
@@ -115,7 +115,7 @@ const handleInputChange = (value) => {
 const handleProblemSelect = (problem) => {
   selectedProblem.value = problem
   // 根据实际API返回的ID字段名称调整
-  addProblemId.value = problem.ID ? problem.ID.toString() : problem.id.toString()
+  addProblemId.value = problem.ID ? problem.ID.toString() : ''
 }
 
 // 获取竞赛详情（包含题目）
@@ -157,7 +157,7 @@ const fetchContestDetail = async () => {
 // 添加题目到竞赛
 const handleAddProblem = async () => {
   if (!addProblemId.value) {
-    message.warning('请输入要添加的题目ID')
+    message.warning('请输入要添加的题目ID或名称')
     return
   }
   
@@ -165,8 +165,8 @@ const handleAddProblem = async () => {
   if (selectedProblem.value) {
     const problemToAdd = selectedProblem.value
     
-    // 获取正确的ID字段（API可能返回ID或id）
-    const problemId = problemToAdd.ID || problemToAdd.id
+    // 获取正确的ID字段
+    const problemId = problemToAdd.ID
     
     // 检查题目是否已存在
     if (problemList.value.some(p => p.id === problemId)) {
@@ -187,43 +187,53 @@ const handleAddProblem = async () => {
     return
   }
   
-  // 如果没有选择题目，则尝试通过ID获取
-  const problemIdToAdd = Number(addProblemId.value)
-  if (isNaN(problemIdToAdd) || problemIdToAdd <= 0) {
-     message.error('无效的题目ID')
-     return
-  }
-
-  // 检查题目是否已存在
-  if (problemList.value.some(p => p.id === problemIdToAdd)) {
-    message.warning('该题目已在竞赛中')
-    return
-  }
-
-  addingProblem.value = true
+  // 如果没有选择题目，判断输入的是数字还是名称
+  const input = addProblemId.value.trim();
+  const isNumeric = /^\d+$/.test(input);
+  
+  addingProblem.value = true;
   try {
-    // 1. 获取题目详情确认题目存在
-    const problemRes = await getProblemDetail(problemIdToAdd)
-    if (problemRes.code === 200 && problemRes.data) {
-      const problemData = problemRes.data
-      // 2. 更新本地列表，确保包含ID和name字段
+    // 根据输入类型搜索题目
+    const searchParam = isNumeric ? { ID: Number(input) } : { name: input };
+    const res = await getProblemsByToken({ 
+      ...searchParam, 
+      page: 1, 
+      page_size: 10 
+    });
+    
+    if (res.code === 200 && res.data && res.data.detail && res.data.detail.length > 0) {
+      // 找到匹配的题目，使用第一个结果
+      const problemData = res.data.detail[0];
+      const problemId = problemData.ID;
+      
+      // 检查题目是否已存在
+      if (problemList.value.some(p => p.id === problemId)) {
+        message.warning('该题目已在竞赛中');
+        return;
+      }
+      
+      // 更新本地列表
       const newProblemList = [...problemList.value, { 
-        id: problemData.ID, 
+        id: problemId, 
         name: problemData.name 
-      }]
-      // 3. 调用更新API
-      await updateProblemSet(newProblemList)
-      addProblemId.value = '' // 清空输入框
-      selectedProblem.value = null
-      searchResults.value = []
+      }];
+      // 调用更新API
+      await updateProblemSet(newProblemList);
+      addProblemId.value = ''; // 清空输入框
+      selectedProblem.value = null;
+      searchResults.value = [];
     } else {
-      message.error(problemRes.message || `题目ID ${problemIdToAdd} 不存在或获取失败`)
+      if (isNumeric) {
+        message.error(`未找到ID为 ${input} 的题目`);
+      } else {
+        message.warning(`未找到名称含 "${input}" 的题目`);
+      }
     }
   } catch (error) {
-    console.error('添加题目失败:', error)
-    message.error('添加题目时发生错误')
+    console.error('添加题目失败:', error);
+    message.error('添加题目时发生错误');
   } finally {
-    addingProblem.value = false
+    addingProblem.value = false;
   }
 }
 
@@ -238,24 +248,28 @@ const updateProblemSet = async (newProblemList) => {
   if (!contestDetail.value) return
   updatingProblemSet.value = true
 
-  // 准备提交数据 - 确保problem_set是正确格式的JSON字符串
-  const formData = {
-    id: Number(contestId.value),
-    // 其他可能需要一起提交的字段，根据ContestEdit的API来确定
-    name: contestDetail.value.name, 
-    tag: contestDetail.value.tag,
-    sponsor: contestDetail.value.sponsor,
-    description: contestDetail.value.description,
-    type: contestDetail.value.type,
-    start_time: contestDetail.value.start_time, // API可能需要原始时间字符串
-    end_time: contestDetail.value.end_time,
-    freeze_time: contestDetail.value.freeze_time,
-    publish: contestDetail.value.publish, 
-    // 更新 problem_set 为JSON字符串
-    problem_set: JSON.stringify(newProblemList)
-  }
-  
   try {
+    // 准备提交数据
+    const formData = {
+      id: Number(contestId.value),
+      name: contestDetail.value.name, 
+      tag: contestDetail.value.tag,
+      sponsor: contestDetail.value.sponsor,
+      description: contestDetail.value.description,
+      type: contestDetail.value.type,
+      start_time: contestDetail.value.start_time,
+      end_time: contestDetail.value.end_time,
+      freeze_time: contestDetail.value.freeze_time,
+      publish: contestDetail.value.publish,
+      public: contestDetail.value.public,
+      code: contestDetail.value.code
+    }
+    
+    // 确保problem_set是非空数组时直接添加到formData中(不使用JSON.stringify)
+    if (Array.isArray(newProblemList) && newProblemList.length > 0) {
+      formData.problem_set = newProblemList;
+    }
+    
     const res = await updateContest(formData) 
     if (res.code === 200) {
       message.success('题目列表更新成功')
@@ -292,20 +306,45 @@ const fetchRankList = async () => {
   }
 }
 
-// 动态生成排行榜列定义 (复用 ContestDetail 逻辑)
+// 动态生成排行榜列定义
 const generateRankColumns = () => {
     const baseColumns = [
-        { title: '排名', dataIndex: 'rank', key: 'rank', width: 60, fixed: 'left', customRender: ({ index }) => h('span', index + 1) },
-        { title: '参赛者', dataIndex: 'apply_name', key: 'user', width: 150, fixed: 'left' },
-        { title: '通过', dataIndex: ['info', 'freeze', 'accepted_count'], key: 'solved', width: 80, sorter: (a, b) => (a.info?.freeze?.accepted_count || 0) - (b.info?.freeze?.accepted_count || 0), customRender: ({ text }) => text || 0 },
-        { title: '罚时', dataIndex: ['info', 'freeze', 'penalty_count'], key: 'penalty', width: 100, sorter: (a, b) => (a.info?.freeze?.penalty_count || 0) - (b.info?.freeze?.penalty_count || 0), customRender: ({ text }) => text ? Math.floor(text) : '-' }
+        { title: '排名', dataIndex: 'rank', key: 'rank', width: 45, fixed: 'left', customRender: ({ index }) => h('span', index + 1) },
+        { title: '参赛者', dataIndex: 'apply_name', key: 'user', width: 100, fixed: 'left', ellipsis: true },
+        { 
+            title: '通过', 
+            dataIndex: ['info', 'freeze', 'accepted_count'], 
+            key: 'solved', 
+            width: 60, 
+            sorter: (a, b) => (a.info?.freeze?.accepted_count || 0) - (b.info?.freeze?.accepted_count || 0), 
+            customRender: ({ text }) => text || 0 
+        },
+        { 
+            title: '罚时', 
+            dataIndex: ['info', 'freeze', 'penalty_count'], 
+            key: 'penalty', 
+            width: 70, 
+            sorter: (a, b) => (a.info?.freeze?.penalty_count || 0) - (b.info?.freeze?.penalty_count || 0), 
+            customRender: ({ text }) => text ? Math.floor(text) : '-' 
+        }
     ];
 
     const problemColumns = (problemList.value || []).map((problem, index) => ({
-        title: String.fromCharCode(65 + index), // A, B, C...
+        title: () => h('div', { 
+            class: 'problem-column-header',
+            style: 'display: flex; flex-direction: column; align-items: center;'
+        }, [
+            h('div', { class: 'problem-letter' }, String.fromCharCode(65 + index)),
+            h(Tooltip, { 
+                title: `${problem.id}: ${problem.name}`,
+                placement: 'top'
+            }, {
+                default: () => h('div', { class: 'problem-id', style: 'font-size: 10px; color: #999;' }, problem.id)
+            })
+        ]),
         dataIndex: ['info', 'freeze', 'details', String(problem.id)],
         key: `problem_${problem.id}`,
-        width: 100,
+        width: 90,
         align: 'center',
         customRender: ({ record }) => {
             const detail = record?.info?.freeze?.details?.[problem.id];

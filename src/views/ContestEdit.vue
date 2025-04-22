@@ -33,6 +33,8 @@ const contestForm = reactive({
   public: false,      // 是否公开
   type: 'ACM',        // 比赛类型
   publish: false,     // 是否发布
+  code: '',           // 邀请码（不可修改）
+  problem_set: ''     // 题目集
 })
 
 // 原始数据，用于检测变更
@@ -90,6 +92,26 @@ const fetchContestDetail = async () => {
       contestForm.public = !!contest.public
       contestForm.type = contest.type || 'ACM'
       contestForm.publish = !!contest.publish
+      contestForm.code = contest.code || '' // 保存邀请码
+      
+      // 正确处理problem_set数据
+      if (contest.problem_set) {
+        // 检查是否为字符串
+        if (typeof contest.problem_set === 'string') {
+          try {
+            contestForm.problem_set = JSON.parse(contest.problem_set);
+          } catch (e) {
+            console.error('解析problem_set字符串失败:', e);
+            contestForm.problem_set = [];
+          }
+        } else if (Array.isArray(contest.problem_set)) {
+          contestForm.problem_set = contest.problem_set;
+        } else {
+          contestForm.problem_set = [];
+        }
+      } else {
+        contestForm.problem_set = [];
+      }
       
       // 保存原始数据用于对比（需要同样转换为dayjs对象或保存转换前的ISO字符串）
       // 为了简单起见，我们可以在比较时再转换原始数据
@@ -99,7 +121,9 @@ const fetchContestDetail = async () => {
         end_time: contest.end_time,     // 保存原始ISO字符串
         freeze_time: contest.freeze_time, // 保存原始ISO字符串
         public: !!contest.public,
-        publish: !!contest.publish
+        publish: !!contest.publish,
+        code: contest.code || '',
+        problem_set: contestForm.problem_set // 使用处理后的problem_set
       };
       
       message.success('比赛信息加载成功')
@@ -165,41 +189,41 @@ const formatDayjsForAPI = (dayjsObj) => {
 // 提交表单更新比赛
 const submitForm = async () => {
   if (!validateForm()) return
-
-  // API需要所有字段，移除变更检查
-  /*
-  const currentEndTimeAPI = formatDayjsForAPI(contestForm.end_time)
-  const currentFreezeTimeAPI = formatDayjsForAPI(contestForm.freeze_time)
-  const originalEndTimeAPI = originalData.value.end_time
-  const originalFreezeTimeAPI = originalData.value.freeze_time
-
-  // 检查是否有变更
-  if (
-    contestForm.type === originalData.value.type &&
-    contestForm.description === originalData.value.description &&
-    currentEndTimeAPI === originalEndTimeAPI &&
-    currentFreezeTimeAPI === originalFreezeTimeAPI &&
-    // contestForm.public === originalData.value.public && // Public 不允许修改，不检查
-    contestForm.publish === originalData.value.publish
-  ) {
-    message.info('未检测到变更，无需保存')
-    return
-  }
-  */
   
-  // 准备提交数据 - 包含所有字段，除了 public
+  // 准备提交数据 - 包含所有获取到的字段
   const formData = {
     id: Number(contestId),
-    name: contestForm.name, // 包含只读字段
-    tag: contestForm.tag, // 包含只读字段
-    sponsor: contestForm.sponsor, // 包含只读字段
+    name: contestForm.name,
+    tag: contestForm.tag,
+    sponsor: contestForm.sponsor,
     description: contestForm.description,
     type: contestForm.type,
-    start_time: formatDayjsForAPI(contestForm.start_time), // 包含只读字段，确保格式正确
+    start_time: formatDayjsForAPI(contestForm.start_time),
     end_time: formatDayjsForAPI(contestForm.end_time),
     freeze_time: formatDayjsForAPI(contestForm.freeze_time),
-    publish: contestForm.publish
-    // public: contestForm.public, // 明确移除 public 字段
+    publish: contestForm.publish,
+    public: contestForm.public,
+    code: contestForm.code,
+  }
+
+  // 处理problem_set字段，只有当它是非空数组时才添加
+  if (contestForm.problem_set) {
+    let problemSetData = contestForm.problem_set;
+    
+    // 如果problem_set是字符串，尝试解析为JSON
+    if (typeof problemSetData === 'string') {
+      try {
+        problemSetData = JSON.parse(problemSetData);
+      } catch (e) {
+        console.error('解析problem_set字符串失败:', e);
+        problemSetData = [];
+      }
+    }
+    
+    // 确保是数组且不为空才添加到formData
+    if (Array.isArray(problemSetData) && problemSetData.length > 0) {
+      formData.problem_set = problemSetData;
+    }
   }
   
   submitting.value = true
@@ -289,6 +313,12 @@ const formatDayjsForDisplay = (dayjsObj) => {
         <div class="form-group">
           <label>开始时间</label>
           <div class="readonly-field">{{ formatDayjsForDisplay(contestForm.start_time) }}</div>
+        </div>
+        
+        <div v-if="!contestForm.public" class="form-group">
+          <label>邀请码</label>
+          <div class="readonly-field code-field">{{ contestForm.code || '无邀请码' }}</div>
+          <div class="field-tip">此邀请码用于参赛者加入私有竞赛</div>
         </div>
       </div>
       
@@ -534,10 +564,22 @@ const formatDayjsForDisplay = (dayjsObj) => {
   resize: vertical;
 }
 
-.markdown-tip {
+.markdown-tip, .field-tip {
   margin: -4px 0 8px;
   font-size: 12px;
   color: #999;
+}
+
+.field-tip {
+  margin-top: 4px;
+}
+
+.code-field {
+  font-family: monospace;
+  letter-spacing: 1px;
+  color: #333;
+  background-color: #f5f5f5;
+  border: 1px dashed #ccc;
 }
 
 .radio-group {

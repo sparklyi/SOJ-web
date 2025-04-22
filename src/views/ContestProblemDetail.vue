@@ -1,9 +1,9 @@
 <script setup>
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch, nextTick, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProblemDetail, getLanguages, runCode as runCodeAPI, submitCode as submitCodeAPI, getSubmissionList, getSubmissionDetail } from '../api/problem'
 import { getContestRank, getContestDetail } from '../api/contest'
-import { message } from 'ant-design-vue'
+import { message, Tabs, Modal, Table, Tooltip } from 'ant-design-vue'
 import { marked } from 'marked'
 import { getUserId } from '../utils/auth'
 import MonacoEditor from 'monaco-editor-vue3'
@@ -502,6 +502,7 @@ const fetchSubmissionList = async () => {
     }
     
     const res = await getSubmissionList(params)
+    console.log('提交记录请求结果:', res)
     if (res.code === 200) {
       submissionList.value = res.data.detail || []
       submissionTotal.value = res.data.count || 0
@@ -522,6 +523,7 @@ const fetchSubmissionDetail = async (submissionId) => {
   submissionDetailLoading.value = true
   try {
     const res = await getSubmissionDetail(submissionId)
+    console.log('提交详情结果:', res)
     if (res.code === 200) {
       submissionDetail.value = res.data
       showSubmissionDetail.value = true
@@ -536,16 +538,22 @@ const fetchSubmissionDetail = async (submissionId) => {
   }
 }
 
-// 关闭提交详情对话框
-const closeSubmissionDetail = () => {
-  showSubmissionDetail.value = false
-  submissionDetail.value = null
+// 查看提交详情
+const viewSubmissionDetail = (submissionId) => {
+  if (!submissionId) {
+    message.warning('无效的提交ID')
+    return
+  }
+  fetchSubmissionDetail(submissionId)
 }
 
 // 获取排行榜
 const fetchRankList = async () => {
   const contestId = getCurrentContestId()
-  if (!contestId) return
+  if (!contestId) {
+    console.warn('未找到竞赛ID，无法获取排行榜')
+    return
+  }
   
   rankLoading.value = true
   try {
@@ -555,7 +563,9 @@ const fetchRankList = async () => {
       contestInfo.value = detailRes.data
     }
     
+    console.log('开始获取排行榜数据，竞赛ID:', contestId)
     const res = await getContestRank(contestId)
+    console.log('排行榜请求结果:', res)
     if (res.code === 200 && res.data) {
       rankList.value = res.data.detail || []
       rankTotal.value = res.data.count || 0
@@ -578,6 +588,7 @@ const fetchRankList = async () => {
     }
   } catch (error) {
     console.error('获取排行榜失败:', error)
+    message.error('获取排行榜失败: ' + (error.message || '未知错误'))
   } finally {
     rankLoading.value = false
   }
@@ -586,36 +597,6 @@ const fetchRankList = async () => {
 // 获取字母序号
 const getLetterIndex = (index) => {
   return String.fromCharCode(65 + index) // A, B, C, D...
-}
-
-// 获取用户解题详情
-const getProblemStatus = (userInfo, problemId) => {
-  if (!userInfo || !userInfo.info || !userInfo.info.freeze || !userInfo.info.freeze.details) {
-    return null
-  }
-  
-  return userInfo.info.freeze.details[problemId] || null
-}
-
-// 获取题目状态样式
-const getProblemStatusClass = (status) => {
-  if (!status) return ''
-  
-  switch (status.status) {
-    case 3: // 已通过
-      return 'accepted'
-    case 4: // 部分通过
-      return 'partial'
-    case 5: // 未通过
-      return 'failed'
-    default:
-      return ''
-  }
-}
-
-// 是否显示题目尝试次数和AC时间
-const showProblemAttempt = (status) => {
-  return status && (status.status === 3 || status.status === 4 || status.attempts > 0)
 }
 
 // 格式化日期时间
@@ -629,25 +610,18 @@ const formatDateTime = (dateStr) => {
 const getStatusClass = (status) => {
   if (!status) return ''
   
-  switch (status) {
-    case 'Accepted':
-      return 'status-accepted'
-    case 'Wrong Answer':
-      return 'status-wrong'
-    case 'Time Limit Exceeded':
-      return 'status-tle'
-    case 'Memory Limit Exceeded':
-      return 'status-mle'
-    case 'Runtime Error':
-      return 'status-runtime'
-    case 'Compilation Error':
-      return 'status-compile'
-    case 'Pending':
-    case 'Judging':
-      return 'status-pending'
-    default:
+  const statusLower = status.toLowerCase()
+  
+  if (statusLower.includes('accepted')) return 'status-accepted'
+  if (statusLower.includes('wrong answer')) return 'status-wrong'
+  if (statusLower.includes('time limit')) return 'status-tle'
+  if (statusLower.includes('memory limit')) return 'status-mle'
+  if (statusLower.includes('runtime')) return 'status-runtime'
+  if (statusLower.includes('compilation') || statusLower.includes('compile')) return 'status-compile'
+  if (statusLower.includes('pending') || statusLower.includes('judging')) return 'status-pending'
+  
+  // 默认返回
       return 'status-other'
-  }
 }
 
 // 处理分页变化
@@ -669,8 +643,15 @@ const useExampleInput = (index) => {
 
 // 语言映射函数 - 将内部语言标识映射到 Monaco 支持的语言
 const mapMonacoLanguage = (lang) => {
+  if (!lang) return 'plaintext'
+  
+  // 规范化语言名称
+  const langLower = lang.toLowerCase()
+  
   const languageMap = {
     'cpp': 'cpp',
+    'c++': 'cpp',
+    'c': 'c',
     'java': 'java',
     'python': 'python',
     'javascript': 'javascript',
@@ -680,7 +661,61 @@ const mapMonacoLanguage = (lang) => {
     'go1.13': 'go',
     'go1.18': 'go'
   }
-  return languageMap[lang] || lang
+  
+  // 查找完全匹配
+  if (languageMap[langLower]) {
+    return languageMap[langLower]
+  }
+  
+  // 查找部分匹配
+  for (const [key, value] of Object.entries(languageMap)) {
+    if (langLower.includes(key)) {
+      return value
+    }
+  }
+  
+  // 默认返回普通文本
+  return 'plaintext'
+}
+
+// 切换题目
+const navigateToProblem = (problemId) => {
+  if (!problemId) return
+  
+  const contestId = getCurrentContestId()
+  if (!contestId) return
+  
+  // 判断是否是同一题目，避免重复加载
+  if (Number(route.params.id) === problemId) return
+  
+  // 保存当前状态
+  saveCodeToLocalStorage()
+  
+  // 从列表点击时，直接修改route.params并重新加载
+  try {
+    // 构建完整路径
+    const targetPath = `/contest/${contestId}/problem/${problemId}`
+    console.log(`导航到: ${targetPath}`)
+    
+    // 使用router.push导航
+    router.push(targetPath).catch(err => {
+      if (err.name !== 'NavigationDuplicated') {
+        console.error('导航错误:', err)
+        message.error('题目切换失败')
+      }
+    })
+    
+    // 如果没有立即跳转，手动触发重载
+    setTimeout(() => {
+      if (Number(route.params.id) !== problemId) {
+        console.log('触发手动重新加载')
+        fetchProblemDetail()
+      }
+    }, 500)
+  } catch (err) {
+    console.error('题目切换错误:', err)
+    message.error('题目切换失败')
+  }
 }
 
 // 生命周期钩子
@@ -690,16 +725,20 @@ onMounted(async () => {
   fetchProblemDetail()
   fetchLanguages()
   
-  // 如果当前有竞赛ID，获取排行榜数据
+  // 默认切换到题目标签页（这将触发相关数据加载）
+  activeTab.value = 'problem'
+  
+  // 延迟加载提交记录和排行榜，避免页面初始加载太慢
+  nextTick(() => {
+    // 如果当前有竞赛ID
   if (getCurrentContestId()) {
-    // 如果此时排行榜为空，获取排行榜数据
-    if (!contestProblems.value || contestProblems.value.length === 0) {
-      await fetchRankList()
+      // 预加载提交记录
+      fetchSubmissionList();
+      
+      // 预加载排行榜数据
+      fetchRankList();
     }
-    
-    // 默认展示题目
-    activeTab.value = 'problem'
-  }
+  });
 })
 
 // 监听路由参数变化
@@ -728,1483 +767,1208 @@ watch(language, (newLanguage) => {
 const isContestProblem = computed(() => {
   return !!getCurrentContestId()
 })
+
+// Get Language Display Name Helper
+const getLanguageDisplayName = (langKey) => {
+  if (!langKey) return '-'
+  const lang = languageOptions.value.find(l => l.value === langKey || l.label === langKey || l.id === langKey)
+  return lang ? lang.label : langKey
+}
+
+// Get Status Icon Helper (Example)
+const getStatusIcon = (status) => {
+  if (!status) return 'fa-question-circle'
+  
+  const statusLower = status.toLowerCase()
+  
+  if (statusLower.includes('accepted')) return 'fa-check-circle'
+  if (statusLower.includes('wrong answer')) return 'fa-times-circle'
+  if (statusLower.includes('time limit')) return 'fa-clock'
+  if (statusLower.includes('memory limit')) return 'fa-memory'
+  if (statusLower.includes('runtime')) return 'fa-bomb'
+  if (statusLower.includes('compilation') || statusLower.includes('compile')) return 'fa-code'
+  
+  return 'fa-question-circle'
+}
+
+// Editor Options
+const editorOptions = ref({
+  automaticLayout: true,
+  scrollBeyondLastLine: false,
+  minimap: { enabled: false },
+  fontSize: 14,
+  theme: 'vs' // Use default light theme or 'vs-dark' for dark
+});
+
+// Submission Columns Definition
+const submissionColumns = computed(() => [
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 150,
+    customRender: ({ text }) => {
+      return h('span', { 
+        class: ['status-tag', getStatusClass(text)],
+        style: 'cursor: pointer;'
+      }, [
+        h('i', { class: ['fas', getStatusIcon(text)], style: 'margin-right: 5px;' }),
+        text
+      ]);
+    }
+  },
+  {
+    title: '执行时间',
+    dataIndex: 'time',
+    key: 'time',
+    width: 100,
+    customRender: ({ text }) => text !== null ? `${text}ms` : '-'
+  },
+  {
+    title: '消耗内存',
+    dataIndex: 'memory',
+    key: 'memory',
+    width: 100,
+    customRender: ({ text }) => text !== null ? formatMemory(text) : '-'
+  },
+  {
+    title: '语言',
+    dataIndex: 'language',
+    key: 'language',
+    width: 100,
+    customRender: ({ text }) => getLanguageDisplayName(text)
+  },
+  {
+    title: '提交时间',
+    dataIndex: 'created_at',
+    key: 'created_at',
+    width: 160,
+    customRender: ({ text }) => formatDateTime(text)
+  },
+  {
+    title: '操作',
+    key: 'action',
+    width: 80,
+    customRender: ({ record }) => {
+      return h('a', {
+        class: 'view-detail-link',
+        onClick: () => viewSubmissionDetail(record.ID)
+      }, [
+        h('i', { class: 'fas fa-eye', style: 'margin-right: 5px;' }),
+        '查看'
+      ]);
+    }
+  },
+]);
+
+// Rank Columns Definition (Similar to ContestDetailsManage)
+const rankColumns = computed(() => {
+  const baseColumns = [
+    { title: '排名', dataIndex: 'rank', key: 'rank', width: 45, fixed: 'left', customRender: ({ index }) => h('span', index + 1) },
+    { title: '参赛者', dataIndex: 'apply_name', key: 'user', width: 100, fixed: 'left', ellipsis: true },
+    {
+      title: '通过',
+      dataIndex: ['info', 'freeze', 'accepted_count'],
+      key: 'solved',
+      width: 60,
+      sorter: (a, b) => (a.info?.freeze?.accepted_count || 0) - (b.info?.freeze?.accepted_count || 0),
+      customRender: ({ text }) => text || 0
+    },
+    {
+      title: '罚时',
+      dataIndex: ['info', 'freeze', 'penalty_count'],
+      key: 'penalty',
+      width: 70,
+      sorter: (a, b) => (a.info?.freeze?.penalty_count || 0) - (b.info?.freeze?.penalty_count || 0),
+      customRender: ({ text }) => text ? Math.floor(text) : '-'
+    }
+  ];
+
+  const problemCols = (contestProblems.value || []).map((problem, index) => ({
+    title: () => h('div', {
+      class: 'problem-column-header',
+      style: 'display: flex; flex-direction: column; align-items: center;'
+    }, [
+      h('div', { class: 'problem-letter' }, getLetterIndex(index)),
+      h(Tooltip, {
+        title: `${problem.id}: ${problem.name}`,
+        placement: 'top'
+      }, {
+        default: () => h('div', { class: 'problem-id', style: 'font-size: 10px; color: #999;' }, problem.id)
+      })
+    ]),
+    dataIndex: ['info', 'freeze', 'details', String(problem.id)],
+    key: `problem_${problem.id}`,
+    width: 90,
+    align: 'center',
+    customRender: ({ record }) => {
+      const detail = record?.info?.freeze?.details?.[problem.id];
+      if (!detail) return h('span', '-');
+      
+      // 已接受的题目 - 浅绿色
+      if (detail.status === 3) { // Accepted
+        const attempts = Math.max(0, detail.count - 1);
+        const time = detail.accept_time ? `${Math.floor(detail.accept_time / 60)}` : '';
+        
+        return h('div', { class: 'rank-cell accepted' }, [
+          h('div', { class: 'time' }, time),
+          h('div', { class: 'attempts' }, attempts > 0 ? `(-${attempts})` : '')
+        ]);
+      } 
+      // 尝试过但未通过的题目 - 浅红色
+      else if (detail.count > 0) { 
+        return h('div', { class: 'rank-cell failed' }, `(-${detail.count})`);
+      }
+      
+      // 未尝试的题目
+      return h('span', '-');
+    }
+  }));
+
+  return [...baseColumns, ...problemCols];
+});
+
+// 获取编辑器语言
+const getEditorLanguage = (langString) => {
+  if (!langString) return 'plaintext'
+  
+  try {
+    // 尝试映射语言
+    const langLower = langString.toLowerCase()
+    
+    // 语言映射
+    if (langLower.includes('c++') || langLower.includes('gcc')) return 'cpp'
+    if (langLower.includes('java')) return 'java'
+    if (langLower.includes('python')) return 'python'
+    if (langLower.includes('javascript')) return 'javascript'
+    if (langLower.includes('go')) return 'go'
+    if (langLower.includes('c') && !langLower.includes('c++')) return 'c'
+    
+    // 默认返回普通文本
+    return 'plaintext'
+  } catch (error) {
+    console.error('语言解析错误:', error)
+    return 'plaintext'
+  }
+}
 </script>
 
 <template>
   <div class="problem-detail-container">
-    <!-- 将标签栏移到最顶层 -->
-    <div v-if="!loading && problem" class="problem-tabs">
-      <div 
-        class="tab-item" 
-        :class="{ active: activeTab === 'problem' }"
-        @click="switchTab('problem')"
-      >
-        题目描述
+    <div class="loading-overlay" v-if="loading">
+      <div class="spinner"></div>
+      <p>加载题目中...</p>
       </div>
-      <div 
-        class="tab-item" 
-        :class="{ active: activeTab === 'submissions' }"
-        @click="switchTab('submissions')"
-      >
-        提交记录
+
+    <div class="content-wrapper" v-else-if="problem">
+      <!-- 左侧题目详情和代码编辑器 -->
+      <div class="main-content">
+        <!-- 竞赛题目列表 (修改) -->
+        <div class="contest-problem-list-section" v-if="isContestProblem && contestProblems.length > 0">
+          <h2 class="section-title">竞赛题目</h2>
+          <div class="problem-list-items">
+            <div 
+              v-for="(prob, index) in contestProblems" 
+              :key="prob.id" 
+              :class="['problem-list-item', { 'active': Number(route.params.id) === prob.id }]"
+              @click="navigateToProblem(prob.id)"
+            >
+              <span class="problem-index">{{ getLetterIndex(index) }}</span>
+              <span class="problem-name">{{ prob.name }}</span>
       </div>
-      <div 
-        class="tab-item" 
-        :class="{ active: activeTab === 'ranking' }"
-        @click="switchTab('ranking')"
-      >
-        排行榜
       </div>
     </div>
     
-    <div v-if="loading" class="loading">
-      加载中...
-    </div>
-    <div v-else-if="!problem" class="empty">
-      题目不存在
-    </div>
-    <div v-else class="problem-detail">
-      <!-- 移动端切换按钮 -->
-      <div class="mobile-toggle">
-        <button @click="toggleEditor" class="toggle-btn">
-          {{ showEditor ? '查看题目' : '查看编辑器' }}
-        </button>
-      </div>
-      
-      <!-- 题目描述选项卡 -->
-      <div v-if="activeTab === 'problem'" class="split-layout">
-        <!-- 左侧题目详情 -->
-        <div class="problem-info" :class="{ 'hidden-mobile': showEditor }">
+        <!-- 题目信息头部 -->
           <div class="problem-header">
-            <h1>{{ problem.name }}</h1>
-            <div class="problem-meta">
-              <span :class="['level-tag', problem.level]">
-                {{ problem.level === 'easy' ? '简单' : problem.level === 'mid' ? '中等' : '困难' }}
-              </span>
-              <span class="create-time" v-if="problem.CreatedAt">
-                创建时间：{{ new Date(problem.CreatedAt).toLocaleDateString() }}
-              </span>
-            </div>
+          <h1 class="problem-title">
+            <span v-if="problem.problemIndex">{{ problem.problemIndex }}.</span> {{ problem.name }}
+          </h1>
           </div>
 
-          <div class="problem-content">
-            <div class="section description-section">
-              <h2>题目描述</h2>
-              <div class="description markdown-body" v-html="parsedDescription"></div>
+        <!-- Tab切换区域 -->
+        <a-tabs v-model:activeKey="activeTab" class="problem-tabs">
+          <a-tab-pane key="problem" tab="题目描述">
+            <div class="problem-section description">
+              <h2 class="section-title">题目描述</h2>
+              <div class="markdown-content" v-html="parsedDescription"></div>
             </div>
 
-            <div class="section input-section">
-              <h2>输入格式</h2>
-              <div class="input-format markdown-body" v-html="parsedInputFormat"></div>
+            <div class="problem-section input-format">
+              <h2 class="section-title">输入格式</h2>
+              <div class="markdown-content" v-html="parsedInputFormat"></div>
             </div>
 
-            <div class="section output-section">
-              <h2>输出格式</h2>
-              <div class="output-format markdown-body" v-html="parsedOutputFormat"></div>
+            <div class="problem-section output-format">
+              <h2 class="section-title">输出格式</h2>
+              <div class="markdown-content" v-html="parsedOutputFormat"></div>
             </div>
 
-            <div class="section samples-section" v-if="problem.samples && problem.samples.length > 0">
-              <h2>示例</h2>
-              <div class="samples">
-                <div v-for="(sample, index) in problem.samples" :key="index" class="sample">
+            <div class="problem-section samples">
+              <h2 class="section-title">样例</h2>
+              <div v-for="(sample, index) in problem.samples" :key="index" class="sample-case">
                   <div class="sample-header">
-                    <span class="sample-title">示例 {{ index + 1 }}</span>
-                    <button class="use-example-btn" @click="useExampleInput(index)">使用此示例</button>
+                  <h3>样例 {{ index + 1 }}</h3>
+                  <button @click="copyToClipboard(sample.input)" class="copy-btn">复制输入</button>
                   </div>
                   <div class="sample-content">
                     <div class="sample-input">
-                      <div class="label">输入:</div>
-                      <pre>{{ sample.input }}</pre>
+                    <pre><code>{{ sample.input }}</code></pre>
                     </div>
                     <div class="sample-output">
-                      <div class="label">输出:</div>
-                      <pre>{{ sample.output }}</pre>
+                    <pre><code>{{ sample.output }}</code></pre>
                     </div>
                   </div>
                 </div>
+              <div v-if="!problem.samples || problem.samples.length === 0" class="no-samples">
+                暂无样例
               </div>
             </div>
 
-            <div class="section remark-section" v-if="problem.remark">
-              <h2>备注</h2>
-              <div class="remark markdown-body" v-html="parsedRemark"></div>
+            <div class="problem-section remark" v-if="problem.remark">
+              <h2 class="section-title">提示</h2>
+              <div class="markdown-content" v-html="parsedRemark"></div>
             </div>
+          </a-tab-pane>
+          
+          <a-tab-pane key="submissions" tab="我的提交">
+            <div class="submissions-section">
+              <h2 class="section-title">提交记录</h2>
+              <button @click="fetchSubmissionList" class="refresh-btn">
+                <i class="fas fa-sync-alt"></i> 刷新
+              </button>
+              <a-table 
+                :columns="submissionColumns" 
+                :data-source="submissionList" 
+                :loading="submissionLoading"
+                :pagination="{ current: currentPage, pageSize: pageSize, total: submissionTotal, onChange: handlePageChange }"
+                rowKey="ID"
+                size="small"
+                class="submission-table"
+              >
+                <template #emptyText>
+                  <div class="empty-submissions">
+                    <i class="fas fa-clipboard-list" style="font-size: 24px; margin-bottom: 10px;"></i>
+                    <div>暂无提交记录</div>
           </div>
+                </template>
+              </a-table>
         </div>
+          </a-tab-pane>
+          
+          <!-- 竞赛排行榜 (如果需要) -->
+          <a-tab-pane key="ranking" tab="排行榜" v-if="isContestProblem">
+             <div class="ranking-section">
+                <h2 class="section-title">本题排行榜 (竞赛期间)</h2>
+                <button @click="fetchRankList" class="refresh-btn">
+                  <i class="fas fa-sync-alt"></i> 刷新
+                </button>
+                 <a-table 
+                    :columns="rankColumns" 
+                    :data-source="rankList" 
+                    :loading="rankLoading"
+                    :pagination="false"
+                    rowKey="user_id"
+                    size="small"
+                    class="rank-table"
+                 >
+                    <template #emptyText>
+                      <div class="empty-ranking">
+                        <i class="fas fa-trophy" style="font-size: 24px; margin-bottom: 10px;"></i>
+                        <div>暂无排名数据</div>
+                      </div>
+                    </template>
+                 </a-table>
+        </div>
+          </a-tab-pane>
+
+        </a-tabs>
+      </div>
         
-        <!-- 右侧代码编辑器 -->
-        <div class="editor-container" :class="{ 'hidden-mobile': !showEditor }">
+      <!-- 右侧代码编辑、提交和自测 -->
+      <div class="side-panel">
+        <div class="editor-container" v-if="showEditor">
           <div class="editor-header">
-            <div class="editor-toolbar">
               <div class="language-selector">
+              <label for="language">语言:</label>
                 <select id="language" v-model="language" @change="handleLanguageChange">
                   <option v-for="lang in languageOptions" :key="lang.id" :value="lang.value">
                     {{ lang.label }}
                   </option>
                 </select>
               </div>
+            <div class="editor-actions">
+               <button @click="resetCode" class="action-btn reset-btn" title="重置代码"><i class="fas fa-undo"></i></button>
+               <button @click="toggleFullScreen" class="action-btn fullscreen-btn" title="全屏/退出全屏"><i class="fas fa-expand"></i></button>
             </div>
           </div>
           
-          <div class="code-editor">
             <MonacoEditor
               v-model:value="code"
-              :language="mapMonacoLanguage(language)"
-              theme="vs-dark"
-              @change="saveCodeToLocalStorage"
-              :options="{
-                automaticLayout: true,
-                scrollBeyondLastLine: false,
-                minimap: { enabled: false },
-                fontSize: 14
-              }"
-              style="height: 100%;"
-            />
+            :language="language"
+            :options="editorOptions"
+            class="code-editor"
+          />
+
+          <div class="editor-footer">
+             <button @click="toggleTestPanel" class="footer-btn test-btn">
+                <i :class="['fas', showTestPanel ? 'fa-chevron-down' : 'fa-chevron-up']"></i> 自测
+             </button>
+             <button @click="runCode" class="footer-btn run-btn" :disabled="isRunning">
+                <i class="fas fa-play"></i> {{ isRunning ? '运行中...' : '运行' }}
+             </button>
+             <button @click="submitCode" class="footer-btn submit-btn" :disabled="isSubmitting">
+                <i class="fas fa-paper-plane"></i> {{ isSubmitting ? '提交中...' : '提交' }}
+             </button>
+          </div>
           </div>
           
-          <!-- 测试面板 -->
-          <div v-if="showTestPanel" class="test-panel">
-            <div class="test-input">
-              <div class="panel-header">测试输入</div>
+        <!-- 自测面板 -->
+        <div class="test-panel" v-show="showTestPanel">
+           <h3 class="panel-title">自定义测试</h3>
               <textarea 
                 v-model="testInput" 
-                class="test-textarea" 
-                placeholder="输入测试样例..."
+              placeholder="在此输入测试数据..." 
+              class="test-input-area"
               ></textarea>
+           <div class="run-result-container" v-if="runResult">
+              <h4>运行结果:</h4>
+              <pre :class="['result-output', runResult.status !== 'Accepted' ? 'error' : '']">{{ runResult.output || runResult.error || '无输出' }}</pre>
             </div>
-            <div class="test-output" v-if="runResult">
-              <div class="panel-header">
-                <span>测试输出</span>
-                <span class="status-badge" :class="runResult.status">
-                  {{ runResult.status }}
-                </span>
               </div>
-              <div class="output-content">
-                <pre v-if="runResult.stdout">{{ runResult.stdout }}</pre>
-                <pre v-else-if="runResult.stderr" class="error-output">{{ runResult.stderr }}</pre>
-                <div v-else class="empty-output">运行完成，无输出</div>
-              </div>
-              <div class="run-stats" v-if="runResult.time">
-                <span>运行耗时: {{ runResult.time }}s</span>
-                <span>内存使用: {{ formatMemory(runResult.memory) }}</span>
-              </div>
-            </div>
-            <div class="test-actions">
-              <button 
-                class="run-btn" 
-                @click="runCode" 
-                :disabled="isRunning"
-              >
-                {{ isRunning ? '运行中...' : '运行' }}
-              </button>
-            </div>
+        
+        <!-- 判题结果动画 -->
+        <div class="judge-result-container" v-if="showJudgeAnimation">
+          <div ref="lottieContainer" class="lottie-animation"></div>
+          <div class="judge-status-text">{{ judgeResult ? judgeResult.status : '判题中...' }}</div>
           </div>
           
-          <div class="editor-footer">
-            <button class="run-btn" @click="toggleTestPanel">{{ showTestPanel ? '隐藏自测' : '自测' }}</button>
-            <button class="submit-btn" @click="submitCode" :disabled="isSubmitting">
-              {{ isSubmitting ? '提交中...' : '提交代码' }}
-            </button>
-          </div>
         </div>
       </div>
       
-      <!-- 提交记录选项卡 -->
-      <div v-else-if="activeTab === 'submissions'" class="tab-content submissions-tab">
-        <div v-if="submissionLoading" class="loading">加载中...</div>
-        <div v-else-if="submissionList.length === 0" class="empty-placeholder">
-          <div class="placeholder-icon">
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1">
-              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <h3>暂无提交记录</h3>
-          <p>提交代码后可以在此查看历史记录</p>
-        </div>
-        <div v-else class="submission-list">
-          <div class="submission-table">
-            <div class="table-header">
-              <div class="header-id">ID</div>
-              <div class="header-status">状态</div>
-              <div class="header-language">语言</div>
-              <div class="header-time">提交时间</div>
-              <div class="header-runtime">运行时间</div>
-              <div class="header-memory">内存</div>
-              <div class="header-actions">操作</div>
-            </div>
-            <div 
-              v-for="item in submissionList" 
-              :key="item.ID" 
-              class="table-row"
-            >
-              <div class="cell-id">{{ item.ID }}</div>
-              <div 
-                class="cell-status" 
-                :class="getStatusClass(item.status)"
-              >
-                {{ item.status }}
-              </div>
-              <div class="cell-language">{{ item.language }}</div>
-              <div class="cell-time">{{ formatDateTime(item.CreatedAt) }}</div>
-              <div class="cell-runtime">{{ item.time ? item.time + 's' : '-' }}</div>
-              <div class="cell-memory">{{ item.memory ? formatMemory(item.memory) : '-' }}</div>
-              <div class="cell-actions">
-                <button 
-                  class="view-code-btn" 
-                  @click="fetchSubmissionDetail(item.ID)"
-                >
-                  查看源码
-                </button>
-              </div>
-            </div>
+    <div class="problem-not-found" v-else>
+      题目加载失败或不存在。
           </div>
           
-          <!-- 分页 -->
-          <div class="pagination">
-            <div class="page-total">共 {{ submissionTotal }} 条记录</div>
-            <div class="page-controls">
-              <button 
-                class="page-btn" 
-                :disabled="currentPage <= 1"
-                @click="handlePageChange(currentPage - 1)"
-              >
-                上一页
-              </button>
-              <span class="page-info">{{ currentPage }} / {{ Math.floor(submissionTotal / pageSize) }}</span>
-              <button 
-                class="page-btn" 
-                :disabled="currentPage > Math.floor(submissionTotal / pageSize)"
-                @click="handlePageChange(currentPage + 1)"
-              >
-                下一页
-              </button>
+    <!-- 提交详情 Modal (修改) -->
+    <a-modal 
+       v-model:visible="showSubmissionDetail" 
+       title="提交详情" 
+       width="80%" 
+       :footer="null" 
+       @cancel="showSubmissionDetail = false"
+       wrapClassName="submission-detail-modal"
+    >
+       <div v-if="submissionDetailLoading" class="modal-loading">
+          <div class="spinner"></div> 加载中...
             </div>
+       <div v-else-if="submissionDetail">
+         <div class="detail-grid">
+            <div class="detail-item"><strong>提交 ID:</strong> {{ submissionDetail.ID }}</div>
+            <div class="detail-item"><strong>题目:</strong> {{ submissionDetail.problem_name || problem?.name }}</div>
+            <div class="detail-item"><strong>提交者:</strong> {{ submissionDetail.user_name }}</div>
+            <div class="detail-item">
+              <strong>状态:</strong> 
+              <span :class="['status-tag', getStatusClass(submissionDetail.status)]">
+                <i :class="['fas', getStatusIcon(submissionDetail.status)]" style="margin-right: 5px;"></i> 
+                {{ submissionDetail.status }}
+              </span>
           </div>
+            <div class="detail-item"><strong>语言:</strong> {{ submissionDetail.language }}</div>
+            <div class="detail-item"><strong>执行时间:</strong> {{ submissionDetail.time !== null ? `${submissionDetail.time}ms` : '-' }}</div>
+            <div class="detail-item"><strong>消耗内存:</strong> {{ submissionDetail.memory !== null ? formatMemory(submissionDetail.memory) : '-' }}</div>
+            <div class="detail-item"><strong>提交时间:</strong> {{ formatDateTime(submissionDetail.CreatedAt || submissionDetail.created_at) }}</div>
         </div>
         
-        <!-- 提交详情对话框 -->
-        <div class="submission-detail-modal" v-if="showSubmissionDetail">
-          <div class="modal-overlay" @click="closeSubmissionDetail"></div>
-          <div class="modal-content">
-            <div class="modal-header">
-              <h3>提交详情 #{{ submissionDetail?.ID }}</h3>
-              <button class="close-btn" @click="closeSubmissionDetail">
-                <svg viewBox="0 0 24 24" width="20" height="20">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </button>
-            </div>
-            <div v-if="submissionDetailLoading" class="modal-loading">加载中...</div>
-            <div v-else class="modal-body">
-              <div class="detail-info">
-                <div class="detail-item">
-                  <span class="label">题目:</span>
-                  <span class="value">{{ submissionDetail?.problem_name }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="label">用户:</span>
-                  <span class="value">{{ submissionDetail?.user_name }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="label">语言:</span>
-                  <span class="value">{{ submissionDetail?.language }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="label">状态:</span>
-                  <span class="value" :class="getStatusClass(submissionDetail?.status)">{{ submissionDetail?.status }}</span>
-                </div>
-                <div class="detail-item" v-if="submissionDetail?.time">
-                  <span class="label">运行时间:</span>
-                  <span class="value">{{ submissionDetail?.time }}s</span>
-                </div>
-                <div class="detail-item" v-if="submissionDetail?.memory">
-                  <span class="label">内存占用:</span>
-                  <span class="value">{{ formatMemory(submissionDetail?.memory) }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="label">提交时间:</span>
-                  <span class="value">{{ formatDateTime(submissionDetail?.CreatedAt) }}</span>
-                </div>
-              </div>
-              <div class="code-container">
-                <h4>源代码</h4>
-                <pre class="source-code">{{ submissionDetail?.source_code }}</pre>
-              </div>
-            </div>
-          </div>
-        </div>
+         <div class="detail-section compile-info" v-if="submissionDetail.compile_info">
+           <h4>编译信息:</h4>
+           <pre class="code-block compile-error">{{ submissionDetail.compile_info }}</pre>
       </div>
       
-      <!-- 排行榜内容 -->
-      <div v-else-if="activeTab === 'ranking'" class="ranking-content">
-        <div class="ranking-list card">
-          <h2>排行榜</h2>
-          
-          <div v-if="rankLoading" class="loading-row">加载中...</div>
-          <div v-else-if="rankList.length === 0" class="empty-ranking">
-            <div class="empty-icon">🏆</div>
-            <div class="empty-text">暂无排名数据</div>
-          </div>
-          <div v-else class="rank-table-container">
-            <div class="contest-problems">
-              <h3>竞赛题目</h3>
-              <div class="problem-list">
-                <div v-for="(problem, index) in contestProblems" :key="problem.id" class="problem-item">
-                  <span class="problem-letter">{{ getLetterIndex(index) }}</span>
-                  <span class="problem-name">{{ problem.name }}</span>
-                </div>
-              </div>
+         <div class="detail-section code-view">
+           <h4>提交代码:</h4>
+           <MonacoEditor
+              :value="submissionDetail.source_code || submissionDetail.code || '// 无法获取代码'"
+              :language="getEditorLanguage(submissionDetail.language)"
+              :options="{ readOnly: true, minimap: { enabled: false }, scrollBeyondLastLine: false }"
+              class="submitted-code-editor"
+              height="400px"
+           />
             </div>
             
-            <table class="rank-table">
-              <thead>
-                <tr>
-                  <th class="rank-number">排名</th>
-                  <th class="user-name">参赛者</th>
-                  <th class="solved-count">通过题数</th>
-                  <th class="total-score">总分</th>
-                  <th class="total-penalty">罚时</th>
-                  <!-- 为每个题目创建一列，以字母命名 -->
-                  <template v-if="contestProblems && contestProblems.length > 0">
-                    <th 
-                      v-for="(problem, index) in contestProblems" 
-                      :key="problem.id" 
-                      class="problem-status"
-                    >
-                      {{ getLetterIndex(index) }}
-                    </th>
-                  </template>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(user, index) in rankList" :key="index">
-                  <td class="rank-number">{{ index + 1 }}</td>
-                  <td class="user-name">{{ user.apply_name }}</td>
-                  <td class="solved-count">
-                    {{ user.info && user.info.freeze ? user.info.freeze.accepted_count : 0 }}
-                  </td>
-                  <td class="total-score">
-                    {{ user.info && user.info.freeze ? user.info.freeze.score_count : 0 }}
-                  </td>
-                  <td class="total-penalty">
-                    {{ user.info && user.info.freeze && user.info.freeze.penalty_count ? 
-                      Math.floor(user.info.freeze.penalty_count)  : '-' }}
-                  </td>
-                  
-                  <!-- 题目状态列 -->
-                  <template v-if="contestProblems && contestProblems.length > 0">
-                    <td 
-                      v-for="problem in contestProblems" 
-                      :key="problem.id" 
-                      class="problem-status"
-                      :class="getProblemStatusClass(getProblemStatus(user, problem.id))"
-                    >
-                      <template v-if="getProblemStatus(user, problem.id)">
-                        <template v-if="getProblemStatus(user, problem.id).status === 3">
-                          <!-- 已通过，显示尝试次数 -->
-                          {{ getProblemStatus(user, problem.id).count || 0 }}
-                        </template>
-                        <template v-else>
-                          <!-- 未通过，显示红色尝试次数 -->
-                          <span class="failed-count">{{ getProblemStatus(user, problem.id).count || 0 }}</span>
-                        </template>
-                      </template>
-                      <template v-else>-</template>
-                    </td>
-                  </template>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+         <div class="detail-section test-cases" v-if="submissionDetail.status !== 'Compilation Error' && submissionDetail.Testcases">
+            <h4>测试点信息:</h4>
+             <div v-for="(testcase, index) in submissionDetail.Testcases" :key="index" class="testcase-item">
+                 <span :class="['testcase-status', getStatusClass(testcase.status)]">
+                    <i :class="['fas', getStatusIcon(testcase.status)]" style="margin-right: 5px;"></i>
+                    #{{ index + 1 }} {{ testcase.status }}
+                 </span>
+                 <span class="testcase-time">时间: {{ testcase.time != null ? `${testcase.time}ms` : '-' }}</span>
+                 <span class="testcase-memory">内存: {{ testcase.memory != null ? formatMemory(testcase.memory) : '-' }}</span>
+                 <!-- 可以添加显示输入输出的按钮 -->
       </div>
     </div>
     
-    <!-- 判题动画 -->
-    <div class="judge-animation" v-if="showJudgeAnimation">
-      <div class="animation-container">
-        <div class="judge-loading" v-if="!judgeResult">
-          <div class="loading-text">正在判题...</div>
         </div>
-        <div class="judge-result" v-else>
-          <div class="result-status" :class="judgeResult.status === 'Accepted' ? 'success' : 'error'">
-            {{ judgeResult.status }}
+       <div v-else class="modal-empty">
+           <i class="fas fa-exclamation-circle" style="font-size: 24px; margin-bottom: 10px;"></i>
+           <div>无法加载提交详情</div>
           </div>
-        </div>
-      </div>
-    </div>
+    </a-modal>
   </div>
 </template>
 
+
 <style scoped>
+/* 基础容器和布局 */
 .problem-detail-container {
-  width: 135%;
-  max-width: none;
+  width: 100%;
+  padding: 15px;
+  background-color: #f7f8fa;
+  min-height: calc(100vh - 60px); /* 假设顶部导航栏高度为60px */
+  box-sizing: border-box;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.content-wrapper {
+  display: flex;
+  gap: 15px;
+  max-width: 1600px; /* 限制最大宽度 */
+  margin: 0 auto;
+}
+
+.main-content {
+  flex: 3; /* 占据更大比例 */
+  background-color: #fff;
+  border-radius: 8px;
   padding: 20px;
-  margin-left: -17%;
-  background-color: #f6f8fa;
-  height: 100vh;
-  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden; /* 防止内部元素溢出 */
+}
+
+.side-panel {
+  flex: 2; /* 占据较小比例 */
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
 }
 
-.problem-tabs {
-  display: flex;
-  border-bottom: 1px solid #e8e8e8;
-  background: white;
-  margin-bottom: 16px;
-  border-radius: 4px 4px 0 0;
-  overflow-x: auto;
-}
-
-.tab-item {
-  padding: 12px 20px;
-  cursor: pointer;
-  font-size: 15px;
-  position: relative;
-  transition: all 0.3s;
-  white-space: nowrap;
-}
-
-.tab-item.active {
-  color: #1890ff;
-  font-weight: 500;
-}
-
-.tab-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: #1890ff;
-}
-
-.tab-item:hover:not(.active) {
-  color: #40a9ff;
-}
-
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-  font-size: 16px;
-  color: #666;
-  background: white;
-  border-radius: 4px;
-}
-
-.empty {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-  font-size: 16px;
-  color: #666;
-  background: white;
-  border-radius: 4px;
-}
-
-.problem-detail {
-  background: white;
-  border-radius: 4px;
-  min-height: 600px;
-}
-
-.mobile-toggle {
-  display: none;
-  margin-bottom: 16px;
-}
-
-.toggle-btn {
-  width: 100%;
-  padding: 8px 0;
-  background: #f0f2f5;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #666;
-  transition: all 0.3s;
-}
-
-.toggle-btn:hover {
-  background: #e6f7ff;
-  color: #1890ff;
-}
-
-.split-layout {
-  display: flex;
-  flex-direction: row;
-  height: calc(100vh - 160px); /* 增加高度 */
-  min-height: 600px;
-  max-width: 1600px; /* 增加最大宽度 */
-  margin: 0 auto; /* 居中 */
-  overflow: hidden;
-}
-
-.problem-info {
-  width: 45%; /* 调整宽度比例 */
-  padding: 20px;
-  overflow-y: auto;
-  box-sizing: border-box;
-}
-
+/* 题目头部信息 */
 .problem-header {
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.problem-header h1 {
-  margin: 0 0 16px 0;
-  font-size: 24px;
-  color: #333;
-}
-
-.problem-meta {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.level-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.level-tag.easy {
-  background: #e8f5e9;
-  color: #4caf50;
-}
-
-.level-tag.mid {
-  background: #fff3e0;
-  color: #ff9800;
-}
-
-.level-tag.hard {
-  background: #ffebee;
-  color: #f44336;
-}
-
-.create-time {
-  font-size: 12px;
-  color: #999;
-}
-
-.problem-content {
-  font-size: 15px;
-  line-height: 1.6;
-  color: #333;
-}
-
-.section {
+  margin-top: 20px; /* 与题目列表分隔开 */
   margin-bottom: 20px;
-  padding: 15px;
-  border-radius: 8px;
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s;
-  width: 100%;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 15px;
 }
 
-.section:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.section h2 {
-  margin: 0 0 15px 0;
+.problem-title {
+  font-size: 24px;
+  font-weight: 600;
   color: #333;
-  font-size: 18px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+  margin-bottom: 10px;
 }
 
-.description,
-.input-format,
-.output-format,
-.remark {
-  color: #666;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  width: 100%;
+/* Tab样式 */
+.problem-tabs {
+  margin-top: -10px; /* 微调与头部的间距 */
 }
 
-.markdown-body {
+:deep(.ant-tabs-nav) {
+  margin-bottom: 15px !important;
+}
+
+:deep(.ant-tabs-tab) {
   font-size: 15px;
-  line-height: 1.6;
+  padding: 10px 16px;
 }
 
-.markdown-body pre {
+/* 题目描述区域 */
+.problem-section {
+  margin-bottom: 25px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  padding-bottom: 5px;
+  border-bottom: 2px solid #eee;
+}
+
+.markdown-content {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #444;
+}
+
+/* Markdown 内容样式增强 */
+:deep(.markdown-content > *:first-child) { margin-top: 0; }
+:deep(.markdown-content > *:last-child) { margin-bottom: 0; }
+:deep(.markdown-content p) { margin-bottom: 1em; }
+:deep(.markdown-content pre) {
   background-color: #f6f8fa;
-  border-radius: 4px;
   padding: 12px;
-  margin: 12px 0;
-  overflow-x: auto;
-}
-
-.markdown-body code {
-  background-color: #f6f8fa;
-  border-radius: 3px;
-  padding: 2px 4px;
-  font-family: monospace;
-}
-
-.markdown-body table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 12px 0;
-}
-
-.markdown-body table th,
-.markdown-body table td {
-  border: 1px solid #dfe2e5;
-  padding: 8px 12px;
-}
-
-.markdown-body table th {
-  background-color: #f6f8fa;
-}
-
-.samples {
-  display: grid;
-  gap: 15px;
-}
-
-.sample {
-  background: #f9f9f9;
   border-radius: 6px;
-  padding: 12px;
-  border: 1px solid #eaeaea;
-  transition: transform 0.2s, box-shadow 0.2s;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+  border: 1px solid #eee;
 }
+:deep(.markdown-content code) {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  background-color: rgba(27,31,35,.05);
+  padding: .2em .4em;
+  margin: 0;
+  font-size: 85%;
+  border-radius: 3px;
+}
+:deep(.markdown-content pre code) {
+  padding: 0;
+  margin: 0;
+  font-size: inherit;
+  background-color: transparent;
+  border-radius: 0;
+}
+:deep(.markdown-content blockquote) {
+  border-left: 4px solid #dfe2e5;
+  padding-left: 15px;
+  color: #6a737d;
+  margin: 1em 0;
+}
+:deep(.markdown-content ul), :deep(.markdown-content ol) {
+  padding-left: 2em;
+  margin-bottom: 1em;
+}
+:deep(.markdown-content li) {
+  margin-bottom: 0.5em;
+}
+:deep(.markdown-content strong) { font-weight: 600; }
+:deep(.markdown-content img) { max-width: 100%; height: auto; }
 
-.sample:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+/* 样例样式 */
+.sample-case {
+  margin-bottom: 20px;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .sample-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  background-color: #f9f9f9;
   padding: 8px 12px;
-  background: #fafafa;
-  font-weight: 500;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.sample-header h3 {
   font-size: 14px;
-  color: #666;
-  border-bottom: 1px solid #f0f0f0;
+  font-weight: 600;
+  margin: 0;
+  color: #555;
 }
 
-.sample-title {
-  color: #333;
-  font-weight: 500;
-}
-
-.use-example-btn {
-  padding: 4px 8px;
-  background: #1890ff;
-  color: white;
-  border: none;
-  border-radius: 4px;
+.copy-btn {
+  background-color: #eee;
+  border: 1px solid #ddd;
+  padding: 3px 8px;
   font-size: 12px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: background-color 0.2s;
 }
-
-.use-example-btn:hover {
-  background: #40a9ff;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
+.copy-btn:hover { background-color: #e0e0e0; }
 
 .sample-content {
-  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 输入输出各占一半 */
+  gap: 0px;
 }
 
 .sample-input, .sample-output {
-  margin-bottom: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border: 1px solid #eaeaea;
-  border-radius: 4px;
-  overflow: hidden;
+  padding: 10px 12px;
 }
 
-.label {
-  color: #666;
-  font-size: 14px;
-  padding: 8px 12px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #eaeaea;
-  font-weight: 500;
-}
+.sample-input { border-right: 1px solid #e8e8e8; } /* 分隔线 */
 
 .sample-input pre, .sample-output pre {
   margin: 0;
-  padding: 12px;
-  background: white;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-family: monospace;
-  white-space: pre-wrap;
-  word-break: break-all;
+  padding: 0;
+  background-color: transparent !important;
+  border: none !important;
+  font-size: 13px;
+  white-space: pre-wrap; /* 允许换行 */
+  word-wrap: break-word;
 }
 
+.sample-input pre code, .sample-output pre code {
+  background-color: transparent !important;
+  padding: 0 !important;
+}
+
+.no-samples {
+  color: #999;
+  padding: 15px;
+  text-align: center;
+  border: 1px dashed #e8e8e8;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+
+/* 编辑器区域 */
 .editor-container {
-  width: 55%; /* 调整宽度比例 */
   display: flex;
   flex-direction: column;
-  border-left: 1px solid #f0f0f0;
+  height: 100%; /* 占满 side-panel */
+  overflow: hidden; /* 防止内部溢出 */
 }
 
 .editor-header {
-  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
   border-bottom: 1px solid #f0f0f0;
-}
-
-.editor-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.language-selector {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .language-selector label {
-  font-size: 14px;
-  color: #666;
+  margin-right: 5px;
+  font-size: 13px;
+  color: #555;
 }
 
 .language-selector select {
   padding: 4px 8px;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
-  font-size: 14px;
-}
-
-.code-editor {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: #1e1e1e;
-}
-
-/* 为CodeMirror编辑器添加样式 */
-:deep(.cm-editor) {
-  height: 100%;
-  font-size: 14px;
-}
-
-:deep(.cm-content) {
-  padding: 8px;
-}
-
-:deep(.cm-focused) {
+  font-size: 13px;
   outline: none;
 }
 
-.editor-textarea {
-  display: none;
-}
-
-.test-panel {
-  padding: 16px;
-  border-top: 1px solid #f0f0f0;
-  background: #fafafa;
-}
-
-.panel-header {
+.editor-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-weight: 500;
-  font-size: 14px;
-  color: #666;
-}
-
-.test-textarea {
-  width: 100%;
-  height: 100px;
-  padding: 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  resize: none;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.test-output {
-  margin-top: 16px;
-}
-
-.output-content {
-  padding: 8px;
-  background: white;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.output-content pre {
-  margin: 0;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 14px;
-  white-space: pre-wrap;
-}
-
-.error-output {
-  color: #ff4d4f;
-}
-
-.empty-output {
-  padding: 8px;
-  color: #999;
-  text-align: center;
-  font-style: italic;
-}
-
-.run-stats {
-  margin-top: 8px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #666;
-}
-
-.test-actions {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: normal;
-}
-
-.status-badge.Accepted, .status-badge.success {
-  background: #f6ffed;
-  color: #52c41a;
-}
-
-.status-badge.error {
-  background: #fff1f0;
-  color: #ff4d4f;
-}
-
-.editor-footer {
-  padding: 16px;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.run-btn, .submit-btn {
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.run-btn {
-  background: white;
-  color: #1890ff;
-  border: 1px solid #1890ff;
-}
-
-.run-btn:hover:not(:disabled) {
-  background: #e6f7ff;
-}
-
-.submit-btn {
-  background: #1890ff;
-  color: white;
-  border: none;
-  flex: 1;
-}
-
-.submit-btn:hover:not(:disabled) {
-  background: #40a9ff;
-}
-
-.submit-btn:disabled, .run-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.judge-animation {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.animation-container {
-  background: white;
-  border-radius: 8px;
-  padding: 24px;
-  width: 80%;
-  max-width: 400px;
-  text-align: center;
-}
-
-.judge-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.loading-text {
-  font-size: 18px;
-  color: #666;
-}
-
-.judge-result {
-  padding: 16px;
-}
-
-.result-status {
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.result-status.success {
-  color: #52c41a;
-}
-
-.result-status.error {
-  color: #ff4d4f;
-}
-
-/* 排行榜样式 */
-.ranking-content {
-  padding: 20px;
-  background: white;
-}
-
-.ranking-list {
-  margin-bottom: 20px;
-}
-
-.ranking-list h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  font-size: 18px;
-  color: #333;
-  position: relative;
-  padding-left: 12px;
-}
-
-.ranking-list h2::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 16px;
-  background: #1890ff;
-  border-radius: 2px;
-}
-
-/* 竞赛题目列表样式 */
-.contest-problems {
-  margin-bottom: 20px;
-  padding: 15px;
-  background: #f9f9f9;
-  border-radius: 4px;
-  border: 1px solid #eee;
-}
-
-.contest-problems h3 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 16px;
-  color: #333;
-}
-
-.problem-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.problem-item {
-  padding: 6px 12px;
-  background: white;
-  border: 1px solid #e8e8e8;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
   gap: 8px;
 }
 
-.problem-letter {
-  font-weight: bold;
+.action-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #888;
+  cursor: pointer;
+  padding: 5px;
+  transition: color 0.2s;
+}
+.action-btn:hover { color: #333; }
+
+.code-editor {
+  flex-grow: 1; /* 占据剩余空间 */
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  min-height: 300px; /* 保证最小高度 */
+}
+
+/* 编辑器主题设置 (在 editorOptions 中) */
+:deep(.monaco-editor) { /* 确保圆角 */
+  border-radius: 4px;
+}
+
+.editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.footer-btn {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s, opacity 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.footer-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.test-btn {
+  background-color: #f0f0f0;
+  color: #555;
+}
+.test-btn:hover:not(:disabled) { background-color: #e0e0e0; }
+
+.run-btn {
+  background-color: #e6f7ff;
   color: #1890ff;
 }
+.run-btn:hover:not(:disabled) { background-color: #bae7ff; }
 
-.problem-name {
-  color: #333;
+.submit-btn {
+  background-color: #52c41a;
+  color: #fff;
+}
+.submit-btn:hover:not(:disabled) { background-color: #73d13d; }
+
+/* 自测面板 */
+.test-panel {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px dashed #ccc;
 }
 
-/* 竞赛进度条样式 */
-.contest-progress-container {
-  margin-bottom: 24px;
-  padding: 16px;
-  background: #f9f9f9;
-  border-radius: 4px;
-}
-
-.progress-info {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.progress-status {
-  font-weight: 500;
-  color: #333;
-}
-
-.progress-time {
-  color: #666;
-}
-
-.progress-bar-container {
-  height: 8px;
-  background: #f0f0f0;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #1890ff, #52c41a);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.loading-row {
-  text-align: center;
-  padding: 30px;
-  color: #666;
-}
-
-.empty-ranking {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 50px 0;
-  color: #999;
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.empty-text {
-  font-size: 16px;
-}
-
-.rank-table-container {
-  overflow-x: auto;
-}
-
-.rank-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 600px;
-}
-
-.rank-table th,
-.rank-table td {
-  padding: 12px;
-  text-align: center;
-  border-bottom: 1px solid #eee;
-  vertical-align: middle;
-}
-
-.rank-table th {
-  font-weight: 500;
-  background: #fafafa;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.rank-table tr:hover {
-  background-color: #f5f5f5;
-}
-
-.user-name {
-  text-align: left;
-  font-weight: 500;
-}
-
-.problem-status {
-  width: 60px;
-}
-
-.failed-count {
-  color: #ff4d4f;
-}
-
-/* 问题状态样式 */
-.accepted {
-  background-color: #d4edda;
-}
-
-.partial {
-  background-color: #fff3cd;
-}
-
-.failed {
-  background-color: #f8d7da;
-}
-
-/* 提交记录选项卡样式 */
-.submissions-tab {
-  padding: 20px;
-}
-
-.submission-list {
-  background: white;
-}
-
-.empty-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 0;
-  color: #999;
-}
-
-.placeholder-icon {
-  margin-bottom: 16px;
-  color: #d9d9d9;
-}
-
-.empty-placeholder h3 {
-  margin: 0 0 8px 0;
-  font-size: 18px;
-  color: #666;
-}
-
-.empty-placeholder p {
-  margin: 0;
+.panel-title {
   font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #444;
+}
+
+.test-input-area {
+  width: 100%;
+  min-height: 80px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 13px;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.run-result-container {
+  margin-top: 10px;
+}
+.run-result-container h4 {
+  font-size: 13px;
+  margin-bottom: 5px;
+  color: #555;
+}
+.result-output {
+  background-color: #f6f8fa;
+  border: 1px solid #eee;
+  padding: 8px;
+  border-radius: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.result-output.error {
+  color: #f5222d;
+  border-color: #ffccc7;
+  background-color: #fff1f0;
+}
+
+/* 判题结果动画 */
+.judge-result-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  margin-top: 15px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+}
+.lottie-animation {
+  width: 100px;
+  height: 100px;
+  margin-bottom: 10px;
+}
+.judge-status-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* 提交记录表格 */
+.submissions-section {
+  margin-top: 10px;
 }
 
 .submission-table {
-  width: 100%;
+  border: 1px solid #f0f0f0;
   border-radius: 4px;
-  overflow: hidden;
 }
 
-.table-header {
-  display: grid;
-  grid-template-columns: 80px 120px 120px 180px 100px 100px 1fr;
-  background: #fafafa;
-  padding: 12px 16px;
+/* 表格状态标签 */
+.status-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
   font-weight: 500;
-  color: #666;
-  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer; /* 可点击查看详情 */
+  transition: opacity 0.2s;
+}
+.status-tag:hover { opacity: 0.8; }
+
+.status-tag.status-accepted { 
+  background-color: #f6ffed; 
+  color: #52c41a; 
+  border: 1px solid #b7eb8f; 
 }
 
-.table-row {
-  display: grid;
-  grid-template-columns: 80px 120px 120px 180px 100px 100px 1fr;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+.status-tag.status-wrong { 
+  background-color: #fff1f0; 
+  color: #f5222d; 
+  border: 1px solid #ffccc7; 
+}
+
+.status-tag.status-tle,
+.status-tag.status-mle { 
+  background-color: #fffbe6; 
+  color: #faad14; 
+  border: 1px solid #ffe58f; 
+}
+
+.status-tag.status-runtime { 
+  background-color: #fff0f6; 
+  color: #eb2f96; 
+  border: 1px solid #ffadd2; 
+}
+
+.status-tag.status-compile { 
+  background-color: #e6f7ff; 
+  color: #1890ff; 
+  border: 1px solid #91d5ff; 
+}
+
+.status-tag.status-pending,
+.status-tag.status-judging { 
+  background-color: #fafafa; 
+  color: #8c8c8c; 
+  border: 1px solid #d9d9d9; 
+}
+
+.status-tag.status-other { 
+  background-color: #fafafa; 
+  color: #8c8c8c; 
+  border: 1px solid #d9d9d9; 
+}
+
+.empty-submissions, .empty-ranking {
+  padding: 30px;
+  text-align: center;
+  color: #999;
+}
+
+/* 提交详情 Modal */
+.modal-loading {
+  display: flex;
+  justify-content: center;
   align-items: center;
+  height: 200px;
+  gap: 10px;
 }
 
-.table-row:hover {
-  background: #f5f5f5;
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px 15px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+}
+.detail-item strong {
+  color: #555;
+  margin-right: 5px;
 }
 
-.cell-id, .header-id {
+.detail-section {
+  margin-bottom: 20px;
+}
+.detail-section h4 {
+  font-size: 15px;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.code-block {
+  background-color: #f6f8fa;
+  border: 1px solid #eee;
+  padding: 10px;
+  border-radius: 4px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.compile-error {
+  color: #f5222d;
+}
+
+.submitted-code-editor {
+  height: 400px; /* 固定高度 */
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.test-cases {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 15px;
+}
+.testcase-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f9f9f9;
+  font-size: 13px;
+}
+.testcase-item:last-child { border-bottom: none; }
+
+.testcase-status {
+  flex-basis: 150px; /* 固定宽度 */
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.testcase-status .fas { font-size: 14px; }
+
+.testcase-status.status-accepted { color: #52c41a; }
+.testcase-status.status-wrong { color: #f5222d; }
+.testcase-status.status-tle,
+.testcase-status.status-mle { color: #faad14; }
+.testcase-status.status-runtime { color: #eb2f96; }
+.testcase-status.status-compile { color: #1890ff; }
+.testcase-status.status-pending,
+.testcase-status.status-judging { color: #8c8c8c; }
+.testcase-status.status-other { color: #8c8c8c; }
+
+.testcase-time, .testcase-memory {
+  color: #888;
 }
 
-.cell-status, .header-status {
+.modal-empty {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .content-wrapper {
+  flex-direction: column;
+  }
+  .side-panel {
+    max-height: none; /* 解除高度限制 */
+  }
+  .code-editor {
+     min-height: 400px; /* 移动端给多点高度 */
+  }
+}
+
+@media (max-width: 768px) {
+  .problem-detail-container { padding: 10px; }
+  .main-content, .side-panel { padding: 15px; }
+  .problem-title { font-size: 20px; }
+  .section-title { font-size: 16px; }
+  .markdown-content { font-size: 13px; }
+  .sample-content { grid-template-columns: 1fr; } /* 堆叠 */
+  .sample-input { border-right: none; border-bottom: 1px solid #e8e8e8; }
+  .editor-footer { flex-wrap: wrap; justify-content: space-between; }
+  .footer-btn { flex-grow: 1; text-align: center; margin-bottom: 5px; }
+  .test-btn { flex-basis: 100%; } /* 自测按钮占一行 */
+}
+
+/* 竞赛题目列表样式 (修改) */
+.contest-problem-list-section {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #eee;
+}
+
+.contest-problem-list-section .section-title {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 16px; /* 减小标题字号 */
+  border-bottom: none; /* 移除标题下划线 */
+  padding-bottom: 0;
+}
+
+.problem-list-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.problem-list-item {
+  display: inline-flex; /* 改为 inline-flex */
+  align-items: center;
+  padding: 6px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 15px; /* 更圆的胶囊形状 */
+  text-decoration: none;
+  color: #555;
+  transition: all 0.3s ease;
+  background-color: #fff;
+  font-size: 13px;
+}
+
+.problem-list-item:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+  background-color: #e6f7ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.problem-list-item.active {
+  border-color: #1890ff;
+  background-color: #1890ff;
+  color: #fff;
   font-weight: 500;
+  }
+  
+.problem-index {
+  font-weight: bold;
+  margin-right: 6px;
+  min-width: 15px; /* 保证宽度 */
+  text-align: center;
+  }
+  
+.problem-list-item.active .problem-index {
+  color: #fff; 
+  }
+  
+.problem-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px; /* 限制名字最大宽度 */
 }
 
-.status-accepted {
-  color: #52c41a;
+/* 调整原有内容的上边距 */
+.problem-header {
+  margin-top: 20px; /* 与题目列表分隔开 */
 }
 
-.status-wrong {
-  color: #ff4d4f;
-}
-
-.status-tle {
-  color: #faad14;
-}
-
-.status-mle {
-  color: #faad14;
-}
-
-.status-runtime {
-  color: #ff4d4f;
-}
-
-.status-compile {
-  color: #ff4d4f;
-}
-
-.status-pending {
-  color: #1890ff;
-}
-
-.status-other {
-  color: #666;
-}
-
-.view-code-btn {
-  background: transparent;
-  color: #1890ff;
-  border: none;
+/* 刷新按钮 */
+.refresh-btn {
+  margin-left: 10px;
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  background-color: #f0f0f0;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   cursor: pointer;
-  font-size: 14px;
+  transition: all 0.3s;
+  font-size: 13px;
+}
+
+.refresh-btn:hover {
+  background-color: #e6f7ff;
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.refresh-btn i {
+  font-size: 12px;
+}
+
+/* 提交记录和排行榜突出显示样式 */
+.submission-table :deep(.ant-table-tbody > tr:hover > td) {
+  background-color: #e6f7ff;
+}
+
+.view-detail-link {
+  color: #1890ff;
   transition: all 0.3s;
 }
 
-.view-code-btn:hover {
+.view-detail-link:hover {
   color: #40a9ff;
   text-decoration: underline;
 }
 
-.pagination {
+/* 排行榜样式增强 */
+.rank-table :deep(.ant-table-tbody > tr:hover > td) {
+  background-color: #e6f7ff;
+}
+
+.rank-cell {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.page-total {
-  font-size: 14px;
-  color: #666;
-}
-
-.page-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.page-btn {
-  padding: 4px 12px;
-  background: white;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
-}
-
-.page-btn:hover:not(:disabled) {
-  color: #1890ff;
-  border-color: #1890ff;
-}
-
-.page-btn:disabled {
-  color: #d9d9d9;
-  cursor: not-allowed;
-}
-
-.page-info {
-  font-size: 14px;
-  color: #666;
-}
-
-.submission-detail-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 800px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  z-index: 1001;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 18px;
-  color: #333;
-}
-
-.close-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: #999;
-}
-
-.modal-loading {
-  padding: 30px;
-  text-align: center;
-  color: #666;
-}
-
-.modal-body {
-  padding: 24px;
-  overflow-y: auto;
-}
-
-.detail-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.label {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 4px;
-}
-
-.value {
-  font-size: 14px;
-  color: #333;
-  font-weight: 500;
-}
-
-.code-container {
-  background: #f5f5f5;
-  border-radius: 4px;
-  padding: 16px;
-}
-
-.code-container h4 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  color: #333;
-}
-
-.source-code {
-  margin: 0;
-  padding: 16px;
-  background: white;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-/* 响应式设计 */
-@media (max-width: 992px) {
-  .split-layout {
     flex-direction: column;
-    height: auto;
-  }
-  
-  .problem-info, .editor-container {
-    width: 100%;
-    height: auto;
-  }
-  
-  .editor-container {
-    height: 500px;
-  }
-  
-  .hidden-mobile {
-    display: none;
-  }
-  
-  .mobile-toggle {
-    display: flex;
-    justify-content: center;
-    margin: 10px 0;
-  }
-  
-  .table-header, .table-row {
-    grid-template-columns: 60px 100px 100px 1fr;
-  }
-  
-  .header-runtime, .header-memory, .header-actions,
-  .cell-runtime, .cell-memory, .cell-actions {
-    display: none;
-  }
+  align-items: center;
+  padding: 4px 0;
+  border-radius: 3px;
+}
+
+.rank-cell.accepted {
+  background-color: rgba(82, 196, 26, 0.1);
+  border: 1px solid rgba(82, 196, 26, 0.3);
+}
+
+.rank-cell.failed {
+  background-color: rgba(245, 34, 45, 0.05);
+  border: 1px solid rgba(245, 34, 45, 0.2);
+  color: #f5222d;
+}
+
+.rank-cell .time {
+  font-weight: bold;
+  color: #52c41a;
+}
+
+.rank-cell .attempts {
+  font-size: 11px;
+  color: #ff4d4f;
+}
+
+/* 突出显示当前项目 */
+.problem-list-item {
+  cursor: pointer;
 }
 </style> 
