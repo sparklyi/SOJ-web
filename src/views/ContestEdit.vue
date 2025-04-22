@@ -219,6 +219,7 @@ const submitForm = async () => {
   }
 }
 
+let previousPage = route.query.from;
 // 取消编辑
 const cancel = () => {
   Modal.confirm({
@@ -228,7 +229,7 @@ const cancel = () => {
     cancelText: '继续编辑',
     onOk: () => {
       // 确保路由跳转正确
-      router.push('/contest-manage') 
+      router.push(previousPage) 
     }
   })
 }
