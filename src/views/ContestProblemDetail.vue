@@ -1045,10 +1045,10 @@ const getEditorLanguage = (langString) => {
             >
               <span class="problem-index">{{ getLetterIndex(index) }}</span>
               <span class="problem-name">{{ prob.name }}</span>
-            </div>
-          </div>
-        </div>
-        
+      </div>
+      </div>
+    </div>
+    
         <!-- 题目信息头部 -->
           <div class="problem-header">
           <h1 class="problem-title">
@@ -1951,8 +1951,8 @@ const getEditorLanguage = (langString) => {
   
 .problem-list-item.active .problem-index {
   color: #fff; 
-  }
-  
+}
+
 .problem-name {
   white-space: nowrap;
   overflow: hidden;
@@ -2054,8 +2054,8 @@ const getEditorLanguage = (langString) => {
 
 :deep(.rank-cell.failed .attempts) { /* Keep failed attempts red */
   color: #ff4d4f;
-}
-
+  }
+  
 :deep(.rank-cell.frozen .fas) {
    font-size: 13px; 
    color: #888;
