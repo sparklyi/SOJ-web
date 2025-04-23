@@ -1,0 +1,33 @@
+User-agent: *
+Allow: /
+Allow: /problems
+Allow: /contest
+Allow: /problem/*
+Allow: /static/*
+Allow: /assets/*
+
+# 禁止爬虫访问的路径
+Disallow: /api/
+Disallow: /admin/
+Disallow: /manage/
+Disallow: /user/profile
+Disallow: /settings
+Disallow: /login
+Disallow: /register
+Disallow: /submission/
+Disallow: /*/manage
+
+# 设置爬取速率限制
+Crawl-delay: 10
+
+# 对特定爬虫的限制
+User-agent: YandexBot
+Disallow: /
+
+User-agent: Baiduspider
+Disallow: /api/
+Disallow: /admin/
+Allow: /
+
+User-agent: Bytespider
+Disallow: /
