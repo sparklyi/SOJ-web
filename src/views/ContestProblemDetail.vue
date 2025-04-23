@@ -51,13 +51,18 @@ const contestInfo = ref(null)
 
 // 获取当前竞赛ID
 const getCurrentContestId = () => {
-  // 先尝试从URL参数获取竞赛ID
+  // 优先从路由参数获取
+  if (route.params.contestId) {
+    return Number(route.params.contestId);
+  }
+  
+  // 其次尝试从URL查询参数获取 (可能来自旧链接或特定场景)
   const contestIdFromQuery = route.query.contestId
   if (contestIdFromQuery) {
     return Number(contestIdFromQuery)
   }
   
-  // 如果URL中没有，则从localStorage中获取
+  // 最后尝试从localStorage获取 (用于独立访问题目详情页等情况)
   const contestIdFromStorage = localStorage.getItem('current_contest_id')
   if (contestIdFromStorage) {
     return Number(contestIdFromStorage)
@@ -189,9 +194,17 @@ const fetchContestInfo = async () => {
 // 获取题目详情
 const fetchProblemDetail = async () => {
   loading.value = true
+  const problemId = route.params.problemId; // 使用 problemId
+  const contestId = getCurrentContestId(); // contestId 可以保持使用此函数
+  if (!problemId) {
+    message.error('无效的题目ID');
+    loading.value = false;
+    return;
+  }
+  
   try {
-    const contestId = getCurrentContestId()
-    const res = await getProblemDetail(route.params.id, contestId)
+    // 确保传递的是 Number 类型
+    const res = await getProblemDetail(Number(problemId), contestId)
     if (res.code === 200) {
       problem.value = res.data
       // 确保样例存在，适配新API格式
@@ -295,7 +308,9 @@ const getShortLanguageName = (fullName) => {
 
 // 根据语言保存和获取本地存储的代码
 const getStorageKey = (langName) => {
-  return `code_${problem.value.ID}_${langName || language.value}`
+  const problemId = route.params.problemId; // 使用 problemId
+  if (!problemId) return 'code_unknown_problem'; // 提供默认键以防万一
+  return `code_${problemId}_${langName || language.value}`;
 }
 
 // 在本地存储中加载代码
@@ -385,12 +400,18 @@ const runCode = async () => {
     return
   }
   
+  const problemId = route.params.problemId; // 使用 problemId
+  if (!problemId) {
+    message.error('无法获取题目ID');
+    return;
+  }
+  
   isRunning.value = true
   runResult.value = null
   
   try {
     const res = await runCodeAPI({
-      problem_id: Number(route.params.id),
+      problem_id: Number(problemId),
       language_id: languageId.value,
       source_code: code.value,
       stdin: testInput.value
@@ -421,13 +442,19 @@ const submitCode = async () => {
     return
   }
   
+  const problemId = route.params.problemId; // 使用 problemId
+  if (!problemId) {
+    message.error('无法获取题目ID');
+    return;
+  }
+  
   isSubmitting.value = true
   showJudgeAnimation.value = true
   judgeResult.value = null
   
   try {
     const submitData = {
-      problem_id: Number(route.params.id),
+      problem_id: Number(problemId),
       language_id: languageId.value,
       source_code: code.value
     }
@@ -481,10 +508,16 @@ const switchTab = (tab) => {
 // 获取提交记录
 const fetchSubmissionList = async () => {
   submissionLoading.value = true
+  const problemId = route.params.problemId; // 使用 problemId
+  if (!problemId) {
+    message.error('无法获取题目ID以加载提交记录');
+    submissionLoading.value = false;
+    return;
+  }
+
   try {
-    // 添加竞赛ID和用户ID筛选
     const params = {
-      problem_id: Number(route.params.id),
+      problem_id: Number(problemId),
       page: currentPage.value,
       size: pageSize.value
     }
@@ -608,10 +641,11 @@ const formatDateTime = (dateStr) => {
 
 // 获取状态样式类名
 const getStatusClass = (status) => {
-  if (!status) return ''
+  console.log('获取状态样式类名:', status)
+  
   
   const statusLower = status.toLowerCase()
-  
+  console.log('状态样式类名:', statusLower)
   if (statusLower.includes('accepted')) return 'status-accepted'
   if (statusLower.includes('wrong answer')) return 'status-wrong'
   if (statusLower.includes('time limit')) return 'status-tle'
@@ -679,43 +713,58 @@ const mapMonacoLanguage = (lang) => {
 }
 
 // 切换题目
-const navigateToProblem = (problemId) => {
-  if (!problemId) return
+const navigateToProblem = (problemIdToNav) => {
+  if (!problemIdToNav) {
+    console.warn('navigateToProblem called with invalid problemId');
+    return;
+  }
   
-  const contestId = getCurrentContestId()
-  if (!contestId) return
+  // 使用 route.params.contestId 获取当前竞赛 ID
+  const contestId = route.params.contestId; 
+  if (!contestId) {
+    console.warn('navigateToProblem called but no contestId found in route params');
+    // 可以选择尝试 getCurrentContestId() 作为后备，但这可能不准确
+    // const fallbackContestId = getCurrentContestId();
+    // if (!fallbackContestId) return;
+    // contestId = fallbackContestId;
+    message.error('无法确定当前竞赛ID');
+    return;
+  }
   
-  // 判断是否是同一题目，避免重复加载
-  if (Number(route.params.id) === problemId) return
+  // 判断是否是同一题目，避免不必要的导航
+  if (Number(route.params.problemId) === problemIdToNav) { // 使用 problemId 比较
+    console.log('Already on the requested problem page.');
+    return;
+  }
   
-  // 保存当前状态
+  // 保存当前代码编辑器的状态
   saveCodeToLocalStorage()
   
-  // 从列表点击时，直接修改route.params并重新加载
-  try {
-    // 构建完整路径
-    const targetPath = `/contest/${contestId}/problem/${problemId}`
-    console.log(`导航到: ${targetPath}`)
-    
-    // 使用router.push导航
-    router.push(targetPath).catch(err => {
-      if (err.name !== 'NavigationDuplicated') {
-        console.error('导航错误:', err)
-        message.error('题目切换失败')
-      }
-    })
-    
-    // 如果没有立即跳转，手动触发重载
-    setTimeout(() => {
-      if (Number(route.params.id) !== problemId) {
-        console.log('触发手动重新加载')
-        fetchProblemDetail()
-      }
-    }, 500)
-  } catch (err) {
-    console.error('题目切换错误:', err)
-    message.error('题目切换失败')
-  }
+  // 构建目标路径 - 确保格式为 /contest/:contestId/problem/:problemId
+  const targetPath = `/contest/${contestId}/problem/${problemIdToNav}`; // 使用 problemIdToNav
+  console.log(`Navigating to problem: ${targetPath}`);
+  
+  // 使用 router.push 进行导航
+  router.push(targetPath).catch(err => {
+    // 忽略重复导航错误，这是预期的，如果用户快速点击同一链接
+    if (err.name !== 'NavigationDuplicated') {
+      console.error('Router navigation error:', err);
+      message.error('切换题目失败，请检查控制台日志。');
+    }
+  });
+  
+  // 注意：Vue Router通常会自动处理组件的重新加载。
+  // 如果组件没有按预期更新，请检查路由配置和组件的 key 属性。
+  // 通常不需要手动 setTimeout 和 fetchProblemDetail。
+  // 保留之前的 setTimeout 逻辑以防万一，但注释掉其核心部分
+  /*
+  setTimeout(() => {
+    if (Number(route.params.problemId) !== problemIdToNav) {
+      console.log('Manual reload triggered (may indicate issue with router reactivity)');
+      // fetchProblemDetail(); // 一般不需要
+    }
+  }, 500);
+  */
 }
 
 // 生命周期钩子
@@ -742,9 +791,21 @@ onMounted(async () => {
 })
 
 // 监听路由参数变化
-watch(() => route.params.id, (newId) => {
-  if (newId) {
-    fetchProblemDetail()
+watch(() => route.params.problemId, (newProblemId) => { // 监听 problemId
+  if (newProblemId) {
+    console.log(`Problem ID changed to: ${newProblemId}, fetching details...`);
+    fetchProblemDetail();
+    // 可能还需要重置/重新加载其他与题目相关的状态，例如提交记录
+    submissionList.value = []; // 清空旧记录
+    submissionTotal.value = 0;
+    currentPage.value = 1;
+    // 如果当前tab是提交记录，则重新获取
+    if (activeTab.value === 'submissions') {
+        fetchSubmissionList();
+    }
+  } else {
+    console.warn('Problem ID in route is missing or invalid.');
+    // 可以考虑导航到错误页或竞赛详情页
   }
 })
 
@@ -905,22 +966,31 @@ const rankColumns = computed(() => {
       const detail = record?.info?.freeze?.details?.[problem.id];
       if (!detail) return h('span', '-');
       
-      // 已接受的题目 - 浅绿色
-      if (detail.status === 3) { // Accepted
-        const attempts = Math.max(0, detail.count - 1);
-        const time = detail.accept_time ? `${Math.floor(detail.accept_time / 60)}` : '';
-        
+      // Status 3: Accepted (Green)
+      if (detail.status === 3) { 
+        const attempts = Math.max(0, detail.count - 1); // Attempts before acceptance
+        const time = detail.accept_time ? `${Math.floor(detail.accept_time / 60)}` : ''; // Acceptance time in minutes
         return h('div', { class: 'rank-cell accepted' }, [
           h('div', { class: 'time' }, time),
           h('div', { class: 'attempts' }, attempts > 0 ? `(-${attempts})` : '')
         ]);
       } 
-      // 尝试过但未通过的题目 - 浅红色
+      // Status 16: Frozen (Grey)
+      else if (detail.status === 16) {
+        // Display attempts before freeze if any
+        const attempts = detail.count || 0;
+        return h('div', { class: 'rank-cell frozen' }, [
+          // Optionally display a lock icon or '封'
+          h('i', { class: 'fas fa-lock', style: 'margin-bottom: 2px;' }), 
+          h('div', { class: 'frozen-attempts' }, attempts > 0 ? `(-${attempts})` : '-')
+        ]);
+      } 
+      // Other statuses with attempts: Failed (Red)
       else if (detail.count > 0) { 
         return h('div', { class: 'rank-cell failed' }, `(-${detail.count})`);
       }
       
-      // 未尝试的题目
+      // No attempts or unknown status
       return h('span', '-');
     }
   }));
@@ -970,15 +1040,15 @@ const getEditorLanguage = (langString) => {
             <div 
               v-for="(prob, index) in contestProblems" 
               :key="prob.id" 
-              :class="['problem-list-item', { 'active': Number(route.params.id) === prob.id }]"
+              :class="['problem-list-item', { 'active': Number(route.params.problemId) === prob.id }]"
               @click="navigateToProblem(prob.id)"
             >
               <span class="problem-index">{{ getLetterIndex(index) }}</span>
               <span class="problem-name">{{ prob.name }}</span>
-      </div>
-      </div>
-    </div>
-    
+            </div>
+          </div>
+        </div>
+        
         <!-- 题目信息头部 -->
           <div class="problem-header">
           <h1 class="problem-title">
@@ -1059,7 +1129,7 @@ const getEditorLanguage = (langString) => {
           <!-- 竞赛排行榜 (如果需要) -->
           <a-tab-pane key="ranking" tab="排行榜" v-if="isContestProblem">
              <div class="ranking-section">
-                <h2 class="section-title">本题排行榜 (竞赛期间)</h2>
+                <h2 class="section-title">排行榜</h2>
                 <button @click="fetchRankList" class="refresh-btn">
                   <i class="fas fa-sync-alt"></i> 刷新
                 </button>
@@ -1270,6 +1340,7 @@ const getEditorLanguage = (langString) => {
   background-color: #fff;
   border-radius: 8px;
   padding: 20px;
+  margin-left: -10%;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: hidden; /* 防止内部元素溢出 */
 }
@@ -1279,6 +1350,7 @@ const getEditorLanguage = (langString) => {
   background-color: #fff;
   border-radius: 8px;
   padding: 15px;
+  margin-right: -10%;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
@@ -1634,56 +1706,57 @@ const getEditorLanguage = (langString) => {
 }
 
 /* 表格状态标签 */
-.status-tag {
+:deep(.status-tag) {
   display: inline-block;
   padding: 3px 8px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
-  cursor: pointer; /* 可点击查看详情 */
   transition: opacity 0.2s;
+  cursor: pointer; /* Added cursor pointer for clarity */
 }
-.status-tag:hover { opacity: 0.8; }
 
-.status-tag.status-accepted { 
+:deep(.status-tag:hover) { opacity: 0.8; }
+
+:deep(.status-tag.status-accepted) { 
   background-color: #f6ffed; 
   color: #52c41a; 
   border: 1px solid #b7eb8f; 
 }
 
-.status-tag.status-wrong { 
+:deep(.status-tag.status-wrong) { 
   background-color: #fff1f0; 
   color: #f5222d; 
   border: 1px solid #ffccc7; 
 }
 
-.status-tag.status-tle,
-.status-tag.status-mle { 
+:deep(.status-tag.status-tle),
+:deep(.status-tag.status-mle) { 
   background-color: #fffbe6; 
   color: #faad14; 
   border: 1px solid #ffe58f; 
 }
 
-.status-tag.status-runtime { 
+:deep(.status-tag.status-runtime) { 
   background-color: #fff0f6; 
   color: #eb2f96; 
   border: 1px solid #ffadd2; 
 }
 
-.status-tag.status-compile { 
+:deep(.status-tag.status-compile) { 
   background-color: #e6f7ff; 
   color: #1890ff; 
   border: 1px solid #91d5ff; 
 }
 
-.status-tag.status-pending,
-.status-tag.status-judging { 
+:deep(.status-tag.status-pending),
+:deep(.status-tag.status-judging) { 
   background-color: #fafafa; 
   color: #8c8c8c; 
   border: 1px solid #d9d9d9; 
 }
 
-.status-tag.status-other { 
+:deep(.status-tag.status-other) { 
   background-color: #fafafa; 
   color: #8c8c8c; 
   border: 1px solid #d9d9d9; 
@@ -1772,15 +1845,15 @@ const getEditorLanguage = (langString) => {
 }
 .testcase-status .fas { font-size: 14px; }
 
-.testcase-status.status-accepted { color: #52c41a; }
-.testcase-status.status-wrong { color: #f5222d; }
-.testcase-status.status-tle,
-.testcase-status.status-mle { color: #faad14; }
-.testcase-status.status-runtime { color: #eb2f96; }
-.testcase-status.status-compile { color: #1890ff; }
-.testcase-status.status-pending,
-.testcase-status.status-judging { color: #8c8c8c; }
-.testcase-status.status-other { color: #8c8c8c; }
+:deep(.testcase-status.status-accepted) { color: #52c41a; }
+:deep(.testcase-status.status-wrong) { color: #f5222d; }
+:deep(.testcase-status.status-tle),
+:deep(.testcase-status.status-mle) { color: #faad14; }
+:deep(.testcase-status.status-runtime) { color: #eb2f96; }
+:deep(.testcase-status.status-compile) { color: #1890ff; }
+:deep(.testcase-status.status-pending),
+:deep(.testcase-status.status-judging) { color: #8c8c8c; }
+:deep(.testcase-status.status-other) { color: #8c8c8c; }
 
 .testcase-time, .testcase-memory {
   color: #888;
@@ -1938,33 +2011,54 @@ const getEditorLanguage = (langString) => {
   background-color: #e6f7ff;
 }
 
-.rank-cell {
+:deep(.rank-cell) {
   display: flex;
-    flex-direction: column;
+  flex-direction: column;
   align-items: center;
+  justify-content: center; /* Center content vertically */
   padding: 4px 0;
   border-radius: 3px;
+  min-height: 36px; /* Ensure consistent height */
+  font-size: 12px; /* Slightly smaller font */
 }
 
-.rank-cell.accepted {
+:deep(.rank-cell.accepted) {
   background-color: rgba(82, 196, 26, 0.1);
   border: 1px solid rgba(82, 196, 26, 0.3);
 }
 
-.rank-cell.failed {
+:deep(.rank-cell.failed) {
   background-color: rgba(245, 34, 45, 0.05);
   border: 1px solid rgba(245, 34, 45, 0.2);
   color: #f5222d;
+  font-weight: 500;
 }
 
-.rank-cell .time {
+:deep(.rank-cell.frozen) {
+  background-color: #f0f0f0; /* Grey background */
+  border: 1px solid #d9d9d9; /* Grey border */
+  color: #888; /* Grey text */
+}
+
+:deep(.rank-cell .time) {
   font-weight: bold;
   color: #52c41a;
+  font-size: 13px; /* Make time slightly larger */
 }
 
-.rank-cell .attempts {
+:deep(.rank-cell .attempts),
+:deep(.rank-cell .frozen-attempts) {
   font-size: 11px;
+  color: #888; /* Make attempt count grey */
+}
+
+:deep(.rank-cell.failed .attempts) { /* Keep failed attempts red */
   color: #ff4d4f;
+}
+
+:deep(.rank-cell.frozen .fas) {
+   font-size: 13px; 
+   color: #888;
 }
 
 /* 突出显示当前项目 */

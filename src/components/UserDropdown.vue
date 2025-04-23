@@ -101,31 +101,31 @@ onUnmounted(() => {
       <div v-for="item in USER_MENU_ITEMS" :key="item.key">
         <!-- 检查权限要求 -->
         <template v-if="!item.requireAuth || userStore.userInfo.role >= item.requireAuth">
-          <!-- 处理带子菜单的项目 -->
-          <div v-if="item.children" class="dropdown-parent">
-            <div class="dropdown-item parent-item" @click="toggleSubMenu(item.key)">
-              <span>{{ item.label }}</span>
-              <span class="dropdown-caret" :class="{ 'rotated': expandedMenus[item.key] }">▼</span>
-            </div>
-            <div class="dropdown-submenu" v-show="expandedMenus[item.key]">
-              <div
-                v-for="child in item.children.filter(c => !c.requireAuth || userStore.userInfo.role >= c.requireAuth)"
-                :key="child.key"
-                class="dropdown-item submenu-item"
-                @click="handleMenuClick(child.key)"
-              >
-                <span>{{ child.label }}</span>
-              </div>
-            </div>
-          </div>
-          <!-- 处理普通菜单项 -->
-          <div
-            v-else
-            class="dropdown-item"
-            @click="handleMenuClick(item.key)"
-          >
+        <!-- 处理带子菜单的项目 -->
+        <div v-if="item.children" class="dropdown-parent">
+          <div class="dropdown-item parent-item" @click="toggleSubMenu(item.key)">
             <span>{{ item.label }}</span>
+            <span class="dropdown-caret" :class="{ 'rotated': expandedMenus[item.key] }">▼</span>
           </div>
+          <div class="dropdown-submenu" v-show="expandedMenus[item.key]">
+            <div
+                v-for="child in item.children.filter(c => !c.requireAuth || userStore.userInfo.role >= c.requireAuth)"
+              :key="child.key"
+              class="dropdown-item submenu-item"
+              @click="handleMenuClick(child.key)"
+            >
+              <span>{{ child.label }}</span>
+            </div>
+          </div>
+        </div>
+        <!-- 处理普通菜单项 -->
+        <div
+          v-else
+          class="dropdown-item"
+          @click="handleMenuClick(item.key)"
+        >
+          <span>{{ item.label }}</span>
+        </div>
         </template>
       </div>
     </div>
