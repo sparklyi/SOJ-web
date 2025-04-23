@@ -2,6 +2,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { getProblems, getProblemJudgeCount } from '../api/problem'
+import { getContests } from '../api/contest'
 import { message } from 'ant-design-vue'
 
 const router = useRouter()
@@ -29,30 +30,65 @@ const levelOptions = [
   { value: 'hard', label: '困难' }
 ]
 
-// 近期竞赛
-const upcomingContests = ref([
-  {
-    id: 1,
-    title: '2024春季算法竞赛',
-    startTime: '2024-05-20 10:00',
-    duration: '3小时',
-    type: '个人赛'
-  },
-  {
-    id: 2,
-    title: '2024程序设计能力挑战赛',
-    startTime: '2024-06-15 14:00',
-    duration: '4小时',
-    type: '团队赛'
-  },
-  {
-    id: 3,
-    title: '前端编程竞赛',
-    startTime: '2024-05-30 15:00',
-    duration: '2小时',
-    type: '个人赛'
+// 近期竞赛 - 改为空数组，通过 API 获取
+const upcomingContests = ref([])
+
+// 获取近期竞赛
+const fetchUpcomingContests = async () => {
+  try {
+    // 获取当前时间，格式化为 yyyy-MM-dd HH:mm:ss
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+    const seconds = String(now.getSeconds()).padStart(2, '0')
+    const currentTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+
+    // 获取竞赛数据，限制为3个，时间大于当前时间
+    const response = await getContests({
+      page: 1,
+      page_size: 3,
+      start_after: currentTime
+    })
+
+    if (response.code === 200) {
+      // 格式化竞赛数据
+      upcomingContests.value = (response.data.detail || []).map(contest => ({
+        id: contest.ID,
+        title: contest.name,
+        startTime: contest.start_time,
+        duration: getDuration(contest.start_time, contest.end_time),
+        type: contest.type,
+        tag: contest.tag
+      }))
+    } else {
+      console.error('获取近期竞赛失败:', response.message)
+    }
+  } catch (error) {
+    console.error('获取近期竞赛失败:', error)
   }
-])
+}
+
+// 计算竞赛时长
+const getDuration = (startTime, endTime) => {
+  if (!startTime || !endTime) return '未知'
+  
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+  
+  // 计算小时差
+  const diffHours = Math.floor((end - start) / (1000 * 60 * 60))
+  
+  if (diffHours >= 24) {
+    const days = Math.floor(diffHours / 24)
+    const hours = diffHours % 24
+    return hours > 0 ? `${days}天${hours}小时` : `${days}天`
+  } else {
+    return `${diffHours}小时`
+  }
+}
 
 // 活动通知
 const activityNotices = ref([
@@ -243,6 +279,7 @@ const handlePageSizeChange = () => {
 
 onMounted(() => {
   fetchProblems()
+  fetchUpcomingContests()
 })
 </script>
 
@@ -369,6 +406,7 @@ onMounted(() => {
                   </div>
                   <div class="contest-details">
                     <span class="contest-duration">时长: {{ contest.duration }}</span>
+                    <span class="contest-tag">{{ contest.tag }}</span>
                     <span class="contest-type">{{ contest.type }}</span>
                   </div>
                 </div>
@@ -774,6 +812,15 @@ h1 {
   color: #4a90e2;
   border-radius: 12px;
   font-size: 12px;
+}
+
+.contest-tag {
+  padding: 2px 8px;
+  background: #e8f5e9;
+  color: #4caf50;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-right: 5px;
 }
 
 .arrow-icon {

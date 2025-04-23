@@ -1,6 +1,8 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getContests } from '../api/contest'
+import { getProblems } from '../api/problem'
 
 const router = useRouter()
 
@@ -29,51 +31,91 @@ const announcements = ref([
   }
 ])
 
-// 热门题目
-const popularProblems = ref([
-  {
-    id: 1,
-    title: '两数之和',
-    difficulty: '简单',
-    tags: ['数组', '哈希表']
-  },
-  {
-    id: 2,
-    title: '最长回文子串',
-    difficulty: '中等',
-    tags: ['字符串', '动态规划']
-  },
-  {
-    id: 3,
-    title: '合并K个排序链表',
-    difficulty: '困难',
-    tags: ['链表', '分治', '堆']
-  },
-  {
-    id: 4,
-    title: '二叉树的层序遍历',
-    difficulty: '中等',
-    tags: ['树', '广度优先搜索']
-  }
-])
+// 热门题目 - 改为空数组，通过 API 获取
+const popularProblems = ref([])
 
-// 热门竞赛
-const upcomingContests = ref([
-  {
-    id: 1,
-    title: '2024春季算法竞赛',
-    startTime: '2024-05-20 10:00',
-    duration: '3小时',
-    type: '个人赛'
-  },
-  {
-    id: 2,
-    title: '2024程序设计能力挑战赛',
-    startTime: '2024-06-15 14:00',
-    duration: '4小时',
-    type: '团队赛'
+// 热门竞赛 - 改为空数组，通过 API 获取
+const upcomingContests = ref([])
+
+// 获取热门题目（前三条）
+const fetchPopularProblems = async () => {
+  try {
+    const response = await getProblems({
+      page: 1,
+      page_size: 3,
+      status: true // 获取公开的题目
+    })
+
+    if (response.code === 200) {
+      popularProblems.value = (response.data.detail || []).map(problem => ({
+        id: problem.ID,
+        title: problem.name,
+        difficulty: problem.level
+      }))
+    } else {
+      console.error('获取热门题目失败:', response.message)
+    }
+  } catch (error) {
+    console.error('获取热门题目失败:', error)
   }
-])
+}
+
+// 获取近期竞赛
+const fetchUpcomingContests = async () => {
+  try {
+    // 获取当前时间，格式化为 yyyy-MM-dd HH:mm:ss
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+    const seconds = String(now.getSeconds()).padStart(2, '0')
+    const currentTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+
+    // 获取竞赛数据，限制为3个，时间大于当前时间
+    const response = await getContests({
+      page: 1,
+      page_size: 3,
+      start_after: currentTime
+    })
+
+    if (response.code === 200) {
+      // 格式化竞赛数据
+      upcomingContests.value = (response.data.detail || []).map(contest => ({
+        id: contest.ID,
+        title: contest.name,
+        startTime: contest.start_time,
+        duration: getDuration(contest.start_time, contest.end_time),
+        type: contest.type,
+        tag: contest.tag
+      }))
+    } else {
+      console.error('获取近期竞赛失败:', response.message)
+    }
+  } catch (error) {
+    console.error('获取近期竞赛失败:', error)
+  }
+}
+
+// 计算竞赛时长
+const getDuration = (startTime, endTime) => {
+  if (!startTime || !endTime) return '未知'
+  
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+  
+  // 计算小时差
+  const diffHours = Math.floor((end - start) / (1000 * 60 * 60))
+  
+  if (diffHours >= 24) {
+    const days = Math.floor(diffHours / 24)
+    const hours = diffHours % 24
+    return hours > 0 ? `${days}天${hours}小时` : `${days}天`
+  } else {
+    return `${diffHours}小时`
+  }
+}
 
 // 热门讨论
 const hotDiscussions = ref([
@@ -97,22 +139,6 @@ const hotDiscussions = ref([
     author: '数据结构爱好者',
     viewCount: 187,
     date: '2024-04-28'
-  }
-])
-
-// 活动通知
-const activityNotices = ref([
-  {
-    id: 1,
-    title: '算法竞赛冲刺训练营',
-    date: '2024-05-15',
-    type: '线上活动'
-  },
-  {
-    id: 2,
-    title: 'ACM编程技巧分享会',
-    date: '2024-05-22',
-    type: '线上讲座'
   }
 ])
 
@@ -140,6 +166,13 @@ const goToContests = () => {
 const goToDiscussion = (id) => {
   router.push(`/discussion/${id}`)
 }
+
+// 生命周期钩子
+onMounted(() => {
+  // 获取近期竞赛和热门题目
+  fetchUpcomingContests()
+  fetchPopularProblems()
+})
 </script>
 
 <template>
@@ -178,9 +211,6 @@ const goToDiscussion = (id) => {
                   <span :class="['difficulty-badge', problem.difficulty.toLowerCase()]">
                     {{ problem.difficulty }}
                   </span>
-                  <div class="tags">
-                    <span v-for="tag in problem.tags" :key="tag" class="tag">{{ tag }}</span>
-                  </div>
                 </div>
               </div>
               <div class="arrow-icon">
@@ -191,7 +221,7 @@ const goToDiscussion = (id) => {
         </section>
       </div>
       
-      <!-- 中间内容：竞赛和活动 -->
+      <!-- 中间内容：竞赛 -->
       <div class="middle-content">
         <!-- 近期竞赛 -->
         <section class="card upcoming-contests">
@@ -215,6 +245,7 @@ const goToDiscussion = (id) => {
                   </div>
                   <div class="contest-details">
                     <span class="contest-duration">时长: {{ contest.duration }}</span>
+                    <span class="contest-tag">{{ contest.tag }}</span>
                     <span class="contest-type">{{ contest.type }}</span>
                   </div>
                 </div>
@@ -225,27 +256,9 @@ const goToDiscussion = (id) => {
             </div>
           </div>
         </section>
-
-        <!-- 活动通知 -->
-        <section class="card activity-notices">
-          <div class="card-header">
-            <h2>活动通知</h2>
-          </div>
-          <div class="activity-list">
-            <div v-for="activity in activityNotices" :key="activity.id" class="activity-item">
-              <div class="activity-info">
-                <h3 class="activity-title">{{ activity.title }}</h3>
-                <div class="activity-meta">
-                  <span class="activity-date">日期: {{ activity.date }}</span>
-                  <span class="activity-type">{{ activity.type }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
       </div>
       
-      <!-- 右侧内容：公告栏和热门讨论 -->
+      <!-- 右侧内容：公告栏 -->
       <div class="right-content">
         <section class="card announcement-board">
           <div class="card-header">
@@ -269,8 +282,6 @@ const goToDiscussion = (id) => {
             </div>
           </div>
         </section>
-
-       
       </div>
     </div>
   </div>
@@ -364,10 +375,10 @@ const goToDiscussion = (id) => {
   transform: translateY(-2px);
 }
 
-/* 主内容区域 */
+/* 主内容区域 - 调整为三列相等宽度 */
 .main-content {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 20px;
   margin-bottom: 30px;
 }
@@ -462,33 +473,19 @@ const goToDiscussion = (id) => {
   font-weight: 500;
 }
 
-.difficulty-badge.简单 {
+.difficulty-badge.easy {
   background: #e6f7ff;
   color: #4a90e2;
 }
 
-.difficulty-badge.中等 {
+.difficulty-badge.mid {
   background: #fff3e0;
   color: #ff9800;
 }
 
-.difficulty-badge.困难 {
+.difficulty-badge.hard {
   background: #ffebee;
   color: #f44336;
-}
-
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.tag {
-  padding: 2px 6px;
-  background: #f0f0f0;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #666;
 }
 
 .arrow-icon {
@@ -577,6 +574,15 @@ const goToDiscussion = (id) => {
   font-size: 12px;
 }
 
+.contest-tag {
+  padding: 2px 8px;
+  background: #e8f5e9;
+  color: #4caf50;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-right: 5px;
+}
+
 /* 公告栏 */
 .announcement-board {
   height: 100%;
@@ -642,109 +648,6 @@ const goToDiscussion = (id) => {
   color: #666;
   line-height: 1.5;
   margin: 0;
-}
-
-/* 活动通知 */
-.activity-list {
-  padding: 0;
-}
-
-.activity-item {
-  padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
-  transition: all 0.2s;
-}
-
-.activity-item:hover {
-  background-color: #f8f9fa;
-  transform: translateY(-2px);
-}
-
-.activity-item:last-child {
-  border-bottom: none;
-}
-
-.activity-title {
-  font-size: 1rem;
-  margin: 0 0 8px;
-  color: #333;
-}
-
-.activity-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  color: #666;
-}
-
-.activity-type {
-  padding: 2px 8px;
-  background: #e6f7ff;
-  color: #4a90e2;
-  border-radius: 12px;
-  font-size: 12px;
-}
-
-/* 热门讨论 */
-.hot-discussions {
-  margin-top: 20px;
-}
-
-.discussion-list {
-  padding: 0;
-}
-
-.discussion-item {
-  padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.discussion-item:hover {
-  background-color: #f8f9fa;
-  transform: translateX(5px);
-}
-
-.discussion-item:last-child {
-  border-bottom: none;
-}
-
-.discussion-title {
-  font-size: 1rem;
-  margin: 0 0 8px;
-  color: #333;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.discussion-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 12px;
-  color: #999;
-}
-
-.discussion-author {
-  color: #666;
-  font-weight: 500;
-}
-
-.discussion-views {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.view-icon {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M12,4.5C7,4.5,2.73,7.61,1,12c1.73,4.39,6,7.5,11,7.5s9.27-3.11,11-7.5C21.27,7.61,17,4.5,12,4.5z M12,17c-2.76,0-5-2.24-5-5s2.24-5,5-5s5,2.24,5,5S14.76,17,12,17z M12,9c-1.66,0-3,1.34-3,3s1.34,3,3,3s3-1.34,3-3S13.66,9,12,9z'/%3E%3C/svg%3E");
-  background-size: contain;
 }
 
 /* 响应式设计 */

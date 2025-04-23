@@ -153,7 +153,7 @@ const validateForm = () => {
   // 确保开始时间存在（虽然只读，但验证时需要）
   if (!contestForm.start_time) {
      message.error('比赛开始时间缺失，无法验证')
-     return false
+    return false
   }
   
   // 使用 dayjs 进行时间比较
