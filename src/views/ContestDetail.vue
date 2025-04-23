@@ -343,13 +343,33 @@ const calculatePassRate = (problem) => {
   return `${passRate}%`
 }
 
-// 跳转到题目详情
+// 跳转到题目详情页
 const goToProblem = (problemId) => {
-  // 存储当前竞赛ID
-  storeContestId()
-  // 在新标签页打开题目
-  const problemUrl = `/contest-problem/${problemId}`
-  window.open(problemUrl, '_blank')
+  if (!contestId.value || !problemId) {
+    console.error('Missing contestId or problemId for navigation');
+    return;
+  }
+  
+  // 检查用户是否可以访问该题目（已报名或公开竞赛）
+  if (!isContestCreator.value && !userApply.value && !isPublicAccess.value) {
+    message.warning('请先报名或加入竞赛才能查看题目');
+    return;
+  }
+  
+  // 存储竞赛ID到localStorage，供题目详情页使用
+  storeContestId();
+
+  // 构建正确的路径
+  const targetPath = `/contest/${contestId.value}/problem/${problemId}`;
+  console.log(`Navigating to problem detail: ${targetPath}`);
+  
+  // 使用router.push进行导航
+  router.push(targetPath).catch(err => {
+    if (err.name !== 'NavigationDuplicated') {
+      console.error('Router navigation error:', err);
+      message.error('跳转题目失败，请检查控制台。');
+    }
+  });
 }
 
 // 获取排行榜
@@ -475,15 +495,20 @@ const getContestRemainingTime = computed(() => {
   return `剩余时间: ${hours}小时 ${minutes}分钟`
 })
 
-// 处理竞赛简介的Markdown格式
-const parsedContestDescription = computed(() => {
-  if (!contestDetail.value || !contestDetail.value.description) return ''
+// 解析Markdown内容
+const parseMarkdown = (content) => {
+  if (!content) return ''
   try {
-    return marked(contestDetail.value.description)
+    return marked(content)
   } catch (error) {
     console.error('Markdown解析错误:', error)
-    return contestDetail.value.description
+    return content
   }
+}
+
+// 计算属性：解析后的竞赛描述
+const parsedDescription = computed(() => {
+  return parseMarkdown(contestDetail.value?.description || '')
 })
 
 onMounted(() => {
@@ -627,7 +652,7 @@ onMounted(() => {
           <!-- 竞赛简介 -->
           <div v-if="activeTab === 'intro'" class="tab-pane">
             <div class="contest-description card">
-              <div v-html="parsedContestDescription" class="description-content"></div>
+              <div v-html="parsedDescription" class="description-content"></div>
             </div>
           </div>
           

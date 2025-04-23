@@ -638,15 +638,15 @@ const applyMemoryLimit = (value) => {
                 <h3>编程语言限制</h3>
                 <div class="toggle-switch-container">
   <label class="switch">
-    <input 
-      type="checkbox" 
-      :checked="selectedLanguages.length === languages.length"
-      @change="toggleAllLanguages"
-    />
+                    <input 
+                      type="checkbox" 
+                      :checked="selectedLanguages.length === languages.length"
+                      @change="toggleAllLanguages"
+                    />
     <span class="slider round"></span>
-  </label>
+                  </label>
   <span class="switch-label">全选</span>
-</div>
+                </div>
               </div>
               <p class="languages-description">请选择支持的编程语言，并设置对应的时间和内存限制</p>
             </div>
