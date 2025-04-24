@@ -7,6 +7,7 @@ import { message, Tabs, Modal, Table, Tooltip } from 'ant-design-vue'
 import { marked } from 'marked'
 import { getUserId } from '../utils/auth'
 import MonacoEditor from 'monaco-editor-vue3'
+import lottie from 'lottie-web' // <-- 添加 lottie import
 
 const route = useRoute()
 const router = useRouter()
@@ -27,6 +28,13 @@ const activeTab = ref('problem')
 const isSubmitting = ref(false)
 const judgeResult = ref(null)
 const showJudgeAnimation = ref(false)
+
+// 添加 Lottie 动画相关 refs
+const lottieContainer = ref(null)
+const loadingAnimation = ref(null)
+const successAnimation = ref(null)
+const errorAnimation = ref(null)
+const warningAnimation = ref(null)
 
 // 提交记录相关
 const submissionLoading = ref(false)
@@ -448,45 +456,61 @@ const submitCode = async () => {
     return;
   }
   
-  isSubmitting.value = true
-  showJudgeAnimation.value = true
+  // 先显示动画界面
   judgeResult.value = null
+  showJudgeAnimation.value = true
+  
+  // 确保DOM更新，再初始化和播放动画
+  await nextTick();
+  
+  // 如果动画没有初始化，尝试初始化
+  if (!loadingAnimation.value) {
+    console.log('Initializing animations in submitCode');
+    initLottieAnimations();
+  }
+  
+  // 播放评测动画 (加载中)
+  playJudgeAnimation()
+  
+  // 设置提交中状态
+  isSubmitting.value = true
+  
+  // 保存代码到本地
+  saveCodeToLocalStorage()
+  
+  const params = {
+    problem_id: Number(problemId), // 使用已经定义的 problemId
+    source_code: code.value,
+    language_id: languageId.value,
+    contest_id: Number(getCurrentContestId()) // 使用函数获取 contestId
+  }
   
   try {
-    const submitData = {
-      problem_id: Number(problemId),
-      language_id: languageId.value,
-      source_code: code.value
-    }
-    
-    // 如果是竞赛题目，添加竞赛ID
-    const contestId = getCurrentContestId()
-    if (contestId) {
-      submitData.contest_id = contestId
-    }
-    
-    const res = await submitCodeAPI(submitData)
-    
+    const res = await submitCodeAPI(params)
     if (res.code === 200) {
-      judgeResult.value = res.data
       message.success('提交成功')
-      
+      judgeResult.value = res.data
+      // 播放评测动画 (根据结果)
+      playJudgeAnimation(res.data.status)
       // 如果在提交记录选项卡，刷新提交记录
       if (activeTab.value === 'submissions') {
         await fetchSubmissionList()
       }
     } else {
       message.error(res.message || '提交失败')
+      // 如果提交失败，也停止动画或显示错误动画 (可选)
+      playJudgeAnimation('Error') // 假设用 'Error' 触发错误动画
     }
   } catch (error) {
     console.error('提交代码失败:', error)
-    message.error('提交失败，请检查网络连接')
+    message.error('提交代码失败: ' + (error.message || '未知错误'))
+    playJudgeAnimation('Error') // 网络或其他错误，显示错误动画
   } finally {
     isSubmitting.value = false
-    // 延迟关闭动画
+    // 延迟关闭动画，确保动画播放完毕
     setTimeout(() => {
       showJudgeAnimation.value = false
-    }, 1500)
+    }, 3000) // 适当延长延迟时间
   }
 }
 
@@ -769,6 +793,7 @@ const navigateToProblem = (problemIdToNav) => {
 
 // 生命周期钩子
 onMounted(async () => {
+  console.log('Component mounted');
   // 先获取竞赛信息，再获取题目详情和语言
   await fetchContestInfo() 
   fetchProblemDetail()
@@ -778,9 +803,17 @@ onMounted(async () => {
   activeTab.value = 'problem'
   
   // 延迟加载提交记录和排行榜，避免页面初始加载太慢
+  // 确保DOM已经更新后再初始化动画
   nextTick(() => {
+    console.log('nextTick called, initializing animations');
+    // 给DOM一点时间渲染，然后初始化动画
+    setTimeout(() => {
+      console.log('Attempting to initialize Lottie animations (delayed)');
+      initLottieAnimations();
+    }, 500);
+    
     // 如果当前有竞赛ID
-  if (getCurrentContestId()) {
+    if (getCurrentContestId()) {
       // 预加载提交记录
       fetchSubmissionList();
       
@@ -1021,6 +1054,167 @@ const getEditorLanguage = (langString) => {
     return 'plaintext'
   }
 }
+
+// 添加 Lottie 动画初始化和播放函数
+// 初始化Lottie动画
+const initLottieAnimations = () => {
+  console.log('initLottieAnimations called, container ref:', lottieContainer.value);
+  // 确保容器存在
+  if (!lottieContainer.value) {
+    console.warn('Lottie container not found, cannot initialize animations.');
+    return;
+  }
+  
+  console.log('Initializing loading animation...');
+  // 加载中动画
+  loadingAnimation.value = lottie.loadAnimation({
+    container: lottieContainer.value,
+    renderer: 'svg',
+    loop: true,
+    autoplay: false,
+    path: 'https://assets6.lottiefiles.com/packages/lf20_x62chJ.json' // 加载中动画
+  });
+  
+  console.log('Initializing success animation...');
+  // 成功动画
+  successAnimation.value = lottie.loadAnimation({
+    container: lottieContainer.value,
+    renderer: 'svg',
+    loop: false,
+    autoplay: false,
+    path: 'https://assets7.lottiefiles.com/packages/lf20_jAT409.json' // 成功动画
+  });
+  
+  console.log('Initializing error animation...');
+  // 错误动画
+  errorAnimation.value = lottie.loadAnimation({
+    container: lottieContainer.value,
+    renderer: 'svg',
+    loop: false,
+    autoplay: false,
+    path: 'https://assets9.lottiefiles.com/packages/lf20_ckcn4hvm.json' // 错误动画
+  });
+  
+  console.log('Initializing warning animation...');
+  // 警告动画
+  warningAnimation.value = lottie.loadAnimation({
+    container: lottieContainer.value,
+    renderer: 'svg',
+    loop: false,
+    autoplay: false,
+    path: 'https://assets2.lottiefiles.com/temp/lf20_WdDF6Z.json' // 警告动画
+  });
+  
+  console.log('All animations initialized successfully!');
+}
+
+// 播放评测动画
+const playJudgeAnimation = (status) => {
+  console.log('playJudgeAnimation called with status:', status);
+  // 确保动画已初始化
+  if (!loadingAnimation.value) {
+    console.warn('Lottie animations not initialized yet. Trying to initialize now...');
+    // 尝试在这里调用初始化
+    initLottieAnimations(); 
+    if (!loadingAnimation.value) {
+      console.error('Failed to initialize animations, still null after init call.');
+      return;
+    }
+  }
+  
+  console.log('Stopping all animations...');
+  // 停止所有动画
+  loadingAnimation.value?.stop()
+  successAnimation.value?.stop()
+  errorAnimation.value?.stop()
+  warningAnimation.value?.stop()
+  
+  // 根据状态播放对应动画
+  if (!status) {
+    console.log('Playing loading animation...');
+    loadingAnimation.value?.play()
+    return
+  }
+  
+  if (status === 'Accepted') {
+    console.log('Playing success animation...');
+    successAnimation.value?.play()
+  } else if (status === 'Wrong Answer' || status.includes('Error')) {
+    console.log('Playing error animation...');
+    errorAnimation.value?.play()
+  } else if (status.includes('Time Limit') || status.includes('Memory Limit')) {
+    console.log('Playing warning animation...');
+    warningAnimation.value?.play()
+  } else {
+    console.log('Playing default loading animation...');
+    loadingAnimation.value?.play()
+  }
+}
+
+// 判题状态对应的图标和消息
+const getJudgeStatusInfo = (status) => {
+  if (!status) {
+    return {
+      icon: '⏳',
+      message: '评测中...',
+      description: '正在提交您的代码并进行评测'
+    }
+  }
+  
+  if (status === 'Accepted') {
+    return {
+      icon: '✅',
+      message: '通过',
+      description: '恭喜，您的代码已通过所有测试用例！'
+    }
+  } else if (status === 'Wrong Answer') {
+    return {
+      icon: '❌',
+      message: '答案错误',
+      description: '您的代码输出与预期结果不符'
+    }
+  } else if (status.includes('Time Limit')) {
+    return {
+      icon: '⏱️',
+      message: '超时',
+      description: '您的代码运行时间超出限制'
+    }
+  } else if (status.includes('Memory Limit')) {
+    return {
+      icon: '📈',
+      message: '内存超限',
+      description: '您的代码使用的内存超出限制'
+    }
+  } else if (status.includes('Compilation Error')) {
+    return {
+      icon: '🛠️',
+      message: '编译错误',
+      description: '您的代码存在语法错误，无法编译'
+    }
+  } else if (status.includes('Error')) {
+    return {
+      icon: '⚠️',
+      message: '错误',
+      description: '运行时发生错误'
+    }
+  } else {
+    return {
+      icon: '❓',
+      message: status,
+      description: '未知状态'
+    }
+  }
+}
+
+// 获取判题状态样式
+const getJudgeStatusClass = (status) => {
+  if (!status) return 'judge-default'
+  if (status === 'Accepted') return 'judge-success'
+  if (status === 'Wrong Answer') return 'judge-error'
+  if (status.includes('Time Limit') || status.includes('Memory Limit')) return 'judge-warning'
+  if (status.includes('Error')) return 'judge-error'
+  return 'judge-default'
+}
 </script>
 
 <template>
@@ -1205,20 +1399,43 @@ const getEditorLanguage = (langString) => {
               <h4>运行结果:</h4>
               <pre :class="['result-output', runResult.status !== 'Accepted' ? 'error' : '']">{{ runResult.output || runResult.error || '无输出' }}</pre>
             </div>
-              </div>
-        
-        <!-- 判题结果动画 -->
-        <div class="judge-result-container" v-if="showJudgeAnimation">
-          <div ref="lottieContainer" class="lottie-animation"></div>
-          <div class="judge-status-text">{{ judgeResult ? judgeResult.status : '判题中...' }}</div>
-          </div>
+        </div>
           
         </div>
       </div>
       
     <div class="problem-not-found" v-else>
       题目加载失败或不存在。
+    </div>
+    
+    <!-- 判题动画 - 全屏版 -->
+    <div class="judge-animation-container" v-if="showJudgeAnimation">
+      <div class="judge-animation-overlay"></div>
+      <div class="judge-animation-content">
+        <div class="animation-box" :class="judgeResult ? getJudgeStatusClass(judgeResult.status) : ''">
+          <!-- Lottie 动画容器 -->
+          <div ref="lottieContainer" class="lottie-animation"></div>
+          
+          <!-- 状态信息 -->
+          <div class="judge-message">
+            <div class="status-title">
+              {{ judgeResult ? getJudgeStatusInfo(judgeResult.status).message : '评测中...' }}
+            </div>
+            <div class="status-description">
+              {{ judgeResult ? getJudgeStatusInfo(judgeResult.status).description : '正在提交您的代码并进行评测' }}
+            </div>
           </div>
+          
+          <!-- 结果信息 -->
+          <div v-if="judgeResult" class="result-display">
+            <div class="result-details">
+              <span>运行时间: {{ judgeResult.time }}ms</span>
+              <span>内存: {{ formatMemory(judgeResult.memory) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
           
     <!-- 提交详情 Modal (修改) -->
     <a-modal 
@@ -1685,9 +1902,10 @@ const getEditorLanguage = (langString) => {
   border-radius: 6px;
 }
 .lottie-animation {
-  width: 100px;
-  height: 100px;
-  margin-bottom: 10px;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto 20px auto;
+  display: block;
 }
 .judge-status-text {
   font-size: 16px;
@@ -2064,5 +2282,119 @@ const getEditorLanguage = (langString) => {
 /* 突出显示当前项目 */
 .problem-list-item {
   cursor: pointer;
+}
+
+/* 判题动画 - 全屏版 */
+.judge-animation-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.judge-animation-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+.judge-animation-content {
+  position: relative;
+  z-index: 2001;
+  text-align: center;
+}
+
+.animation-box {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 30px;
+  width: 320px;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.5s ease;
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.lottie-animation {
+  width: 150px;
+  height: 150px;
+  margin: 0 auto 20px auto;
+  display: block;
+}
+
+.judge-message {
+  text-align: center;
+  margin: 16px 0;
+}
+
+.status-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.status-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 16px;
+}
+
+.result-display {
+  margin-top: 16px;
+}
+
+.result-details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+}
+
+/* 判题结果样式 */
+.judge-success {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+}
+
+.judge-error {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+}
+
+.judge-warning {
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+}
+
+.judge-default {
+  background: #f5f5f5;
+  border: 1px solid #d9d9d9;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes scale-in {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
 }
 </style> 
