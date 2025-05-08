@@ -11,6 +11,7 @@ import { message, Modal, Input, Button, Table, Tabs, TabPane, Popconfirm, Spin, 
 import { useUserStore } from '../store/user'
 import { getUserId } from '../utils/auth' 
 import dayjs from 'dayjs'
+import ContestResolver from '../components/ContestResolver.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -39,9 +40,8 @@ const rankTotal = ref(0)
 const rankColumns = ref([]) // 排行榜列定义
 
 // --- 滚榜 ---
-// 滚榜功能暂未实现
+const resolverRef = ref(null)
 
-// 权限检查 (假设管理员才有权限)
 const hasPermission = computed(() => userStore.isAdmin)
 
 // 定义题目表格列配置
@@ -497,12 +497,11 @@ const getLetterIndex = (index) => String.fromCharCode(65 + index)
               <template #title>
                 <h2 class="content-title">滚榜回放</h2>
               </template>
-              <div class="coming-soon">
-                <div class="coming-soon-icon">
-                  <Spin size="large" />
-                </div>
-                <p>此功能正在开发中，敬请期待...</p>
-              </div>
+              <ContestResolver 
+                ref="resolverRef"
+                :contestId="contestId" 
+                :problemList="problemList"
+              />
             </Card>
           </a-tab-pane>
         </a-tabs>
