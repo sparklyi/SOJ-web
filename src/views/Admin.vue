@@ -141,7 +141,7 @@ const contestColumns = [
     title: '操作',
     key: 'action',
     fixed: 'right',
-    width: 160,
+    width: 220,
     customRender: ({ record }) => {
       return h(Space, {}, () => [
         h(Button, { 
@@ -149,6 +149,11 @@ const contestColumns = [
           size: 'small',
           onClick: () => editContest(record.ID)
         }, () => '编辑'),
+        h(Button, { 
+          type: 'default', 
+          size: 'small',
+          onClick: () => manageContest(record.ID)
+        }, () => '管理'),
         h(Popconfirm, {
           title: '确定要删除此竞赛吗？',
           description: '此操作不可逆，请谨慎操作',
@@ -704,6 +709,14 @@ const handleLanguageStatusChange = async (id, status) => {
 const handleLanguageStatusFilterChange = (value) => {
   statusFilter.value = value;
   fetchLanguages();
+}
+
+// 管理竞赛
+const manageContest = (contestId) => {
+  router.push({
+    path: `/contest-management/${contestId}`,
+    query: { from: router.currentRoute.value.fullPath }
+  })
 }
 
 // 初始化: 权限检查和数据加载
