@@ -12,7 +12,9 @@ import {
   deleteUser
 } from '../api/admin'
 import { useUserStore } from '../store/user'
-import { Modal, message, Button, Table, Input, Tag, Space, Popconfirm } from 'ant-design-vue'
+import { Modal, message, Button, Table, Input, Tag, Space, Popconfirm, Switch, Select } from 'ant-design-vue'
+import { formatDateTime } from '../utils/dateUtil'
+import { SyncOutlined } from '@ant-design/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -26,7 +28,8 @@ const searchUserId = ref('')
 const tabs = [
   { key: 'problems', label: '题目管理' },
   { key: 'contests', label: '竞赛管理' },
-  { key: 'users', label: '用户管理' }
+  { key: 'users', label: '用户管理' },
+  { key: 'languages', label: '语言管理' }
 ]
 
 // 题目管理
@@ -40,6 +43,12 @@ const contestLoading = ref(false)
 // 用户管理
 const users = ref([])
 const userLoading = ref(false)
+
+// 语言管理
+const languages = ref([])
+const languageLoading = ref(false)
+const syncLoading = ref(false)
+const statusFilter = ref(undefined)
 
 // 定义表格列
 const problemColumns = [
@@ -59,13 +68,13 @@ const problemColumns = [
     title: '创建时间', 
     dataIndex: 'CreatedAt', 
     key: 'created_at',
-    customRender: ({ text }) => formatDate(text) 
+    customRender: ({ text }) => formatDateTime(text) 
   },
   { 
     title: '更新时间', 
     dataIndex: 'UpdatedAt', 
     key: 'updated_at',
-    customRender: ({ text }) => formatDate(text) 
+    customRender: ({ text }) => formatDateTime(text) 
   },
   { 
     title: '状态', 
@@ -111,13 +120,13 @@ const contestColumns = [
     title: '开始时间', 
     dataIndex: 'start_time', 
     key: 'start_time',
-    customRender: ({ text }) => formatDate(text) 
+    customRender: ({ text }) => formatDateTime(text) 
   },
   { 
     title: '结束时间', 
     dataIndex: 'end_time', 
     key: 'end_time',
-    customRender: ({ text }) => formatDate(text) 
+    customRender: ({ text }) => formatDateTime(text) 
   },
   { 
     title: '状态', 
@@ -169,7 +178,7 @@ const userColumns = [
     title: '创建时间', 
     dataIndex: 'CreatedAt', 
     key: 'created_at',
-    customRender: ({ text }) => formatDate(text) 
+    customRender: ({ text }) => formatDateTime(text) 
   },
   {
     title: '操作',
@@ -200,6 +209,35 @@ const userColumns = [
           cancelText: '取消'
         }, () => h(Button, { danger: true, size: 'small' }, () => '删除'))
       ]);
+    }
+  }
+];
+
+// 语言管理 - 表格列定义
+const languageColumns = [
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80, align: 'center' },
+  { title: '语言名称', dataIndex: 'name', key: 'name' },
+  { 
+    title: '状态', 
+    dataIndex: 'status', 
+    key: 'status',
+    width: 100,
+    align: 'center',
+    customRender: ({ text }) => {
+      return h(Tag, { color: text ? 'success' : 'default' }, () => text ? '已启用' : '未启用');
+    }
+  },
+  {
+    title: '操作',
+    key: 'action',
+    width: 100,
+    align: 'center',
+    customRender: ({ record }) => {
+      return h(Switch, {
+        checked: record.status,
+        loading: record.statusLoading,
+        onChange: (checked) => handleLanguageStatusChange(record.id, checked)
+      });
     }
   }
 ];
@@ -521,18 +559,18 @@ const getUserRoleTagInfo = (role) => {
   return { label: '未知', color: 'default' }
 }
 
-// 监听标签切换 - 优化性能
-const handleTabChange = (tabKey) => {
-  if (activeTab.value === tabKey) return // 避免重复加载
+// 处理选项卡切换
+const handleTabChange = (key) => {
+  activeTab.value = key
   
-  activeTab.value = tabKey
-  
-  if (tabKey === 'problems' && (!isInitialized.value || problems.value.length === 0)) {
+  if (key === 'problems') {
     fetchProblems()
-  } else if (tabKey === 'contests' && (!isInitialized.value || contests.value.length === 0)) {
+  } else if (key === 'contests') {
     fetchContests()
-  } else if (tabKey === 'users' && (!isInitialized.value || users.value.length === 0)) {
+  } else if (key === 'users') {
     fetchUsers()
+  } else if (key === 'languages') {
+    fetchLanguages()
   }
 }
 
@@ -568,17 +606,104 @@ const getContestStatusText = (startTime, endTime) => {
   return '进行中'
 }
 
-// 格式化时间
-const formatDate = (dateString) => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+// 获取语言列表
+const fetchLanguages = async () => {
+  try {
+    const { getLanguages } = await import('../api/language')
+    
+    languageLoading.value = true
+    const params = {};
+    
+    // 仅当状态筛选有值时添加到请求参数
+    if (statusFilter.value !== undefined) {
+      params.status = statusFilter.value;
+    }
+    
+    const res = await getLanguages(params)
+    if (res.code === 200) {
+      languages.value = (res.data || []).map(item => ({
+        ...item,
+        statusLoading: false
+      }))
+    } else {
+      message.error(res.message || '获取语言列表失败')
+    }
+  } catch (error) {
+    console.error('获取语言列表失败:', error)
+    message.error('获取语言列表失败: ' + (error.message || '未知错误'))
+  } finally {
+    languageLoading.value = false
+  }
+}
+
+// 同步语言列表
+const handleSyncLanguages = async () => {
+  try {
+    const { syncLanguages } = await import('../api/language')
+    
+    Modal.confirm({
+      title: '确认同步',
+      content: '确定要同步测评语言列表吗？这可能会新增或移除系统中的语言。',
+      async onOk() {
+        try {
+          syncLoading.value = true
+          const res = await syncLanguages()
+          if (res.code === 200) {
+            message.success('语言同步成功')
+            await fetchLanguages() // 刷新语言列表
+          } else {
+            message.error(res.message || '语言同步失败')
+          }
+        } catch (error) {
+          console.error('语言同步失败:', error)
+          message.error('语言同步失败: ' + (error.message || '未知错误'))
+        } finally {
+          syncLoading.value = false
+        }
+      }
+    })
+  } catch (error) {
+    console.error('导入语言同步模块失败:', error)
+    message.error('操作失败: ' + (error.message || '未知错误'))
+  }
+}
+
+// 更改语言状态
+const handleLanguageStatusChange = async (id, status) => {
+  try {
+    const { updateLanguageStatus } = await import('../api/language')
+    
+    // 找到要更新的语言记录
+    const index = languages.value.findIndex(item => item.id === id)
+    if (index === -1) return
+    
+    // 设置状态加载中
+    languages.value[index].statusLoading = true
+    
+    try {
+      const res = await updateLanguageStatus({ id, status })
+      if (res.code === 200) {
+        message.success(status ? '语言已启用' : '语言已禁用')
+        languages.value[index].status = status
+      } else {
+        message.error(res.message || '操作失败')
+      }
+    } catch (error) {
+      console.error('更新语言状态失败:', error)
+      message.error('操作失败: ' + (error.message || '未知错误'))
+    } finally {
+      languages.value[index].statusLoading = false
+    }
+  } catch (error) {
+    console.error('导入语言状态更新模块失败:', error)
+    message.error('操作失败: ' + (error.message || '未知错误'))
+  }
+}
+
+// 状态筛选变化处理
+const handleLanguageStatusFilterChange = (value) => {
+  statusFilter.value = value;
+  fetchLanguages();
 }
 
 // 初始化: 权限检查和数据加载
@@ -614,7 +739,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="content">
+    <div class="content" v-if="activeTab !== 'languages'">
       <!-- 题目管理 -->
       <div v-if="activeTab === 'problems'" class="tab-content">
         <div class="header">
@@ -685,6 +810,44 @@ onMounted(() => {
           :pagination="{ pageSize: 10, showSizeChanger: false }"
           bordered
         />
+      </div>
+    </div>
+
+    <!-- 语言管理 -->
+    <div v-if="activeTab === 'languages'" class="content">
+      <div class="header">
+        <div class="header-left">
+          <h2>语言列表</h2>
+          <a-select
+            v-model:value="statusFilter"
+            placeholder="状态筛选"
+            style="width: 200px"
+            @change="handleLanguageStatusFilterChange"
+            allowClear
+            :options="[
+              { value: true, label: '已启用' },
+              { value: false, label: '未启用' }
+            ]"
+          >
+          </a-select>
+        </div>
+        <div>
+          <a-button type="primary" @click="handleSyncLanguages" :loading="syncLoading">
+            <template #icon><sync-outlined /></template>
+            同步测评语言
+          </a-button>
+        </div>
+      </div>
+      <a-table
+        :dataSource="languages"
+        :columns="languageColumns"
+        :rowKey="record => record.id"
+        :loading="languageLoading"
+        :pagination="{ pageSize: 10, showSizeChanger: false }"
+        bordered
+      />
+      <div v-if="!languageLoading && languages.length === 0" class="empty-tip">
+        暂无测评语言数据，请点击"同步测评语言"按钮获取最新数据
       </div>
     </div>
   </div>

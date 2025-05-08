@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getContestDetail, getUserApply } from '../api/contest'
 import { message } from 'ant-design-vue'
 import { getUserId } from '../utils/auth'
+import { formatDateTime } from '../utils/dateUtil'
 
 const route = useRoute()
 const router = useRouter()
@@ -150,13 +151,6 @@ const startCountdown = () => {
   timerInterval.value = setInterval(updateCountdown, 1000)
 }
 
-// 格式化日期
-const formatDate = (dateStr) => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
 // 进入竞赛
 const enterContest = () => {
   // 检查竞赛是否已开始或即将开始
@@ -274,11 +268,11 @@ const getFormattedDescription = computed(() => {
           <div class="time-info">
             <div class="start-time">
               <span class="time-label">开始时间：</span>
-              <span class="time-value">{{ formatDate(contestDetail.start_time) }}</span>
+              <span class="time-value">{{ formatDateTime(contestDetail.start_time) }}</span>
             </div>
             <div class="end-time">
               <span class="time-label">结束时间：</span>
-              <span class="time-value">{{ formatDate(contestDetail.end_time) }}</span>
+              <span class="time-value">{{ formatDateTime(contestDetail.end_time) }}</span>
             </div>
           </div>
         </div>

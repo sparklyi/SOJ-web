@@ -2,8 +2,9 @@
 import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { getProblems, getProblemJudgeCount } from '../api/problem'
-import { getContests } from '../api/contest'
+import { getContests, getContestList } from '../api/contest'
 import { message } from 'ant-design-vue'
+import { formatDateTime } from '../utils/dateUtil'
 
 const router = useRouter()
 const problems = ref([])
@@ -47,7 +48,7 @@ const fetchUpcomingContests = async () => {
     const currentTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 
     // 获取竞赛数据，限制为3个，时间大于当前时间
-    const response = await getContests({
+    const response = await getContestList({
       page: 1,
       page_size: 3,
       start_after: currentTime
@@ -58,7 +59,7 @@ const fetchUpcomingContests = async () => {
       upcomingContests.value = (response.data.detail || []).map(contest => ({
         id: contest.ID,
         title: contest.name,
-        startTime: contest.start_time,
+        startTime: formatDateTime(contest.start_time),
         duration: getDuration(contest.start_time, contest.end_time),
         type: contest.type,
         tag: contest.tag

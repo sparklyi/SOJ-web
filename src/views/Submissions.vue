@@ -4,6 +4,7 @@ import { message } from 'ant-design-vue'
 import { getSubmissionList, getSubmissionDetail, getLanguages } from '../api/problem'
 import { getUserId } from '../utils/auth'
 import { useRoute, useRouter } from 'vue-router'
+import { formatDateTimeWithSeconds } from '../utils/dateUtil'
 
 const submissions = ref([])
 const loading = ref(true)
@@ -160,15 +161,7 @@ const closeSubmissionDetail = () => {
 
 // 格式化日期时间
 const formatDateTime = (dateStr) => {
-  const date = new Date(dateStr)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
+  return formatDateTimeWithSeconds(dateStr)
 }
 
 // 格式化内存显示

@@ -3,12 +3,12 @@
     <div class="footer-content">
       <div class="copyright">
         SOJ©2025 All rights reserved 
-        <a href="mailto:admin@admin.com">admin@admin.com</a>
+        <a href="mailto:admin@admin.com">sparkyi@foxmail.com</a>
       </div>
       <div class="beian-info">
-        <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">京ICP备xxxxx号-1</a>
+        <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">渝ICP备2025056030号-1</a>
         <span class="divider">|</span>
-        <span class="beian">京公网安备 xxxxx号</span>
+        <span class="beian">渝公网安备 xxxxx号</span>
       </div>
     </div>
   </footer>
