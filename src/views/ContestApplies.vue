@@ -3,7 +3,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getUserAppliedContests, getContestDetail, applyContest } from '../api/contest'
 import { message } from 'ant-design-vue'
-import { getUserId } from '../utils/auth'
+
 
 const router = useRouter()
 const loading = ref(false)

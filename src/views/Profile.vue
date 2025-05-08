@@ -5,6 +5,7 @@ import { getUserInfo, sendVerifyCode, updatePassword, getCaptcha, updateUserInfo
 import { message } from 'ant-design-vue'
 import { useUserStore } from '../store/user'
 import { useRouter } from 'vue-router'
+import { formatDate as formatDateUtil } from '../utils/dateUtil'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -40,13 +41,7 @@ const showCaptchaModal = ref(false)
 
 // 格式化日期
 const formatDate = (dateStr) => {
-  if (!dateStr) return '未知';
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  return formatDateUtil(dateStr) || '未知'
 }
 
 // 获取角色名称

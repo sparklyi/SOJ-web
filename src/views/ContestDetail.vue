@@ -13,6 +13,7 @@ import { message, Modal } from 'ant-design-vue'
 import { getUserId } from '../utils/auth'
 import { useUserStore } from '../store/user'
 import { marked } from 'marked'
+import { formatDateTime } from '../utils/dateUtil'
 
 const route = useRoute()
 const router = useRouter()
@@ -305,13 +306,6 @@ const goToContestManage = () => {
   router.push(`/admin/contest/${contestId.value}`)
 }
 
-// 格式化时间
-const formatDate = (dateStr) => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
 // 计算竞赛状态
 const getContestStatus = (contest) => {
   if (!contest) return { status: '未知', class: '' }
@@ -595,15 +589,15 @@ onMounted(() => {
           <div class="time-info">
             <div class="time-item">
               <span class="time-label">开始时间:</span>
-              <span class="time-value">{{ formatDate(contestDetail.start_time) }}</span>
+              <span class="time-value">{{ formatDateTime(contestDetail.start_time) }}</span>
             </div>
             <div class="time-item">
               <span class="time-label">结束时间:</span>
-              <span class="time-value">{{ formatDate(contestDetail.end_time) }}</span>
+              <span class="time-value">{{ formatDateTime(contestDetail.end_time) }}</span>
             </div>
             <div class="time-item" v-if="contestDetail.freeze_time">
               <span class="time-label">封榜时间:</span>
-              <span class="time-value">{{ formatDate(contestDetail.freeze_time) }}</span>
+              <span class="time-value">{{ formatDateTime(contestDetail.freeze_time) }}</span>
             </div>
           </div>
         </div>

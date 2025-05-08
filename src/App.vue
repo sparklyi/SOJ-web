@@ -10,11 +10,11 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
-// 监听路由变化，检查登录状态
+
 watch(
   () => route.path,
   () => {
-    // 如果已登录但没有用户信息，则获取用户信息
+    
     if (isAuthenticated() && !userStore.isLoggedIn) {
       userStore.fetchUserInfo()
     }

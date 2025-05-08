@@ -1,10 +1,11 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getContests, getUserApply, applyContest, cancelApply } from '../api/contest'
+import { getContests, getUserApply, applyContest, cancelApply, getContestList } from '../api/contest'
 import { message, Modal } from 'ant-design-vue'
 import { getUserId } from '../utils/auth'
 import { useUserStore } from '../store/user'
+import { formatDateTime } from '../utils/dateUtil'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -78,7 +79,11 @@ const fetchContests = async () => {
       size: pagination.size
     }
     
-    const res = await getContests(params)
+    // 根据用户是否登录选择调用不同的API
+    const res = currentUserId 
+      ? await getContests(params) 
+      : await getContestList(params)
+    
     if (res.code === 200) {
       contestsList.value = res.data.detail || []
       total.value = res.data.count || 0
@@ -364,12 +369,6 @@ const fetchAllApplyStatus = async () => {
   }
 }
 
-// 格式化时间
-const formatDate = (dateStr) => {
-  const date = new Date(dateStr)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
 // 计算竞赛状态
 const getContestStatus = (contest) => {
   const now = new Date()
@@ -515,11 +514,11 @@ watch(contestsList, () => {
               <div class="time-info">
                 <div class="time-item">
                   <span class="time-label">开始时间:</span>
-                  <span class="time-value bold">{{ formatDate(contest.start_time) }}</span>
+                  <span class="time-value bold">{{ formatDateTime(contest.start_time) }}</span>
                 </div>
                 <div class="time-item">
                   <span class="time-label">结束时间:</span>
-                  <span class="time-value bold">{{ formatDate(contest.end_time) }}</span>
+                  <span class="time-value bold">{{ formatDateTime(contest.end_time) }}</span>
                 </div>
               </div>
               <div class="sponsor-info">

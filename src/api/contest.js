@@ -14,6 +14,20 @@ export function getContests(params) {
   })
 }
 
+// 获取竞赛列表(无需登录)
+export function getContestList(params) {
+  // 过滤掉空值参数
+  const filteredParams = Object.fromEntries(
+    Object.entries(params).filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+  )
+  
+  return request({
+    url: '/api/v1/contest/list',
+    method: 'post',
+    data: filteredParams
+  })
+}
+
 // 获取竞赛详情
 export function getContestDetail(id) {
   return request({

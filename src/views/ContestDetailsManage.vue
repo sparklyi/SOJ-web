@@ -5,18 +5,19 @@ import {
   getContestDetail, 
   getContestRank,
   updateContest
-} from '../api/contest' // 假设API统一放在contest.js
-import { getProblemDetail, getProblemsByToken } from '../api/problem' // 修正API导入
+} from '../api/contest' 
+import { getProblemDetail, getProblemsByToken } from '../api/problem' 
 import { message, Modal, Input, Button, Table, Tabs, TabPane, Popconfirm, Spin, Select, Card, Empty, Tooltip } from 'ant-design-vue'
 import { useUserStore } from '../store/user'
-import { getUserId } from '../utils/auth' // 确保导入 getUserId
+import { getUserId } from '../utils/auth' 
 import dayjs from 'dayjs'
 
 const route = useRoute()
 const router = useRouter()
+
 const userStore = useUserStore()
 const contestId = computed(() => route.params.id)
-const currentUserId = getUserId() // 假设 getUserId 已导入或可用
+const currentUserId = getUserId() 
 
 const loading = ref(false)
 const contestDetail = ref(null)
