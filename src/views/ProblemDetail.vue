@@ -8,6 +8,7 @@ import { marked } from 'marked'
 import { getUserId } from '../utils/auth'
 import MonacoEditor from 'monaco-editor-vue3'
 import lottie from 'lottie-web'
+import { formatDateTimeWithSeconds } from '../utils/dateUtil'
 // import { getUserId } from '../utils/auth'
 
 const TabPane = Tabs.TabPane
@@ -511,15 +512,7 @@ const getJudgeStatusClass = (status) => {
 
 // 格式化日期时间
 const formatDateTime = (dateStr) => {
-  const date = new Date(dateStr)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
+  return formatDateTimeWithSeconds(dateStr)
 }
 
 // 监听选项卡变化

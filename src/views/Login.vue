@@ -95,6 +95,11 @@ const toggleLoginMode = () => {
   formData.value.password = ''
   formData.value.captcha = ''
   clearErrors()
+  
+  // 切换到密码登录模式时获取验证码
+  if (loginMode.value === 'password') {
+    getCaptchaImage()
+  }
 }
 
 // 清除错误信息
@@ -130,6 +135,9 @@ const sendCode = async () => {
     emailError.value = '请输入有效的邮箱地址'
     return
   }
+  
+  // 显示图形验证码弹窗前确保已获取图形验证码
+  await getCaptchaImage()
   
   // 显示图形验证码弹窗
   showCaptchaModal.value = true
@@ -340,9 +348,6 @@ const handleSubmit = async () => {
     loading.value = false
   }
 }
-
-// 页面加载时获取验证码
-getCaptchaImage()
 </script>
 
 <template>

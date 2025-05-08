@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getContests, getContestList } from '../api/contest'
 import { getProblems } from '../api/problem'
+import { formatDateTime } from '../utils/dateUtil'
 
 const router = useRouter()
 
@@ -85,7 +86,7 @@ const fetchUpcomingContests = async () => {
       upcomingContests.value = (response.data.detail || []).map(contest => ({
         id: contest.ID,
         title: contest.name,
-        startTime: contest.start_time,
+        startTime: formatDateTime(contest.start_time),
         duration: getDuration(contest.start_time, contest.end_time),
         type: contest.type,
         tag: contest.tag
