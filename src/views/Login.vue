@@ -549,7 +549,7 @@ getCaptchaImage()
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f5f5f5;
+  background-color: #f9fafc;
   padding: 20px;
 }
 
