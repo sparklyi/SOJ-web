@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getContests, getUserApply, applyContest, cancelApply } from '../api/contest'
+import { getContests, getUserApply, applyContest, cancelApply, getContestList } from '../api/contest'
 import { message, Modal } from 'ant-design-vue'
 import { getUserId } from '../utils/auth'
 import { useUserStore } from '../store/user'
@@ -78,7 +78,11 @@ const fetchContests = async () => {
       size: pagination.size
     }
     
-    const res = await getContests(params)
+    // 根据用户是否登录选择调用不同的API
+    const res = currentUserId 
+      ? await getContests(params) 
+      : await getContestList(params)
+    
     if (res.code === 200) {
       contestsList.value = res.data.detail || []
       total.value = res.data.count || 0

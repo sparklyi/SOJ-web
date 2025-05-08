@@ -68,7 +68,7 @@ const routes = [
     path: '/contests',
     name: 'Contests',
     component: Contests,
-    meta: { requiresAuth: true },
+    
   },
   {
     path: '/contest/:id',
