@@ -13,6 +13,11 @@ node_modules
 dist
 dist-ssr
 coverage
+.next/
+playwright-report/
+test-results/
+.superpowers/
+*.tsbuildinfo
 *.local
 
 # Editor directories and files

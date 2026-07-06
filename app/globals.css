@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  --soj-bg: 16 18 17;
+  --soj-text: 236 241 235;
+  --soj-text-muted: 154 164 154;
+  --soj-accent: 179 255 67;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: rgb(var(--soj-bg));
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: rgb(var(--soj-bg));
+  color: rgb(var(--soj-text));
+}
