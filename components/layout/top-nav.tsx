@@ -16,7 +16,7 @@ export function TopNav() {
         <Link href="/" className="shrink-0 font-mono text-sm font-semibold uppercase tracking-[0.18em] text-soj-accent">
           SOJ
         </Link>
-        <nav aria-label="Primary" className="min-w-0 flex-1 overflow-x-auto">
+        <nav aria-label="Primary" className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ul className="flex min-w-max items-center gap-1">
             {navItems.map((item) => (
               <li key={item.href}>
