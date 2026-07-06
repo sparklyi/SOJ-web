@@ -1,0 +1,7 @@
+import { expect, test } from "@playwright/test";
+
+test("home page renders", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("main")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /SOJ v2 foundation/i })).toBeVisible();
+});
