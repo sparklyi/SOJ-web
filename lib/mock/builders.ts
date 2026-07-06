@@ -1,4 +1,5 @@
 import type { ContestSummary, ProblemDetail, SubmissionSummary } from "@/lib/api/types";
+import type { AcmScoreboardRow, OiScoreboardRow } from "@/lib/domain/scoreboard";
 
 export function buildProblem(overrides: Partial<ProblemDetail> = {}): ProblemDetail {
   const id = overrides.id ?? 1;
@@ -50,6 +51,38 @@ export function buildSubmission(overrides: Partial<SubmissionSummary> = {}): Sub
     status: "running",
     score: 0,
     submittedAt: "2026-07-07T10:12:00Z",
+    ...overrides,
+  };
+}
+
+export function buildAcmScoreboardRow(overrides: Partial<AcmScoreboardRow> = {}): AcmScoreboardRow {
+  return {
+    id: overrides.id ?? "team-1",
+    handle: "lin-chen",
+    solved: 4,
+    penalty: 312,
+    movement: 2,
+    problems: [
+      { problemId: 1, alias: "A", status: "accepted", attempts: 1, penalty: 42 },
+      { problemId: 2, alias: "B", status: "wrong_answer", attempts: 2 },
+      { problemId: 3, alias: "C", status: "pending", attempts: 1 },
+    ],
+    ...overrides,
+  };
+}
+
+export function buildOiScoreboardRow(overrides: Partial<OiScoreboardRow> = {}): OiScoreboardRow {
+  return {
+    id: overrides.id ?? "team-1",
+    handle: "lin-chen",
+    score: 420,
+    lastImprovedAt: "2026-07-07T10:35:00Z",
+    movement: 2,
+    problems: [
+      { problemId: 1, alias: "A", status: "accepted", score: 100 },
+      { problemId: 2, alias: "B", status: "partial", score: 70 },
+      { problemId: 3, alias: "C", status: "wrong_answer", score: 0 },
+    ],
     ...overrides,
   };
 }
