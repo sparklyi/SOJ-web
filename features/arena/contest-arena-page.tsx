@@ -28,8 +28,8 @@ export function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPa
   }));
 
   return (
-    <div className="grid min-w-0 gap-5">
-        <header className="grid gap-4 border-b border-soj-line pb-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
+        <header className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 border-b border-soj-line pb-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div>
             <div className="mb-4 flex flex-wrap gap-2">
               <StatusPill tone="accent">Arena</StatusPill>
@@ -42,8 +42,8 @@ export function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPa
           <ContestClock label="Freeze countdown" value={contest.status === "frozen" ? "00:00:00" : "00:47:18"} frozen={contest.status === "frozen"} />
         </header>
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="grid gap-4 rounded-soj-lg border border-soj-line bg-soj-bg-raised p-5">
+        <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 rounded-soj-lg border border-soj-line bg-soj-bg-raised p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-2xl font-semibold">Top ranks</h2>
@@ -71,7 +71,7 @@ export function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPa
           />
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <ArenaEventPanel title="Key submissions" events={keyEvents} emptyLabel="No submissions yet" />
           <ArenaEventPanel title="Accepted events" events={acceptedEvents} emptyLabel="No accepted submissions yet" />
         </section>
@@ -82,19 +82,19 @@ export function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPa
 function ArenaEventPanel({ title, events, emptyLabel }: { title: string; events: ArenaEvent[]; emptyLabel: string }) {
   return (
     <section className="rounded-soj-lg border border-soj-line bg-soj-bg-raised">
-      <div className="flex items-center justify-between gap-3 border-b border-soj-line px-4 py-3">
+      <div className="flex min-w-0 items-center justify-between gap-3 border-b border-soj-line px-4 py-3">
         <h2 className="text-2xl font-semibold">{title}</h2>
         <StatusPill tone={events.length > 0 ? "accent" : "neutral"}>{events.length}</StatusPill>
       </div>
       {events.length > 0 ? (
         <ol className="divide-y divide-soj-line">
           {events.map((event) => (
-            <li key={event.id} className="grid grid-cols-[1fr_auto] gap-4 px-4 py-4">
-              <div>
+            <li key={event.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-4 px-4 py-4">
+              <div className="min-w-0">
                 <div className="text-lg font-medium text-soj-text">{event.value}</div>
                 <div className="mt-1 text-sm text-soj-muted">{event.label}</div>
               </div>
-              <div className="grid justify-items-end gap-1">
+              <div className="grid min-w-0 justify-items-end gap-1">
                 <RankMovement delta={event.tone === "danger" ? -1 : 1} />
                 <time className="font-mono text-xs text-soj-muted">{formatEventTime(event.timestamp)}</time>
               </div>

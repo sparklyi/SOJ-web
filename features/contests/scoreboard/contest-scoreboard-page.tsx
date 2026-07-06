@@ -43,8 +43,8 @@ export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboard
   }));
 
   return (
-    <div className="grid min-w-0 gap-5">
-      <section className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
+      <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
         <ContestClock label="Freeze countdown" value={contest.status === "frozen" ? "00:00:00" : "00:47:18"} frozen={contest.status === "frozen"} />
         <SignalFeed
           items={[
