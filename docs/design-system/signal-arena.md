@@ -99,3 +99,36 @@ Do not:
 - Build generic equal 3-card sections.
 - Add decorative status dots unless they communicate real state.
 - Use em dash characters in visible product copy.
+
+## Shared Components
+
+Low-level primitives live in `components/ui/**`:
+
+- `Button`
+- `IconButton`
+- `Input`
+- `Textarea`
+- `Tabs`
+- `Dialog`
+- `Popover`
+- `Tooltip`
+- `Toast`
+- `Table`
+- `Skeleton`
+
+SOJ product components live in `components/soj/**`:
+
+- `StatusPill`
+- `VerdictBadge`
+- `ProblemStatus`
+- `ContestClock`
+- `SignalFeed`
+- `SubmissionTimeline`
+- `TestPointMatrix`
+- `ScoreboardGrid`
+- `RankMovement`
+- `CodeWorkspace`
+- `ProblemStatement`
+- `AuthGate`
+
+The visual baseline route is `/style-guide`. Page work is not reviewable until it is consistent with that route.
