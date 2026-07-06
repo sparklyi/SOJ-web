@@ -40,7 +40,7 @@ export function ContestWorkspacePage({ contest, problem }: ContestWorkspacePageP
     <SplitWorkspace
       className="items-start"
       primary={
-        <div className="grid min-w-0 gap-4">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
           <section className="rounded-soj-lg border border-soj-line bg-soj-bg-raised p-5">
             <div className="mb-5 flex flex-wrap items-center gap-2">
               <StatusPill tone="accent">Problem {alias}</StatusPill>
@@ -65,7 +65,7 @@ int main() {
         </div>
       }
       secondary={
-        <div className="grid min-w-0 gap-4">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
           <ContestClock label={contest.status === "frozen" ? "Freeze active" : "Freeze in"} value="00:47:18" frozen={contest.status === "frozen"} />
 
           <section className="rounded-soj-lg border border-soj-line bg-soj-bg-raised p-4">
@@ -73,7 +73,7 @@ int main() {
               <h2 className="text-base font-semibold text-soj-text">Submit risk</h2>
               <StatusPill tone={contest.canSubmit ? "warning" : "danger"}>{contest.canSubmit ? "Contest live" : "Blocked"}</StatusPill>
             </div>
-            <div className="mt-4 grid gap-3 text-sm leading-6 text-soj-muted">
+            <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3 text-sm leading-6 text-soj-muted">
               <p>{freezeLabel}.</p>
               <p>Wrong answers add one attempt and ACM penalty after acceptance.</p>
               <Button disabled={!contest.canSubmit} className="mt-1 w-full">
@@ -82,12 +82,12 @@ int main() {
             </div>
           </section>
 
-          <section className="grid gap-3">
+          <section className="grid grid-cols-[minmax(0,1fr)] gap-3">
             <h2 className="text-base font-semibold text-soj-text">Judge feedback</h2>
             <SubmissionTimeline items={timelineItems} />
           </section>
 
-          <section className="grid gap-3 rounded-soj-lg border border-soj-line bg-soj-bg-raised p-4">
+          <section className="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-soj-lg border border-soj-line bg-soj-bg-raised p-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-base font-semibold text-soj-text">Test points</h2>
               <StatusPill tone="accent">Running</StatusPill>
