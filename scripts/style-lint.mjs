@@ -61,8 +61,11 @@ function checkFile(path) {
       issues.push(`${relative}: forbidden class fragment '${item}'.`);
     }
   }
-  if (/LocalButton|CustomInput|PageTabs|button className=/.test(source)) {
+  if (/LocalButton|CustomInput|PageTabs/.test(source)) {
     issues.push(`${relative}: possible page-local primitive. Use shared UI components.`);
+  }
+  if ((relative.startsWith("app/") || relative.startsWith("features/")) && /<button\s+className=/.test(source)) {
+    issues.push(`${relative}: page-local button styling found. Use components/ui/button.`);
   }
 }
 
