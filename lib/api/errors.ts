@@ -12,3 +12,7 @@ export class ApiError extends Error {
 export function notFound(resource: string, id: number | string) {
   return new ApiError(`${resource} ${id} was not found.`, "not_found", 404);
 }
+
+export function isNotFoundError(error: unknown) {
+  return error instanceof ApiError && error.code === "not_found";
+}
