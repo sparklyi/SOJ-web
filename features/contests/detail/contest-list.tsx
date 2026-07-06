@@ -49,8 +49,8 @@ export function ContestList({ contests }: ContestListProps) {
         />
       </section>
 
-      <section aria-label="Contest list" className="overflow-hidden rounded-soj-lg border border-soj-line bg-soj-bg-raised">
-        <Table>
+      <section aria-label="Contest list" className="overflow-x-auto rounded-soj-lg border border-soj-line bg-soj-bg-raised">
+        <Table className="min-w-[760px]">
           <TableHead>
             <tr>
               <TableHeaderCell>Contest</TableHeaderCell>

@@ -31,8 +31,8 @@ function contestLabel(contestId?: number) {
 
 export function SubmissionList({ submissions }: SubmissionListProps) {
   return (
-    <section className="overflow-hidden rounded-soj-lg border border-soj-line bg-soj-bg-raised">
-      <Table aria-label="Submission queue">
+    <section className="overflow-x-auto rounded-soj-lg border border-soj-line bg-soj-bg-raised">
+      <Table aria-label="Submission queue" className="min-w-[860px]">
         <TableHead>
           <tr>
             <TableHeaderCell>Run</TableHeaderCell>
