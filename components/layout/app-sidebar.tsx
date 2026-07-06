@@ -32,7 +32,7 @@ export function AppSidebar() {
         </section>
         <section className="grid grid-cols-[minmax(0,1fr)] gap-2 border-t border-soj-line pt-4">
           <h2 className="text-sm font-semibold text-soj-text">Judge Signal</h2>
-          <p className="text-sm leading-6 text-soj-muted">Mock mode keeps the shell deterministic while page workers build route surfaces.</p>
+          <p className="text-sm leading-6 text-soj-muted">Mock mode keeps navigation, account state, and contest signals stable for local review.</p>
         </section>
       </div>
     </aside>
