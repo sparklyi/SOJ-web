@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/ui/cn";
 
@@ -14,6 +15,15 @@ const navItems = [
 
 export function TopNav() {
   const pathname = usePathname() ?? "/";
+  const navRef = useRef<HTMLElement>(null);
+  const activeHref = navItems.find((item) => pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`)))?.href ?? "/";
+
+  useEffect(() => {
+    const activeLink = navRef.current?.querySelector<HTMLAnchorElement>(`a[data-href="${activeHref}"]`);
+    if (typeof activeLink?.scrollIntoView === "function") {
+      activeLink.scrollIntoView({ block: "nearest", inline: "center" });
+    }
+  }, [activeHref]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-soj-line/70 bg-soj-bg/82 backdrop-blur-xl">
@@ -30,15 +40,16 @@ export function TopNav() {
             <span className="mt-1 hidden font-mono text-[10px] uppercase tracking-[0.18em] text-soj-muted sm:block">Signal Online Judge</span>
           </span>
         </Link>
-        <nav aria-label="Primary" className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav ref={navRef} aria-label="Primary" className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ul className="flex min-w-max items-center gap-1">
             {navItems.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  data-href={item.href}
                   className={cn(
                     "relative block rounded-soj-md px-3 py-2 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent",
-                    pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
+                    item.href === activeHref
                       ? "bg-soj-surface text-soj-text shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]"
                       : "text-soj-muted hover:bg-soj-surface/70 hover:text-soj-text",
                   )}
