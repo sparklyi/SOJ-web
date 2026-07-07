@@ -8,7 +8,7 @@ type ContestClockProps = {
 
 export function ContestClock({ label, value, frozen = false }: ContestClockProps) {
   return (
-    <div className="rounded-soj-lg border border-soj-line bg-soj-bg-raised p-4">
+    <div className="soj-contest-access p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm text-soj-muted">{label}</span>
         {frozen ? <StatusPill tone="warning">Frozen</StatusPill> : <StatusPill tone="accent">Live</StatusPill>}
