@@ -66,8 +66,11 @@ function buildImpactItems(submission: SubmissionWithState): SignalFeedItem[] {
 
 export function SubmissionImpact({ submission }: { submission: SubmissionWithState }) {
   return (
-    <section aria-label="Contest impact signal" className="grid grid-cols-[minmax(0,1fr)] gap-3">
-      <h2 className="text-xl font-semibold">Contest impact signal</h2>
+    <section aria-label="Contest impact signal" className="soj-submission-detail-panel grid content-start grid-cols-[minmax(0,1fr)] gap-4 p-5">
+      <div>
+        <h2 className="text-xl font-semibold">Contest impact signal</h2>
+        <p className="mt-1 text-sm text-soj-muted">Rank, penalty, and contest state impact.</p>
+      </div>
       <SignalFeed items={buildImpactItems(submission)} />
     </section>
   );
