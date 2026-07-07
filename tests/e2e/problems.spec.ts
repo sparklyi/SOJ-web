@@ -10,8 +10,8 @@ test("problem list renders search, filters, and data rows", async ({ page }) => 
   await expect(page.locator("form").getByText("Tag")).toBeVisible();
 
   await expect(page.getByRole("link", { name: /Signal Path/i })).toBeVisible();
-  await expect(page.getByText("Solved")).toBeVisible();
-  await expect(page.getByText("graphs")).toBeVisible();
+  await expect(page.getByText("Solved", { exact: true })).toBeVisible();
+  await expect(page.getByRole("table").getByText("graphs")).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "Acceptance" })).toBeVisible();
 });
 
