@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { PageShell } from "@/components/layout/page-shell";
+import { TopNav } from "@/components/layout/top-nav";
 import { getSubmission } from "@/features/submissions/api";
 import { SubmissionDetail } from "@/features/submissions/submission-detail";
 import { isNotFoundError } from "@/lib/api/errors";
@@ -26,8 +26,11 @@ export default async function SubmissionDetailPage({ params }: SubmissionDetailP
   }
 
   return (
-    <PageShell title={`Submission #${submission.id}`} description="Lifecycle feedback, test point progress, and contest impact.">
-      <SubmissionDetail submission={submission} />
-    </PageShell>
+    <div className="min-h-dvh text-soj-text">
+      <TopNav />
+      <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 lg:px-8" id="main-content">
+        <SubmissionDetail submission={submission} />
+      </main>
+    </div>
   );
 }

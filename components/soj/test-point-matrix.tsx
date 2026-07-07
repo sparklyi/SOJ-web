@@ -20,9 +20,9 @@ const statusClass: Record<JudgeStatus, string> = {
 
 export function TestPointMatrix({ points }: { points: TestPoint[] }) {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(72px,1fr))] gap-2">
+    <div className="grid content-start grid-cols-[repeat(auto-fill,minmax(78px,1fr))] gap-2">
       {points.map((point) => (
-        <div key={point.index} className={cn("rounded-soj-md border px-2 py-2 text-center font-mono text-xs", statusClass[point.status])}>
+        <div key={point.index} className={cn("soj-test-point px-2 py-2 text-center font-mono text-xs", statusClass[point.status])}>
           <div>#{point.index}</div>
           <div className="mt-1">{point.score}</div>
         </div>
