@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { PageShell } from "@/components/layout/page-shell";
+import { TopNav } from "@/components/layout/top-nav";
 import { ContestArenaPage } from "@/features/arena/contest-arena-page";
 import { getContest, getContestArenaEvents, getContestScoreboard } from "@/features/contests/api";
 import { isNotFoundError } from "@/lib/api/errors";
@@ -34,8 +34,11 @@ export default async function ContestArenaRoute({ params }: ContestArenaRoutePro
   const [contest, events, scoreboard] = result;
 
   return (
-    <PageShell title="Arena" description={`${contest.title} live big-screen view for rank movement, freeze countdown, key submissions, accepted events, and score deltas.`}>
-      <ContestArenaPage contest={contest} events={events} scoreboard={scoreboard} />
-    </PageShell>
+    <div className="min-h-dvh text-soj-text">
+      <TopNav />
+      <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 lg:px-8" id="main-content">
+        <ContestArenaPage contest={contest} events={events} scoreboard={scoreboard} />
+      </main>
+    </div>
   );
 }

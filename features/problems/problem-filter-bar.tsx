@@ -50,15 +50,29 @@ export function ProblemFilterBar({ query = "", difficulty, status, tag, tags }: 
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    replaceFilter("query", search);
+    replaceFilter("q", search);
+  }
+
+  function resetFilters() {
+    setSearch("");
+    startTransition(() => {
+      router.replace(pathname);
+    });
   }
 
   return (
     <form
-      className="grid gap-4 rounded-soj-lg border border-soj-line bg-soj-bg-raised p-4"
+      className="soj-control-panel grid gap-4 p-4 md:p-5"
       onSubmit={submitSearch}
     >
-      <div className="grid gap-4 lg:grid-cols-[minmax(220px,1fr)_auto_auto_auto_auto] lg:items-end">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-soj-line/35 pb-4">
+        <div>
+          <h2 className="text-base font-semibold text-soj-text">Find the next problem</h2>
+          <p className="mt-1 text-sm text-soj-muted">Filters update the URL so review links stay shareable.</p>
+        </div>
+        <div className="h-px w-32 soj-hairline" />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(150px,176px)_minmax(140px,160px)_minmax(150px,192px)_auto] lg:items-end">
         <Input
           id="problem-search"
           label="Search problems"
@@ -70,7 +84,7 @@ export function ProblemFilterBar({ query = "", difficulty, status, tag, tags }: 
         <div className="grid gap-2">
           <span className="text-sm font-medium text-soj-text">Difficulty</span>
           <Select value={difficulty ?? "all"} onValueChange={(value) => replaceFilter("difficulty", value)}>
-            <SelectTrigger className="w-full lg:w-44" aria-label="Difficulty">
+            <SelectTrigger className="w-full" aria-label="Difficulty">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -85,7 +99,7 @@ export function ProblemFilterBar({ query = "", difficulty, status, tag, tags }: 
         <div className="grid gap-2">
           <span className="text-sm font-medium text-soj-text">Status</span>
           <Select value={status ?? "all"} onValueChange={(value) => replaceFilter("status", value)}>
-            <SelectTrigger className="w-full lg:w-40" aria-label="Status">
+            <SelectTrigger className="w-full" aria-label="Status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -100,7 +114,7 @@ export function ProblemFilterBar({ query = "", difficulty, status, tag, tags }: 
         <div className="grid gap-2">
           <span className="text-sm font-medium text-soj-text">Tag</span>
           <Select value={tag ?? "all"} onValueChange={(value) => replaceFilter("tag", value)}>
-            <SelectTrigger className="w-full lg:w-48" aria-label="Tag">
+            <SelectTrigger className="w-full" aria-label="Tag">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -113,9 +127,14 @@ export function ProblemFilterBar({ query = "", difficulty, status, tag, tags }: 
             </SelectContent>
           </Select>
         </div>
-        <Button type="submit" loading={isPending}>
-          Apply
-        </Button>
+        <div className="flex gap-2">
+          <Button type="submit" loading={isPending} className="min-w-24">
+            Apply
+          </Button>
+          <Button type="button" variant="ghost" onClick={resetFilters}>
+            Reset
+          </Button>
+        </div>
       </div>
     </form>
   );

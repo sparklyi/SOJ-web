@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { PageShell } from "@/components/layout/page-shell";
+import { TopNav } from "@/components/layout/top-nav";
 import { ContestScoreboardPage } from "@/features/contests/scoreboard/contest-scoreboard-page";
 import { getContest, getContestScoreboard } from "@/features/contests/api";
 import { isNotFoundError } from "@/lib/api/errors";
@@ -30,8 +30,11 @@ export default async function ContestScoreboardRoute({ params }: ContestScoreboa
   const [contest, scoreboard] = result;
 
   return (
-    <PageShell title="Scoreboard" description={`${contest.title} ranking, freeze state, per-problem results, and movement.`}>
-      <ContestScoreboardPage contest={contest} scoreboard={scoreboard} />
-    </PageShell>
+    <div className="min-h-dvh text-soj-text">
+      <TopNav />
+      <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 lg:px-8" id="main-content">
+        <ContestScoreboardPage contest={contest} scoreboard={scoreboard} />
+      </main>
+    </div>
   );
 }

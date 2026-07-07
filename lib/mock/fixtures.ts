@@ -1,4 +1,4 @@
-import type { ContestSummary, CurrentUser, ProblemDetail, SubmissionSummary } from "@/lib/api/types";
+import type { ContestSummary, CurrentUser, JudgeLanguage, ProblemDetail, SubmissionSummary } from "@/lib/api/types";
 import { buildAcmScoreboardRow, buildContest, buildOiScoreboardRow, buildProblem, buildSubmission } from "./builders";
 
 export const mockUser: CurrentUser = {
@@ -33,6 +33,33 @@ export const mockSubmissions: SubmissionSummary[] = [
   buildSubmission({ id: 6, status: "runtime_error", score: 0, timeMs: 12, memoryKb: 4096 }),
   buildSubmission({ id: 7, status: "compile_error", score: 0 }),
   buildSubmission({ id: 8, status: "system_error", score: 0 }),
+];
+
+export const mockLanguages: JudgeLanguage[] = [
+  {
+    id: 54,
+    engine: "soj-agent",
+    engineLanguageId: "cpp17",
+    name: "C++17",
+    version: "17",
+    compileCommand: "g++ -std=c++17 -O2 -pipe -o {{binary}} {{source}}",
+    runCommand: "{{binary}}",
+    defaultTimeLimitMs: 1000,
+    defaultMemoryLimitKb: 262144,
+    enabled: true,
+  },
+  {
+    id: 60,
+    engine: "soj-agent",
+    engineLanguageId: "go",
+    name: "Go",
+    version: "1.24",
+    compileCommand: "go build -o {{binary}} {{source}}",
+    runCommand: "{{binary}}",
+    defaultTimeLimitMs: 1000,
+    defaultMemoryLimitKb: 262144,
+    enabled: true,
+  },
 ];
 
 export const mockAcmScoreboardRows = [

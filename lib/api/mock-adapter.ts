@@ -1,5 +1,5 @@
 import { notFound } from "./errors";
-import { mockContests, mockProblems, mockSubmissions, mockUser } from "@/lib/mock/fixtures";
+import { mockContests, mockLanguages, mockProblems, mockSubmissions, mockUser } from "@/lib/mock/fixtures";
 import type { ApiClient } from "./types";
 
 export function createMockAdapter(): ApiClient {
@@ -29,6 +29,16 @@ export function createMockAdapter(): ApiClient {
         const contest = mockContests.find((item) => item.id === id);
         if (!contest) throw notFound("Contest", id);
         return contest;
+      },
+    },
+    languages: {
+      list: async (filter = {}) => {
+        const items = mockLanguages.filter((language) => {
+          if (typeof filter.enabled === "boolean" && language.enabled !== filter.enabled) return false;
+          if (filter.engine && language.engine !== filter.engine) return false;
+          return true;
+        });
+        return { items, total: items.length };
       },
     },
   };
