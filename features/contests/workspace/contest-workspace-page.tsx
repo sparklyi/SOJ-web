@@ -18,7 +18,7 @@ type ContestWorkspacePageProps = {
 
 const timelineItems = [
   { id: "queued", status: "queued" as const, label: "Queued by contest judge", timestamp: "10:12:01" },
-  { id: "compiling", status: "compiling" as const, label: "Compiling with GNU C++17", timestamp: "10:12:04" },
+  { id: "compiling", status: "compiling" as const, label: "Compiling with selected toolchain", timestamp: "10:12:04" },
   { id: "running", status: "running" as const, label: "Running sample and hidden tests", timestamp: "10:12:08" },
 ];
 
