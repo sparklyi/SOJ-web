@@ -1336,6 +1336,91 @@ body::after {
   line-height: 1.65;
 }
 
+.soj-account-stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgb(var(--soj-line) / 0.66);
+  border-radius: 22px 8px 26px 8px;
+  background:
+    radial-gradient(ellipse at 82% 12%, rgb(var(--soj-accent) / 0.095), transparent 42%),
+    linear-gradient(118deg, rgb(var(--soj-accent) / 0.072), transparent 32%),
+    linear-gradient(112deg, transparent 0 62%, rgb(var(--soj-accent) / 0.052) 62% 100%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.064), rgb(255 255 255 / 0.016)),
+    rgb(var(--soj-bg-raised) / 0.82);
+  box-shadow:
+    0 26px 86px rgb(0 0 0 / 0.22),
+    inset 0 1px 0 rgb(255 255 255 / 0.065);
+  backdrop-filter: blur(20px);
+}
+
+.soj-account-stage::before {
+  position: absolute;
+  top: 0;
+  right: 20px;
+  left: 20px;
+  height: 1px;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.64), transparent);
+}
+
+.soj-account-stage::after {
+  position: absolute;
+  inset: auto -16% -54% 12%;
+  height: 92%;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(90deg, rgb(255 255 255 / 0.038) 1px, transparent 1px),
+    linear-gradient(180deg, rgb(255 255 255 / 0.027) 1px, transparent 1px),
+    linear-gradient(104deg, transparent 0 36%, rgb(var(--soj-accent) / 0.055) 36% 48%, transparent 48% 100%);
+  background-size: 32px 32px, 32px 32px, auto;
+  transform: skew(-18deg);
+}
+
+.soj-account-signal,
+.soj-account-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgb(var(--soj-line) / 0.74);
+  background:
+    radial-gradient(ellipse at 88% 10%, rgb(var(--soj-accent) / 0.068), transparent 40%),
+    linear-gradient(116deg, transparent 0 68%, rgb(var(--soj-accent) / 0.052) 68% 100%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.064), transparent 30%),
+    rgb(var(--soj-bg-raised) / 0.92);
+  box-shadow:
+    0 24px 70px rgb(0 0 0 / 0.22),
+    inset 0 1px 0 rgb(255 255 255 / 0.07),
+    inset 0 -1px 0 rgb(255 255 255 / 0.025);
+  backdrop-filter: blur(18px);
+}
+
+.soj-account-signal {
+  min-height: 220px;
+  border-radius: 22px 6px 18px 6px;
+}
+
+.soj-account-panel {
+  border-radius: 8px 22px 8px 18px;
+}
+
+.soj-account-signal > *,
+.soj-account-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.soj-account-panel::before {
+  position: absolute;
+  top: 0;
+  right: 18px;
+  left: 24%;
+  height: 1px;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.42), transparent);
+}
+
 @media (max-width: 900px) {
   .soj-judge-track {
     grid-template-columns: repeat(2, minmax(0, 1fr));
