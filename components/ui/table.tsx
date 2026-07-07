@@ -10,7 +10,7 @@ export function TableHead({ className, ...props }: HTMLAttributes<HTMLTableSecti
 }
 
 export function TableRow({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn("border-b border-soj-line/70 transition hover:bg-soj-surface/60", className)} {...props} />;
+  return <tr className={cn("group border-b border-soj-line/60 transition duration-200 hover:bg-soj-surface/62", className)} {...props} />;
 }
 
 export function TableCell({ className, ...props }: HTMLAttributes<HTMLTableCellElement>) {
