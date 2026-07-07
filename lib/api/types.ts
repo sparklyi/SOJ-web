@@ -61,6 +61,19 @@ export type SubmissionSummary = {
   submittedAt: string;
 };
 
+export type JudgeLanguage = {
+  id: number;
+  engine: string;
+  engineLanguageId: string;
+  name: string;
+  version?: string;
+  compileCommand?: string;
+  runCommand?: string;
+  defaultTimeLimitMs: number;
+  defaultMemoryLimitKb: number;
+  enabled: boolean;
+};
+
 export type CurrentUser = {
   id: number;
   handle: string;
@@ -88,5 +101,8 @@ export type ApiClient = {
   contests: {
     list: () => Promise<PageResult<ContestSummary>>;
     get: (id: number) => Promise<ContestSummary>;
+  };
+  languages: {
+    list: (filter?: { enabled?: boolean; engine?: string }) => Promise<PageResult<JudgeLanguage>>;
   };
 };

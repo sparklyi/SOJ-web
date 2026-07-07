@@ -3,6 +3,7 @@ import { createApiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { getCurrentUser } from "@/features/auth/api";
 import { getContest, getContestArenaEvents, getContestScoreboard, listContests } from "@/features/contests/api";
+import { listEnabledLanguages } from "@/features/languages/api";
 import { getProblem, listProblems } from "@/features/problems/api";
 import { getSubmission, listSubmissions } from "@/features/submissions/api";
 
@@ -11,6 +12,12 @@ const client = createApiClient({ mode: "mock" });
 describe("feature api modules", () => {
   it("returns current user from auth boundary", async () => {
     await expect(getCurrentUser(client)).resolves.toMatchObject({ handle: "lin-chen" });
+  });
+
+  it("returns enabled judge languages from the language catalog", async () => {
+    const languages = await listEnabledLanguages(client);
+    expect(languages.items.map((language) => language.engineLanguageId)).toEqual(expect.arrayContaining(["cpp17", "go"]));
+    expect(languages.items.every((language) => language.engine === "soj-agent" && language.enabled)).toBe(true);
   });
 
   it("filters problem lists and propagates not found errors", async () => {

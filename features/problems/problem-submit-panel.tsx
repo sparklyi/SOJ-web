@@ -1,4 +1,4 @@
-import type { ProblemDetail } from "@/lib/api/types";
+import type { JudgeLanguage, ProblemDetail } from "@/lib/api/types";
 import { getAcceptanceRate } from "@/lib/domain/problem";
 import { CodeWorkspace } from "@/components/soj/code-workspace";
 import { ProblemStatus } from "@/components/soj/problem-status";
@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 
 type ProblemSubmitPanelProps = {
   problem: ProblemDetail;
+  languages: JudgeLanguage[];
 };
 
-export function ProblemSubmitPanel({ problem }: ProblemSubmitPanelProps) {
+export function ProblemSubmitPanel({ problem, languages }: ProblemSubmitPanelProps) {
   const acceptance = getAcceptanceRate(problem);
 
   return (
@@ -46,7 +47,7 @@ export function ProblemSubmitPanel({ problem }: ProblemSubmitPanelProps) {
           ))}
         </div>
       </section>
-      <CodeWorkspace language="C++17" value={"#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false);\n  cin.tie(nullptr);\n  return 0;\n}"} />
+      <CodeWorkspace languages={languages} />
       <Button type="button" className="w-full">
         Submit solution
       </Button>

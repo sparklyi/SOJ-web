@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-
-const defaultLanguages = ["C++17", "C++20", "Java 17", "Python 3", "Go", "Rust"] as const;
+import type { JudgeLanguage } from "@/lib/api/types";
 
 const starters: Record<string, string> = {
-  "C++17": `#include <bits/stdc++.h>
+  cpp17: `#include <bits/stdc++.h>
 using namespace std;
 
 int main() {
@@ -14,31 +13,7 @@ int main() {
 
   return 0;
 }`,
-  "C++20": `#include <bits/stdc++.h>
-using namespace std;
-
-int main() {
-  ios::sync_with_stdio(false);
-  cin.tie(nullptr);
-
-  return 0;
-}`,
-  "Java 17": `import java.io.*;
-import java.util.*;
-
-public class Main {
-  public static void main(String[] args) throws Exception {
-    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-  }
-}`,
-  "Python 3": `import sys
-
-def main():
-    data = sys.stdin.read().strip().split()
-
-if __name__ == "__main__":
-    main()`,
-  Go: `package main
+  go: `package main
 
 import (
   "bufio"
@@ -51,26 +26,28 @@ func main() {
   _ = in
   fmt.Println()
 }`,
-  Rust: `use std::io::{self, Read};
-
-fn main() {
-    let mut input = String::new();
-    io::stdin().read_to_string(&mut input).unwrap();
-}`,
 };
 
 type CodeWorkspaceProps = {
-  language?: string;
-  languages?: readonly string[];
+  languages: JudgeLanguage[];
+  initialLanguageId?: number;
   value?: string;
 };
 
-export function CodeWorkspace({ language = "C++17", languages = defaultLanguages, value = "" }: CodeWorkspaceProps) {
-  const [selectedLanguage, setSelectedLanguage] = useState(language);
+function languageLabel(language: JudgeLanguage) {
+  if (!language.version || language.name.toLowerCase().includes(language.version.toLowerCase())) return language.name;
+  return `${language.name} ${language.version}`;
+}
+
+export function CodeWorkspace({ languages, initialLanguageId, value = "" }: CodeWorkspaceProps) {
+  const initial = initialLanguageId ?? languages[0]?.id;
+  const [selectedLanguageId, setSelectedLanguageId] = useState(initial ? String(initial) : "");
+  const selectedLanguage = languages.find((item) => String(item.id) === selectedLanguageId);
   const code = useMemo(() => {
-    if (value && selectedLanguage === language) return value;
-    return starters[selectedLanguage] ?? value ?? "// Editor integration lands in the workspace slice.";
-  }, [language, selectedLanguage, value]);
+    if (!selectedLanguage) return "// No enabled judge languages are available.";
+    if (value && selectedLanguage.id === initial) return value;
+    return starters[selectedLanguage.engineLanguageId] ?? (value || `// ${languageLabel(selectedLanguage)} starter is not configured yet.`);
+  }, [initial, selectedLanguage, value]);
 
   return (
     <section className="overflow-hidden rounded-[18px_6px_14px_6px] border border-soj-line/58 bg-soj-bg-raised/78 shadow-[inset_0_1px_0_rgb(255_255_255/0.05)]">
@@ -81,12 +58,14 @@ export function CodeWorkspace({ language = "C++17", languages = defaultLanguages
           <select
             aria-label="Language"
             className="soj-language-select"
-            value={selectedLanguage}
-            onChange={(event) => setSelectedLanguage(event.target.value)}
+            disabled={languages.length === 0}
+            value={selectedLanguageId}
+            onChange={(event) => setSelectedLanguageId(event.target.value)}
           >
+            {languages.length === 0 ? <option value="">No languages</option> : null}
             {languages.map((item) => (
-              <option key={item} value={item}>
-                {item}
+              <option key={item.id} value={item.id}>
+                {languageLabel(item)}
               </option>
             ))}
           </select>
