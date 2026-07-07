@@ -16,7 +16,7 @@ export function MockAuthForm({ mode }: MockAuthFormProps) {
 
   return (
     <form
-      className="grid grid-cols-[minmax(0,1fr)] gap-4 rounded-soj-lg border border-soj-line bg-soj-bg-raised p-5"
+      className="soj-account-panel grid grid-cols-[minmax(0,1fr)] gap-4 p-5"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -34,6 +34,10 @@ export function MockAuthForm({ mode }: MockAuthFormProps) {
         setSubmitted(true);
       }}
     >
+      <div className="border-b border-soj-line/60 pb-4">
+        <h2 className="text-xl font-semibold text-soj-text">{isRegister ? "Create account" : "Enter session"}</h2>
+        <p className="mt-1 text-sm text-soj-muted">{isRegister ? "Reserve a mock handle for the contest workspace." : "Use any handle to enter the local SOJ workspace."}</p>
+      </div>
       <Input id={`${mode}-handle`} name="handle" label="Handle" autoComplete="username" helperText="Use any contest handle in mock mode." />
       {isRegister ? <Input id="register-email" name="email" label="Email" type="email" autoComplete="email" helperText="Used for account recovery later." /> : null}
       <Input id={`${mode}-password`} name="password" label="Password" type="password" autoComplete={isRegister ? "new-password" : "current-password"} helperText="Mock mode does not send credentials." />

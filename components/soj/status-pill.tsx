@@ -19,7 +19,7 @@ type StatusPillProps = {
 
 export function StatusPill({ children, tone = "neutral", className }: StatusPillProps) {
   return (
-    <span className={cn("inline-flex items-center whitespace-nowrap rounded-soj-sm border px-2 py-1 font-mono text-xs", tones[tone], className)}>
+    <span className={cn("inline-flex w-fit items-center justify-self-start whitespace-nowrap rounded-soj-sm border px-2 py-1 font-mono text-xs", tones[tone], className)}>
       {children}
     </span>
   );
