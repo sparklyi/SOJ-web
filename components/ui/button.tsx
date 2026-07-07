@@ -11,9 +11,9 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "border-soj-accent bg-soj-accent text-soj-bg hover:bg-soj-accent/90",
-  secondary: "border-soj-line bg-soj-surface text-soj-text hover:border-soj-accent/60 hover:bg-soj-surface-2",
-  ghost: "border-transparent bg-transparent text-soj-muted hover:bg-soj-surface hover:text-soj-text",
+  primary: "border-soj-accent/80 bg-soj-accent text-soj-bg shadow-[0_10px_30px_rgb(var(--soj-accent)/0.18),inset_0_1px_0_rgb(255_255_255/0.26)] hover:bg-soj-accent/90",
+  secondary: "border-soj-line bg-soj-surface text-soj-text shadow-[inset_0_1px_0_rgb(255_255_255/0.06)] hover:border-soj-accent/60 hover:bg-soj-surface-2",
+  ghost: "border-transparent bg-transparent text-soj-muted hover:bg-soj-surface/80 hover:text-soj-text",
   danger: "border-soj-danger/70 bg-soj-danger/12 text-soj-danger hover:bg-soj-danger/18",
 };
 
@@ -35,7 +35,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex shrink-0 items-center justify-center gap-2 rounded-soj-md border font-medium transition duration-150 ease-out active:translate-y-px disabled:pointer-events-none disabled:opacity-45",
+        "inline-flex shrink-0 items-center justify-center gap-2 rounded-soj-md border font-medium transition duration-200 ease-out active:translate-y-px disabled:pointer-events-none disabled:opacity-45",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent",
         variants[variant],
         sizes[size],
