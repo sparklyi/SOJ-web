@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { PageShell } from "@/components/layout/page-shell";
+import { TopNav } from "@/components/layout/top-nav";
 import { ContestWorkspacePage } from "@/features/contests/workspace/contest-workspace-page";
 import { getContest } from "@/features/contests/api";
 import { getProblem } from "@/features/problems/api";
@@ -33,8 +33,11 @@ export default async function ContestProblemRoute({ params }: ContestProblemRout
   const [contest, problem] = result;
 
   return (
-    <PageShell title={`${contest.title} workspace`} description="Statement, editor, clock, submit risk, and judge feedback stay visible for fast contest solving.">
-      <ContestWorkspacePage contest={contest} problem={problem} />
-    </PageShell>
+    <div className="min-h-dvh text-soj-text">
+      <TopNav />
+      <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 lg:px-8" id="main-content">
+        <ContestWorkspacePage contest={contest} problem={problem} />
+      </main>
+    </div>
   );
 }
