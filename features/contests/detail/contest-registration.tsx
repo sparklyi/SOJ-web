@@ -21,7 +21,7 @@ export function ContestRegistration({ contest }: ContestRegistrationProps) {
   const firstProblemId = contest.problems[0]?.problemId;
 
   return (
-    <section aria-label="Contest access" className="grid grid-cols-[minmax(0,1fr)] gap-4 rounded-soj-lg border border-soj-line bg-soj-bg-raised p-5">
+    <section aria-label="Contest access" className="soj-contest-access grid grid-cols-[minmax(0,1fr)] gap-4 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">Access</h2>
         {contest.registered ? <StatusPill tone="success">Registered</StatusPill> : <StatusPill tone={contest.canRegister ? "accent" : "warning"}>{contest.canRegister ? "Registration open" : "Registration closed"}</StatusPill>}

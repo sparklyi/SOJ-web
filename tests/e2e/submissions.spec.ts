@@ -24,7 +24,7 @@ test("submission detail renders lifecycle feedback and contest impact", async ({
   await expect(page.getByText("#1")).toBeVisible();
   await expect(page.getByText("#8")).toBeVisible();
   await expect(page.getByRole("region", { name: "Runtime and system information" })).toBeVisible();
-  await expect(page.getByText("Mismatch at point 4")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Runtime and system information" }).getByText("Mismatch at point 4")).toBeVisible();
   await expect(page.getByRole("region", { name: "Contest impact signal" })).toBeVisible();
   await expect(page.getByText("Penalty risk")).toBeVisible();
   await expect(page.getByText("+20 min")).toBeVisible();

@@ -17,9 +17,9 @@ const toneClass: Record<NonNullable<SignalFeedItem["tone"]>, string> = {
 
 export function SignalFeed({ items }: { items: SignalFeedItem[] }) {
   return (
-    <div className="divide-y divide-soj-line rounded-soj-lg border border-soj-line bg-soj-bg-raised">
+    <div className="soj-signal-feed">
       {items.map((item) => (
-        <div key={item.id} className="grid grid-cols-[1fr_auto] gap-4 px-4 py-3">
+        <div key={item.id} className="soj-signal-feed-row">
           <span className="text-sm text-soj-muted">{item.label}</span>
           <span className={cn("font-mono text-sm", toneClass[item.tone ?? "neutral"])}>{item.value}</span>
         </div>
