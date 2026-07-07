@@ -6,7 +6,7 @@ import { StatusPill } from "@/components/soj/status-pill";
 import { SubmissionTimeline } from "@/components/soj/submission-timeline";
 import { TestPointMatrix } from "@/components/soj/test-point-matrix";
 import { Button } from "@/components/ui/button";
-import type { ContestSummary, ProblemDetail } from "@/lib/api/types";
+import type { ContestSummary, JudgeLanguage, ProblemDetail } from "@/lib/api/types";
 
 type ContestWorkspacePageProps = {
   contest: ContestSummary & {
@@ -14,6 +14,7 @@ type ContestWorkspacePageProps = {
     canSubmit: boolean;
   };
   problem: ProblemDetail;
+  languages: JudgeLanguage[];
 };
 
 const timelineItems = [
@@ -35,7 +36,7 @@ function formatMemory(value: number) {
   return `${Math.round(value / 1024)} MB`;
 }
 
-export function ContestWorkspacePage({ contest, problem }: ContestWorkspacePageProps) {
+export function ContestWorkspacePage({ contest, problem, languages }: ContestWorkspacePageProps) {
   const contestProblem = contest.problems.find((item) => item.problemId === problem.id);
   const alias = contestProblem?.alias ?? "A";
   const freezeLabel = contest.status === "frozen" ? "Rank updates hidden" : "Rank updates live";
@@ -163,7 +164,7 @@ export function ContestWorkspacePage({ contest, problem }: ContestWorkspacePageP
               <StatusPill tone={contest.canSubmit ? "accent" : "danger"}>{contest.canSubmit ? "Live" : "Review"}</StatusPill>
             </div>
             <CodeWorkspace
-              language="C++17"
+              languages={languages}
               value={`#include <bits/stdc++.h>
 using namespace std;
 
