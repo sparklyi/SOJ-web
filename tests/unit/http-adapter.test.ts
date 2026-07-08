@@ -426,6 +426,188 @@ describe("http adapter", () => {
     });
   });
 
+  it("lists and gets contests from backend contest endpoints", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const path = String(url).replace("http://localhost:8080", "");
+      if (path === "/api/v1/contests?page=1&page_size=100") {
+        return Response.json({
+          data: {
+            items: [
+              contestResponse({
+                id: 11,
+                title: "Signal Cup",
+                status: "published",
+                startAt: "2999-07-08T11:00:00Z",
+                problems: [{ problem_id: 101, alias: "A", sort_order: 1 }],
+              }),
+            ],
+            total: 1,
+            page: 1,
+            page_size: 100,
+          },
+          error: null,
+        });
+      }
+      if (path === "/api/v1/contests/11") {
+        return Response.json({
+          data: contestResponse({
+            id: 11,
+            title: "Signal Cup",
+            status: "running",
+            endAt: "2999-07-08T12:00:00Z",
+            freezeAt: "2000-07-08T09:00:00Z",
+            problems: [{ problem_id: 202, alias: "B", sort_order: 2 }],
+          }),
+          error: null,
+        });
+      }
+      return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createHttpAdapter({ accessToken: "contest-token" });
+    const contests = await client.contests.list();
+    const contest = await client.contests.get(11);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "http://localhost:8080/api/v1/contests?page=1&page_size=100", {
+      cache: "no-store",
+      headers: { Authorization: "Bearer contest-token" },
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "http://localhost:8080/api/v1/contests/11", {
+      cache: "no-store",
+      headers: { Authorization: "Bearer contest-token" },
+    });
+    expect(contests.items[0]).toMatchObject({
+      id: 11,
+      title: "Signal Cup",
+      type: "acm",
+      status: "scheduled",
+      registered: false,
+      problems: [{ problemId: 101, alias: "A", title: "Problem A" }],
+    });
+    expect(contest).toMatchObject({
+      id: 11,
+      status: "frozen",
+      problems: [{ problemId: 202, alias: "B", title: "Problem B" }],
+    });
+  });
+
+  it("registers for a contest with backend field names", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json(
+        {
+          data: {
+            id: 301,
+            contest_id: 11,
+            user_id: 7,
+            display_name: "Lin",
+            email: "lin@example.com",
+            status: "active",
+            registered_at: "2026-07-08T10:10:00Z",
+          },
+          error: null,
+        },
+        { status: 201 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const registration = await createHttpAdapter({ accessToken: "contest-token" }).contests.register(11, {
+      displayName: "Lin",
+      email: "lin@example.com",
+      inviteCode: "INVITE-7",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/contests/11/registrations", {
+      cache: "no-store",
+      method: "POST",
+      headers: {
+        Authorization: "Bearer contest-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        display_name: "Lin",
+        email: "lin@example.com",
+        invite_code: "INVITE-7",
+      }),
+    });
+    expect(registration).toEqual({
+      id: 301,
+      contestId: 11,
+      userId: 7,
+      displayName: "Lin",
+      email: "lin@example.com",
+      status: "active",
+      registeredAt: "2026-07-08T10:10:00Z",
+    });
+  });
+
+  it("omits invite_code when contest registration has no invite code", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        data: {
+          id: 302,
+          contest_id: 11,
+          user_id: 7,
+          display_name: "Lin",
+          email: "lin@example.com",
+          status: "active",
+          registered_at: "2026-07-08T10:10:00Z",
+        },
+        error: null,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createHttpAdapter().contests.register(11, {
+      displayName: "Lin",
+      email: "lin@example.com",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/contests/11/registrations", {
+      cache: "no-store",
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        display_name: "Lin",
+        email: "lin@example.com",
+      }),
+    });
+  });
+
+  it("loads backend ACM scoreboard rows through contests.scoreboard", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        data: scoreboardResponse(),
+        error: null,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const scoreboard = await createHttpAdapter({ accessToken: "contest-token" }).contests.scoreboard(11);
+
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/contests/11/scoreboard", {
+      cache: "no-store",
+      headers: { Authorization: "Bearer contest-token" },
+    });
+    expect(scoreboard).toMatchObject({
+      type: "acm",
+      rows: [
+        {
+          rank: 1,
+          id: "7",
+          handle: "Lin",
+          solved: 2,
+          penalty: 88,
+          problems: [
+            { problemId: 101, alias: "A", status: "accepted", attempts: 1, penalty: 18 },
+            { problemId: 102, alias: "B", status: "wrong_answer", attempts: 2, penalty: 0 },
+          ],
+        },
+      ],
+    });
+  });
+
   it("combines backend problem, statement, and stats into a problem detail", async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request) => {
       const path = String(url).replace("http://localhost:8080", "");
@@ -891,6 +1073,69 @@ function runResponse(overrides: {
     created_at: "2026-07-07T10:12:00Z",
     finished_at: overrides.status === "accepted" ? "2026-07-07T10:12:03Z" : null,
     updated_at: "2026-07-07T10:12:03Z",
+  };
+}
+
+function contestResponse(overrides: {
+  id: number;
+  title: string;
+  status: "draft" | "published" | "running" | "ended" | "archived";
+  startAt?: string;
+  endAt?: string;
+  freezeAt?: string;
+  problems?: Array<{ problem_id: number; alias: string; sort_order: number }>;
+}) {
+  return {
+    id: overrides.id,
+    owner_user_id: 7,
+    title: overrides.title,
+    description: null,
+    visibility: "public",
+    status: overrides.status,
+    start_at: overrides.startAt ?? "2026-07-08T10:00:00Z",
+    end_at: overrides.endAt ?? "2026-07-08T12:00:00Z",
+    freeze_at: overrides.freezeAt ?? "2026-07-08T11:30:00Z",
+    problems: overrides.problems ?? [],
+    created_at: "2026-07-07T10:00:00Z",
+    updated_at: "2026-07-07T10:00:00Z",
+  };
+}
+
+function scoreboardResponse() {
+  return {
+    contest_id: 11,
+    view: "live",
+    generated_at: "2026-07-08T10:30:00Z",
+    problems: [
+      { problem_id: 101, alias: "A", sort_order: 1 },
+      { problem_id: 102, alias: "B", sort_order: 2 },
+    ],
+    rows: [
+      {
+        rank: 1,
+        user_id: 7,
+        display_name: "Lin",
+        accepted_count: 2,
+        penalty_minutes: 88,
+        cells: [
+          {
+            problem_id: 101,
+            alias: "A",
+            status: "accepted",
+            attempts: 1,
+            penalty_minutes: 18,
+            accepted_at: "2026-07-08T10:12:00Z",
+          },
+          {
+            problem_id: 102,
+            alias: "B",
+            status: "attempted",
+            attempts: 2,
+            penalty_minutes: 0,
+          },
+        ],
+      },
+    ],
   };
 }
 

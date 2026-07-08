@@ -1,6 +1,7 @@
 import { notFound } from "./errors";
 import { createMockSession } from "@/lib/auth/session";
-import { mockContests, mockLanguages, mockProblems, mockSubmissions, mockUser } from "@/lib/mock/fixtures";
+import { buildScoreboardModel } from "@/lib/domain/scoreboard";
+import { mockAcmScoreboardRows, mockContests, mockLanguages, mockOiScoreboardRows, mockProblems, mockSubmissions, mockUser } from "@/lib/mock/fixtures";
 import type { ApiClient, CurrentUser, RunSummary, SubmissionSummary } from "./types";
 
 type MockAdapterOptions = {
@@ -93,6 +94,23 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         const contest = mockContests.find((item) => item.id === id);
         if (!contest) throw notFound("Contest", id);
         return contest;
+      },
+      register: async (id, input) => ({
+        id,
+        contestId: id,
+        userId: currentUser.id,
+        displayName: input.displayName,
+        email: input.email,
+        status: "active",
+        registeredAt: new Date().toISOString(),
+      }),
+      scoreboard: async (id) => {
+        const contest = mockContests.find((item) => item.id === id);
+        if (!contest) throw notFound("Contest", id);
+
+        return contest.type === "acm"
+          ? buildScoreboardModel({ type: "acm", rows: mockAcmScoreboardRows })
+          : buildScoreboardModel({ type: "oi", rows: mockOiScoreboardRows });
       },
     },
     languages: {

@@ -2,6 +2,8 @@ import { ApiError } from "./errors";
 import { request } from "./http-client";
 import type {
   AuthResponse,
+  ContestRegistrationResponse,
+  ContestResponse,
   LanguageResponse,
   LoginRequest,
   PageResponse,
@@ -12,20 +14,18 @@ import type {
   RegisterRequest,
   RunCreateRequest,
   RunResponse,
+  ScoreboardResponse,
   SubmissionCreateRequest,
   SubmissionResponse,
   UserResponse,
 } from "./backend-types";
 import type { AuthSession } from "@/lib/auth/session";
 import type { ApiClient, CurrentUser, JudgeLanguage, PageResult } from "./types";
+import { mapContestRegistration, mapContestResponse, mapContestScoreboard } from "./contest-mappers";
 import { mapProblemDetail, mapProblemSummary } from "./problem-mappers";
 import { mapRunSummary, mapSubmissionSummary } from "./submission-mappers";
 
 const LANGUAGE_LIST_PATH = "/api/v1/admin/languages";
-
-function notConnected(): never {
-  throw new ApiError("HTTP API adapter is not connected yet.", "api.not_connected", 501);
-}
 
 type HttpAdapterOptions = {
   accessToken?: string;
@@ -198,8 +198,41 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
       },
     },
     contests: {
-      list: async () => notConnected(),
-      get: async () => notConnected(),
+      list: async () => {
+        const data = await request<PageResponse<ContestResponse>>("/api/v1/contests", {
+          accessToken: options.accessToken,
+          query: {
+            page: 1,
+            page_size: 100,
+          },
+        });
+        return { items: data.items.map((contest) => mapContestResponse(contest)), total: data.total };
+      },
+      get: async (id) => {
+        const data = await request<ContestResponse>(`/api/v1/contests/${id}`, {
+          accessToken: options.accessToken,
+        });
+        return mapContestResponse(data);
+      },
+      register: async (id, input) => {
+        const data = await request<ContestRegistrationResponse>(`/api/v1/contests/${id}/registrations`, {
+          accessToken: options.accessToken,
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            display_name: input.displayName,
+            email: input.email,
+            invite_code: input.inviteCode,
+          }),
+        });
+        return mapContestRegistration(data);
+      },
+      scoreboard: async (id) => {
+        const data = await request<ScoreboardResponse>(`/api/v1/contests/${id}/scoreboard`, {
+          accessToken: options.accessToken,
+        });
+        return mapContestScoreboard(data);
+      },
     },
     languages: {
       list: async (filter = {}): Promise<PageResult<JudgeLanguage>> => {

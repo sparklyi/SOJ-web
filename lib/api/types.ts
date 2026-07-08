@@ -1,4 +1,5 @@
 import type { AuthSession } from "@/lib/auth/session";
+import type { ScoreboardModel } from "@/lib/domain/scoreboard";
 
 export type ApiMode = "mock" | "http";
 
@@ -39,6 +40,22 @@ export type ContestSummary = {
   freezeAt: string;
   registered: boolean;
   problems: Array<{ problemId: number; alias: string; title: string }>;
+};
+
+export type ContestRegistrationInput = {
+  displayName: string;
+  email: string;
+  inviteCode?: string;
+};
+
+export type ContestRegistration = {
+  id: number;
+  contestId: number;
+  userId: number;
+  displayName: string;
+  email: string;
+  status: "active" | "canceled";
+  registeredAt: string;
 };
 
 export type JudgeStatus =
@@ -147,6 +164,8 @@ export type ApiClient = {
   contests: {
     list: () => Promise<PageResult<ContestSummary>>;
     get: (id: number) => Promise<ContestSummary>;
+    register: (id: number, input: ContestRegistrationInput) => Promise<ContestRegistration>;
+    scoreboard: (id: number) => Promise<ScoreboardModel>;
   };
   languages: {
     list: (filter?: { enabled?: boolean; engine?: string }) => Promise<PageResult<JudgeLanguage>>;
