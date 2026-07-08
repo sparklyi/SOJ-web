@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/errors";
 import { createHttpAdapter } from "@/lib/api/http-adapter";
+import { request } from "@/lib/api/http-client";
 
 describe("http adapter", () => {
   afterEach(() => {
@@ -97,6 +98,27 @@ describe("http adapter", () => {
       code: "api.invalid_response",
       status: 200,
     } satisfies Partial<ApiError>);
+  });
+
+  it("throws ApiError when the backend returns non-JSON content", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("service unavailable", { status: 503, headers: { "content-type": "text/plain" } })),
+    );
+
+    await expect(createHttpAdapter().languages.list()).rejects.toMatchObject({
+      name: "ApiError",
+      code: "api.invalid_response",
+      status: 503,
+    } satisfies Partial<ApiError>);
+  });
+
+  it("allows callers to receive undefined from an empty successful response", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(request<undefined>("/api/v1/auth/logout")).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/auth/logout", { cache: "no-store" });
   });
 
   it("adds a bearer authorization header when an access token is provided", async () => {

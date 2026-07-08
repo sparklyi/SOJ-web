@@ -35,7 +35,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   });
   if (accessToken) requestHeaders.Authorization = `Bearer ${accessToken}`;
 
-  const response = await fetch(`${apiBaseUrl()}${path}${buildQuery(query)}`, {
+  const response = await fetch(`${apiBaseUrl()}${appendQuery(path, query)}`, {
     ...init,
     cache: "no-store",
     ...(Object.keys(requestHeaders).length > 0 ? { headers: requestHeaders } : {}),
@@ -55,8 +55,17 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 }
 
 async function parseEnvelope<T>(response: Response): Promise<Envelope<T>> {
+  const body = await response.text();
+  if (body.length === 0) {
+    if (response.ok && (response.status === 202 || response.status === 204)) {
+      return { data: undefined as T };
+    }
+
+    throw new ApiError("HTTP API response was empty.", "api.invalid_response", response.status);
+  }
+
   try {
-    return (await response.json()) as Envelope<T>;
+    return JSON.parse(body) as Envelope<T>;
   } catch {
     throw new ApiError("HTTP API response was not valid JSON.", "api.invalid_response", response.status);
   }
@@ -64,4 +73,10 @@ async function parseEnvelope<T>(response: Response): Promise<Envelope<T>> {
 
 function apiErrorFromBackend(error: BackendError | null | undefined, status: number) {
   return new ApiError(error?.message ?? "HTTP API request failed.", error?.code ?? "api.request_failed", status);
+}
+
+function appendQuery(path: string, query?: Record<string, QueryValue | QueryValue[]>) {
+  const serialized = buildQuery(query);
+  if (!serialized) return path;
+  return `${path}${path.includes("?") ? "&" : "?"}${serialized.slice(1)}`;
 }
