@@ -9,7 +9,20 @@ export type RequestOptions = Omit<RequestInit, "cache"> & {
 };
 
 export function apiBaseUrl() {
-  return process.env.NEXT_PUBLIC_SOJ_API_BASE_URL ?? "http://localhost:8080";
+  const publicBaseUrl = process.env.NEXT_PUBLIC_SOJ_API_BASE_URL;
+
+  if (typeof window === "undefined") {
+    if (publicBaseUrl?.startsWith("/")) {
+      return process.env.SOJ_API_INTERNAL_BASE_URL ?? "http://localhost:8080";
+    }
+    return publicBaseUrl ?? process.env.SOJ_API_INTERNAL_BASE_URL ?? "http://localhost:8080";
+  }
+
+  if (process.env.NODE_ENV === "test") {
+    return publicBaseUrl ?? "http://localhost:8080";
+  }
+
+  return publicBaseUrl ?? "/soj-api";
 }
 
 export function buildQuery(params: Record<string, QueryValue | QueryValue[]> = {}) {

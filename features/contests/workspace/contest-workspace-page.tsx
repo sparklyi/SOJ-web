@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CodeWorkspace } from "@/components/soj/code-workspace";
 import { ContestClock } from "@/components/soj/contest-clock";
 import { SignalFeed } from "@/components/soj/signal-feed";
@@ -14,6 +14,7 @@ import { createBrowserApiClient } from "@/lib/api/client";
 import { getApiMode } from "@/lib/api/mode";
 import { restoreSession } from "@/lib/auth/session";
 import { contestRegistrationUserKey, isContestRegistered, subscribeToContestRegistrationChanges } from "@/lib/domain/contest-registration-session";
+import { listEnabledLanguages } from "@/features/languages/api";
 
 type ContestWorkspacePageProps = {
   contest: ContestSummary & {
@@ -21,7 +22,7 @@ type ContestWorkspacePageProps = {
     canSubmit: boolean;
   };
   problem: ProblemDetail;
-  languages: JudgeLanguage[];
+  languages?: JudgeLanguage[];
 };
 
 const timelineItems = [
@@ -43,7 +44,9 @@ function formatMemory(value: number) {
   return `${Math.round(value / 1024)} MB`;
 }
 
-export function ContestWorkspacePage({ contest, problem, languages }: ContestWorkspacePageProps) {
+export function ContestWorkspacePage({ contest, problem, languages: initialLanguages = [] }: ContestWorkspacePageProps) {
+  const [languages, setLanguages] = useState<JudgeLanguage[]>(initialLanguages);
+  const [languageError, setLanguageError] = useState<string>();
   const contestProblem = contest.problems.find((item) => item.problemId === problem.id);
   const alias = contestProblem?.alias ?? "A";
   const freezeLabel = contest.status === "frozen" ? "Rank updates hidden" : "Rank updates live";
@@ -64,6 +67,20 @@ export function ContestWorkspacePage({ contest, problem, languages }: ContestWor
   const lifecycleAllowsSubmit = contest.status === "running" || contest.status === "frozen";
   const effectiveCanSubmit = contest.canSubmit || (locallyRegistered && lifecycleAllowsSubmit);
   const canSubmit = !needsSession && effectiveCanSubmit && Boolean(workspace.languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
+
+  useEffect(() => {
+    if (initialLanguages.length > 0) return;
+
+    listEnabledLanguages(createBrowserApiClient())
+      .then((result) => {
+        setLanguages(result.items);
+        setLanguageError(undefined);
+      })
+      .catch((error: unknown) => {
+        setLanguages([]);
+        setLanguageError(error instanceof Error ? error.message : "Language catalog is not available to this backend session yet.");
+      });
+  }, [initialLanguages.length]);
 
   const handleSubmit = useCallback(async () => {
     if (needsSession || !workspace.languageId || !workspace.sourceCode.trim() || !effectiveCanSubmit) return;
@@ -206,6 +223,14 @@ export function ContestWorkspacePage({ contest, problem, languages }: ContestWor
               </div>
               <StatusPill tone={effectiveCanSubmit ? "accent" : "danger"}>{effectiveCanSubmit ? "Live" : "Review"}</StatusPill>
             </div>
+            {languageError ? (
+              <p className="rounded-soj-md border border-soj-warning/35 bg-soj-warning/10 px-3 py-2 text-sm text-soj-muted">{languageError}</p>
+            ) : null}
+            {!languageError && languages.length === 0 ? (
+              <p className="rounded-soj-md border border-soj-warning/35 bg-soj-warning/10 px-3 py-2 text-sm text-soj-muted">
+                Language catalog is empty for this backend session.
+              </p>
+            ) : null}
             <CodeWorkspace
               languages={languages}
               onChange={setWorkspace}
@@ -285,25 +310,34 @@ function browserUserKey() {
 }
 
 function useBrowserSessionAvailable() {
-  return useSyncExternalStore(
-    subscribeToSessionChanges,
-    () => getApiMode() === "mock" || browserHasSession(),
-    () => getApiMode() === "mock",
-  );
+  const [available, setAvailable] = useState(() => getApiMode() === "mock");
+
+  useEffect(() => {
+    function update() {
+      setAvailable(getApiMode() === "mock" || browserHasSession());
+    }
+
+    update();
+    window.addEventListener("storage", update);
+    return () => window.removeEventListener("storage", update);
+  }, []);
+
+  return available;
 }
 
 function useLocalContestRegistration(contestId: number) {
-  return useSyncExternalStore(
-    subscribeToContestRegistrationChanges,
-    () => (typeof window === "undefined" ? false : isContestRegistered(window.localStorage, browserUserKey(), contestId)),
-    () => false,
-  );
-}
+  const [registered, setRegistered] = useState(false);
 
-function subscribeToSessionChanges(onStoreChange: () => void) {
-  if (typeof window === "undefined") return () => undefined;
-  window.addEventListener("storage", onStoreChange);
-  return () => window.removeEventListener("storage", onStoreChange);
+  useEffect(() => {
+    function update() {
+      setRegistered(isContestRegistered(window.localStorage, browserUserKey(), contestId));
+    }
+
+    update();
+    return subscribeToContestRegistrationChanges(update);
+  }, [contestId]);
+
+  return registered;
 }
 
 function ContestSubmissionResult({

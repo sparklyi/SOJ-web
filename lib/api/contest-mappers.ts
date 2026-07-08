@@ -53,7 +53,7 @@ function mapContestStatus(input: ContestResponse, now: Date): ContestStatus {
     case "draft":
       return "ended";
     case "published":
-      return "scheduled";
+      return mapPublishedContestStatus(input, now);
     case "running":
       return isFrozen(input, now) ? "frozen" : "running";
     case "ended":
@@ -61,6 +61,16 @@ function mapContestStatus(input: ContestResponse, now: Date): ContestStatus {
     case "archived":
       return "unsealed";
   }
+}
+
+function mapPublishedContestStatus(input: ContestResponse, now: Date): ContestStatus {
+  const current = now.getTime();
+  const startAt = Date.parse(input.start_at);
+  const endAt = Date.parse(input.end_at);
+
+  if (Number.isFinite(startAt) && current < startAt) return "scheduled";
+  if (Number.isFinite(endAt) && current >= endAt) return "ended";
+  return isFrozen(input, now) ? "frozen" : "running";
 }
 
 function isFrozen(input: ContestResponse, now: Date) {

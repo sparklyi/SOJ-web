@@ -51,6 +51,10 @@ describe("scoreboard model", () => {
     expect(mapContestResponse(contestResponse({ status: "published", startAt: "2026-07-08T11:00:00Z" }), now).status).toBe(
       "scheduled",
     );
+    expect(
+      mapContestResponse(contestResponse({ status: "published", startAt: "2026-07-08T10:00:00Z", freezeAt: "2026-07-08T11:00:00Z" }), now)
+        .status,
+    ).toBe("running");
     expect(mapContestResponse(contestResponse({ status: "running", freezeAt: "2026-07-08T10:00:00Z" }), now).status).toBe(
       "frozen",
     );

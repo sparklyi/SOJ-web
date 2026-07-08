@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import type { JudgeLanguage } from "@/lib/api/types";
 
+const noLanguageSource = "// No enabled judge languages are available.";
+
 const starters: Record<string, string> = {
   cpp17: `#include <bits/stdc++.h>
 using namespace std;
@@ -41,7 +43,7 @@ function languageLabel(language: JudgeLanguage) {
 }
 
 function starterFor(language: JudgeLanguage | undefined, initialLanguageId: number | undefined, value: string) {
-  if (!language) return "// No enabled judge languages are available.";
+  if (!language) return noLanguageSource;
   if (value && language.id === initialLanguageId) return value;
   return starters[language.engineLanguageId] ?? (value || `// ${languageLabel(language)} starter is not configured yet.`);
 }
@@ -49,15 +51,17 @@ function starterFor(language: JudgeLanguage | undefined, initialLanguageId: numb
 export function CodeWorkspace({ languages, initialLanguageId, value = "", onChange }: CodeWorkspaceProps) {
   const initial = initialLanguageId ?? languages[0]?.id;
   const [selectedLanguageId, setSelectedLanguageId] = useState(initial ? String(initial) : "");
-  const selectedLanguage = languages.find((item) => String(item.id) === selectedLanguageId);
+  const effectiveSelectedLanguageId = selectedLanguageId || (languages[0] ? String(languages[0].id) : "");
+  const selectedLanguage = languages.find((item) => String(item.id) === effectiveSelectedLanguageId);
   const [sourceCode, setSourceCode] = useState(() => starterFor(selectedLanguage, initial, value));
+  const effectiveSourceCode = sourceCode === noLanguageSource && selectedLanguage ? starterFor(selectedLanguage, initialLanguageId, value) : sourceCode;
 
   useEffect(() => {
     onChange?.({
       languageId: selectedLanguage ? Number(selectedLanguage.id) : undefined,
-      sourceCode,
+      sourceCode: effectiveSourceCode,
     });
-  }, [onChange, selectedLanguage, sourceCode]);
+  }, [effectiveSourceCode, onChange, selectedLanguage]);
 
   return (
     <section className="overflow-hidden rounded-[18px_6px_14px_6px] border border-soj-line/58 bg-soj-bg-raised/78 shadow-[inset_0_1px_0_rgb(255_255_255/0.05)]">
@@ -69,7 +73,7 @@ export function CodeWorkspace({ languages, initialLanguageId, value = "", onChan
             aria-label="Language"
             className="soj-language-select"
             disabled={languages.length === 0}
-            value={selectedLanguageId}
+            value={effectiveSelectedLanguageId}
             onChange={(event) => {
               const nextLanguageId = event.target.value;
               setSelectedLanguageId(nextLanguageId);
@@ -89,7 +93,7 @@ export function CodeWorkspace({ languages, initialLanguageId, value = "", onChan
         className="min-h-64 w-full resize-y border-0 bg-soj-bg/24 p-4 font-mono text-sm leading-6 text-soj-muted outline-none ring-0 transition placeholder:text-soj-muted/60 focus:bg-soj-bg/32 focus:text-soj-text"
         disabled={languages.length === 0}
         spellCheck={false}
-        value={sourceCode}
+        value={effectiveSourceCode}
         onChange={(event) => setSourceCode(event.target.value)}
       />
     </section>

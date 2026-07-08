@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState, useSyncExternalStore } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/soj/status-pill";
 import { createBrowserApiClient } from "@/lib/api/client";
@@ -157,23 +157,32 @@ function browserUserKey() {
 }
 
 function useBrowserSessionAvailable() {
-  return useSyncExternalStore(
-    subscribeToSessionChanges,
-    () => getApiMode() === "mock" || browserHasSession(),
-    () => getApiMode() === "mock",
-  );
+  const [available, setAvailable] = useState(() => getApiMode() === "mock");
+
+  useEffect(() => {
+    function update() {
+      setAvailable(getApiMode() === "mock" || browserHasSession());
+    }
+
+    update();
+    window.addEventListener("storage", update);
+    return () => window.removeEventListener("storage", update);
+  }, []);
+
+  return available;
 }
 
 function useLocalContestRegistration(contestId: number) {
-  return useSyncExternalStore(
-    subscribeToContestRegistrationChanges,
-    () => (typeof window === "undefined" ? false : isContestRegistered(window.localStorage, browserUserKey(), contestId)),
-    () => false,
-  );
-}
+  const [registered, setRegistered] = useState(false);
 
-function subscribeToSessionChanges(onStoreChange: () => void) {
-  if (typeof window === "undefined") return () => undefined;
-  window.addEventListener("storage", onStoreChange);
-  return () => window.removeEventListener("storage", onStoreChange);
+  useEffect(() => {
+    function update() {
+      setRegistered(isContestRegistered(window.localStorage, browserUserKey(), contestId));
+    }
+
+    update();
+    return subscribeToContestRegistrationChanges(update);
+  }, [contestId]);
+
+  return registered;
 }
