@@ -4,17 +4,23 @@ import { CodeWorkspace } from "@/components/soj/code-workspace";
 import { ScoreboardGrid } from "@/components/soj/scoreboard-grid";
 import { SubmissionTimeline } from "@/components/soj/submission-timeline";
 import { VerdictBadge } from "@/components/soj/verdict-badge";
+import { ContestRegistration } from "@/features/contests/detail/contest-registration";
 import { ContestWorkspacePage } from "@/features/contests/workspace/contest-workspace-page";
 import { ProblemSubmitPanel } from "@/features/problems/problem-submit-panel";
 import { createMockSession, saveSession } from "@/lib/auth/session";
+import { markContestRegistered } from "@/lib/domain/contest-registration-session";
 import { buildContest, buildProblem } from "@/lib/mock/builders";
 import { mockLanguages, mockUser } from "@/lib/mock/fixtures";
 
 const submissionsCreate = vi.fn();
+const contestsRegister = vi.fn();
 const previousApiMode = process.env.NEXT_PUBLIC_SOJ_API_MODE;
 
 vi.mock("@/lib/api/client", () => ({
   createBrowserApiClient: () => ({
+    contests: {
+      register: contestsRegister,
+    },
     submissions: {
       create: submissionsCreate,
     },
@@ -98,6 +104,52 @@ describe("soj product components", () => {
     expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/auth/login");
   });
 
+  it("prompts sign-in instead of posting contest registration without a browser session", () => {
+    process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
+    render(
+      <ContestRegistration
+        contest={{
+          ...buildContest({ id: 88, status: "scheduled", registered: false }),
+          canRegister: true,
+          canSubmit: false,
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Sign in to register" })).toBeDisabled();
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/auth/login");
+    expect(contestsRegister).not.toHaveBeenCalled();
+  });
+
+  it("posts contest registration with saved session and shows enter contest", async () => {
+    process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
+    contestsRegister.mockResolvedValue({ id: 9 });
+    saveSession(window.localStorage, createMockSession(mockUser));
+    render(
+      <ContestRegistration
+        contest={{
+          ...buildContest({ id: 88, status: "scheduled", registered: false }),
+          canRegister: true,
+          canSubmit: false,
+        }}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Lin" } });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "lin@example.com" } });
+    fireEvent.change(screen.getByLabelText("Invite code"), { target: { value: "INVITE-7" } });
+    fireEvent.click(screen.getByRole("button", { name: "Register" }));
+
+    await waitFor(() => {
+      expect(contestsRegister).toHaveBeenCalledWith(88, {
+        displayName: "Lin",
+        email: "lin@example.com",
+        inviteCode: "INVITE-7",
+      });
+    });
+    expect(await screen.findByRole("link", { name: "Enter contest" })).toHaveAttribute("href", "/contests/88/problems/1");
+  });
+
   it("posts edited contest source with contest context when signed in", async () => {
     process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
     submissionsCreate.mockResolvedValue({ id: 654 });
@@ -115,6 +167,28 @@ describe("soj product components", () => {
         contestId: 88,
         languageId: mockLanguages[0]?.id,
         sourceCode: "contest edited source",
+      });
+    });
+  });
+
+  it("allows contest workspace submit from local registration state with contest context", async () => {
+    process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
+    submissionsCreate.mockResolvedValue({ id: 777 });
+    saveSession(window.localStorage, createMockSession(mockUser));
+    markContestRegistered(window.localStorage, 88);
+    const contest = buildContest({ id: 88, registered: false, status: "running" });
+    const problem = buildProblem({ id: 1 });
+    render(<ContestWorkspacePage contest={{ ...contest, phase: "live", canSubmit: false }} problem={problem} languages={mockLanguages} />);
+
+    fireEvent.change(screen.getByLabelText("Source code"), { target: { value: "contest local registration source" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit solution" }));
+
+    await waitFor(() => {
+      expect(submissionsCreate).toHaveBeenCalledWith({
+        problemId: 1,
+        contestId: 88,
+        languageId: mockLanguages[0]?.id,
+        sourceCode: "contest local registration source",
       });
     });
   });
