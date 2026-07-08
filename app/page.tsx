@@ -7,13 +7,16 @@ import { RecommendedProblems } from "@/features/home/recommended-problems";
 import { getContestScoreboard, listContests } from "@/features/contests/api";
 import { listProblems } from "@/features/problems/api";
 import { listSubmissions } from "@/features/submissions/api";
+import { ApiError } from "@/lib/api/errors";
+import type { ProblemSummary, SubmissionSummary } from "@/lib/api/types";
 
 export default async function HomePage() {
-  const [{ items: contests }, { items: problems }, { items: submissions }] = await Promise.all([
+  const [{ items: contests }, { items: problems }, submissionsResult] = await Promise.all([
     listContests(),
     listProblems(),
-    listSubmissions(),
+    listVisibleSubmissions(),
   ]);
+  const submissions = submissionsResult.items;
 
   const activeContests = contests.filter((contest) => contest.status === "running" || contest.status === "frozen");
   const featuredContest = activeContests[0] ?? contests[0];
@@ -23,7 +26,7 @@ export default async function HomePage() {
   const recentSubmissions = acceptedSubmission
     ? [acceptedSubmission, ...submissions.filter((submission) => submission.id !== acceptedSubmission.id).slice(0, 2)]
     : submissions.slice(0, 3);
-  const featuredSubmission = acceptedSubmission ?? recentSubmissions[0];
+  const featuredSubmission = acceptedSubmission ?? recentSubmissions[0] ?? buildIdleSubmission(featuredProblem);
   const scoreboard = await getContestScoreboard(featuredContest.id);
   const scoreboardRows = scoreboard.rows.slice(0, 3).map((row) => ({
     id: row.id,
@@ -50,4 +53,24 @@ export default async function HomePage() {
       </div>
     </PageShell>
   );
+}
+
+async function listVisibleSubmissions() {
+  try {
+    return await listSubmissions();
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return { items: [], total: 0 };
+    throw error;
+  }
+}
+
+function buildIdleSubmission(problem: ProblemSummary): SubmissionSummary {
+  return {
+    id: 0,
+    problemId: problem.id,
+    problemTitle: problem.title,
+    status: "queued",
+    score: 0,
+    submittedAt: new Date(0).toISOString(),
+  };
 }

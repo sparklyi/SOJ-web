@@ -15,7 +15,7 @@ export function getContestPhase(contest: Pick<ContestSummary, "status">): Contes
 }
 
 export function canRegister(contest: Pick<ContestSummary, "status" | "registered">): boolean {
-  return !contest.registered && contest.status === "scheduled";
+  return !contest.registered && (contest.status === "scheduled" || contest.status === "running" || contest.status === "frozen");
 }
 
 export function canSubmit(contest: Pick<ContestSummary, "status" | "registered">): boolean {
