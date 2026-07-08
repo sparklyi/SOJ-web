@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { StatusPill } from "@/components/soj/status-pill";
 import { AccountSurface } from "@/features/auth/account-surface";
-import { MockAuthForm } from "@/features/auth/mock-auth-form";
+import { AuthForm } from "@/features/auth/auth-form";
 
 export default function RegisterPage() {
   return (
     <AccountSurface
       eyebrow="Identity route"
       title="Register"
-      description="Create a local SOJ account for the v2 contest workspace."
-      meta="Mock onboarding"
+      description="Create an SOJ account for the contest workspace."
+      meta="Onboarding"
       signal={
         <>
           <div className="flex items-start justify-between gap-4">
@@ -33,7 +33,7 @@ export default function RegisterPage() {
       }
     >
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-        <MockAuthForm mode="register" />
+        <AuthForm mode="register" />
         <section className="soj-account-panel grid grid-cols-[minmax(0,1fr)] content-start gap-4 p-5">
           <StatusPill tone="success">Ready</StatusPill>
           <h2 className="text-xl font-semibold">Permission-aware by default</h2>

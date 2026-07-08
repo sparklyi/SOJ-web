@@ -1,10 +1,24 @@
 import { notFound } from "./errors";
+import { createMockSession } from "@/lib/auth/session";
 import { mockContests, mockLanguages, mockProblems, mockSubmissions, mockUser } from "@/lib/mock/fixtures";
-import type { ApiClient } from "./types";
+import type { ApiClient, CurrentUser } from "./types";
+
+function mockAuthUser(input: { email: string; username?: string }): CurrentUser {
+  const handle = input.username ?? input.email.split("@")[0] ?? mockUser.handle;
+  return {
+    ...mockUser,
+    handle,
+    displayName: handle,
+  };
+}
 
 export function createMockAdapter(): ApiClient {
   return {
     auth: {
+      login: async (input) => createMockSession(mockAuthUser(input)),
+      register: async (input) => createMockSession(mockAuthUser(input)),
+      refresh: async () => createMockSession(mockUser),
+      logout: async () => undefined,
       me: async () => mockUser,
     },
     problems: {
