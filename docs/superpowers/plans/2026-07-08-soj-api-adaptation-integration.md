@@ -1,6 +1,6 @@
 # SOJ API Adaptation Integration Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make SOJ-web HTTP mode usable against the SOJ OpenAPI contract for auth, problems, languages, submissions/runs, contests, and local integration smoke testing.
 
@@ -21,7 +21,7 @@
 - Modify: `lib/api/http-adapter.ts`
 - Modify: `tests/unit/http-adapter.test.ts`
 
-- [ ] **Step 1: Write failing tests for envelope parsing, errors, and auth headers**
+- [x] **Step 1: Write failing tests for envelope parsing, errors, and auth headers**
 
 Extend `tests/unit/http-adapter.test.ts` with tests that assert:
 - successful envelope returns `data`
@@ -31,7 +31,7 @@ Extend `tests/unit/http-adapter.test.ts` with tests that assert:
 
 Run: `npm run test -- tests/unit/http-adapter.test.ts`
 
-- [ ] **Step 2: Add backend DTO types**
+- [x] **Step 2: Add backend DTO types**
 
 Create `lib/api/backend-types.ts` with OpenAPI-shaped request/response types for:
 - `Envelope<T>`
@@ -45,7 +45,7 @@ Create `lib/api/backend-types.ts` with OpenAPI-shaped request/response types for
 
 Keep field names snake_case where the backend uses snake_case.
 
-- [ ] **Step 3: Add HTTP request helper**
+- [x] **Step 3: Add HTTP request helper**
 
 Create `lib/api/http-client.ts` exporting:
 - `apiBaseUrl()`
@@ -59,11 +59,11 @@ The helper must:
 - preserve backend error code/message/status in `ApiError`
 - accept optional `accessToken`
 
-- [ ] **Step 4: Update the HTTP adapter to use the helper**
+- [x] **Step 4: Update the HTTP adapter to use the helper**
 
 Keep `languages.list()` behavior working, but route it through `request()`.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run:
 - `npm run test -- tests/unit/http-adapter.test.ts`
@@ -92,7 +92,7 @@ git commit -m "feat: add http api transport foundation"
 - Modify: `tests/unit/auth-session.test.ts`
 - Modify: `tests/unit/http-adapter.test.ts`
 
-- [ ] **Step 1: Write failing tests for auth mapping and session tokens**
+- [x] **Step 1: Write failing tests for auth mapping and session tokens**
 
 Add tests that assert:
 - `auth.login()` maps `AuthResponse.user.username` to `CurrentUser.handle/displayName`
@@ -102,7 +102,7 @@ Add tests that assert:
 Run:
 - `npm run test -- tests/unit/auth-session.test.ts tests/unit/http-adapter.test.ts`
 
-- [ ] **Step 2: Extend page-facing auth API**
+- [x] **Step 2: Extend page-facing auth API**
 
 In `lib/api/types.ts`, extend `ApiClient.auth` with:
 - `login(input: { email: string; password: string })`
@@ -113,7 +113,7 @@ In `lib/api/types.ts`, extend `ApiClient.auth` with:
 
 Return the saved session shape from login/register/refresh.
 
-- [ ] **Step 3: Implement HTTP auth methods**
+- [x] **Step 3: Implement HTTP auth methods**
 
 In `lib/api/http-adapter.ts`, call:
 - `POST /api/v1/auth/login`
@@ -124,7 +124,7 @@ In `lib/api/http-adapter.ts`, call:
 
 Map backend user to `CurrentUser`.
 
-- [ ] **Step 4: Replace mock auth form with real-mode aware form**
+- [x] **Step 4: Replace mock auth form with real-mode aware form**
 
 Create `features/auth/auth-form.tsx` or replace the mock form. The form should:
 - work in mock mode without a backend
@@ -133,7 +133,7 @@ Create `features/auth/auth-form.tsx` or replace the mock form. The form should:
 - redirect to `/me` on success
 - show validation/API errors inline
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run:
 - `npm run test -- tests/unit/auth-session.test.ts tests/unit/http-adapter.test.ts`
@@ -160,7 +160,7 @@ git commit -m "feat: connect auth to backend api"
 - Modify: `tests/unit/http-adapter.test.ts`
 - Modify: `tests/unit/feature-api.test.ts`
 
-- [ ] **Step 1: Write failing tests for problem mapping**
+- [x] **Step 1: Write failing tests for problem mapping**
 
 Add HTTP adapter tests for:
 - `problems.list()` maps backend problem page to `ProblemSummary`
@@ -170,7 +170,7 @@ Add HTTP adapter tests for:
 
 Run: `npm run test -- tests/unit/http-adapter.test.ts`
 
-- [ ] **Step 2: Implement problem mappers**
+- [x] **Step 2: Implement problem mappers**
 
 Create `lib/api/problem-mappers.ts` with:
 - `mapProblemSummary(problem, stats?)`
@@ -182,18 +182,18 @@ Rules:
 - set HTTP-mode solve status to `"todo"` until backend exposes user progress
 - use stats totals for acceptance counts
 
-- [ ] **Step 3: Implement problem HTTP methods**
+- [x] **Step 3: Implement problem HTTP methods**
 
 In `createHttpAdapter()`:
 - `problems.list()` calls `GET /api/v1/problems?page=1&page_size=100`
 - optionally fetch stats per item only if needed for display; keep this bounded
 - `problems.get(id)` calls problem, statement, and stats endpoints
 
-- [ ] **Step 4: Confirm language endpoint behavior**
+- [x] **Step 4: Confirm language endpoint behavior**
 
 Keep current admin language endpoint for now, but isolate the path in one place so it can be swapped to `/api/v1/languages` once backend exposes it.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run:
 - `npm run test -- tests/unit/http-adapter.test.ts tests/unit/feature-api.test.ts`
@@ -223,7 +223,7 @@ git commit -m "feat: map backend problems into v2 views"
 - Modify: `tests/unit/submission-lifecycle.test.ts`
 - Modify: `tests/unit/http-adapter.test.ts`
 
-- [ ] **Step 1: Write failing tests for judge statuses and submit APIs**
+- [x] **Step 1: Write failing tests for judge statuses and submit APIs**
 
 Add tests that assert:
 - `time_limit`, `memory_limit`, and `canceled` have display states
@@ -234,14 +234,14 @@ Add tests that assert:
 Run:
 - `npm run test -- tests/unit/submission-lifecycle.test.ts tests/unit/http-adapter.test.ts`
 
-- [ ] **Step 2: Extend API types**
+- [x] **Step 2: Extend API types**
 
 In `lib/api/types.ts`:
 - add backend judge statuses to `JudgeStatus`
 - add `submissions.create(input)`
 - add `runs.create(input)` and `runs.get(id)`
 
-- [ ] **Step 3: Implement submission mappers and HTTP methods**
+- [x] **Step 3: Implement submission mappers and HTTP methods**
 
 Create `lib/api/submission-mappers.ts`.
 
@@ -252,7 +252,7 @@ Mapping rules:
 - `contest_id ?? undefined`
 - `problemTitle` should be `"Problem #<problem_id>"` unless enriched by a known problem list
 
-- [ ] **Step 4: Make workspace code editable and submittable**
+- [x] **Step 4: Make workspace code editable and submittable**
 
 Update `CodeWorkspace` so callers can receive:
 - selected `languageId`
@@ -264,7 +264,7 @@ Update standalone and contest submit panels to:
 - show pending/success/error state
 - link to `/submissions/{id}` on success
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run:
 - `npm run test -- tests/unit/submission-lifecycle.test.ts tests/unit/http-adapter.test.ts`
@@ -294,7 +294,7 @@ git commit -m "feat: connect submissions and runs"
 - Modify: `tests/unit/http-adapter.test.ts`
 - Modify: `tests/unit/feature-api.test.ts`
 
-- [ ] **Step 1: Write failing tests for contest and scoreboard mapping**
+- [x] **Step 1: Write failing tests for contest and scoreboard mapping**
 
 Add tests that assert:
 - backend contest status maps into frontend lifecycle safely
@@ -305,7 +305,7 @@ Add tests that assert:
 Run:
 - `npm run test -- tests/unit/http-adapter.test.ts tests/unit/scoreboard.test.ts`
 
-- [ ] **Step 2: Extend contest API contract**
+- [x] **Step 2: Extend contest API contract**
 
 In `lib/api/types.ts`, add:
 - `contests.register(id, input)`
@@ -313,7 +313,7 @@ In `lib/api/types.ts`, add:
 
 Keep `ContestSummary.type` defaulted to `"acm"` in HTTP mode until backend exposes scoring mode.
 
-- [ ] **Step 3: Implement contest mappers and HTTP methods**
+- [x] **Step 3: Implement contest mappers and HTTP methods**
 
 Create `lib/api/contest-mappers.ts`.
 
@@ -324,14 +324,14 @@ Rules:
 - backend `archived` maps to `unsealed`
 - `registered` defaults to `false` until backend exposes current-user registration state
 
-- [ ] **Step 4: Use backend scoreboard in feature API**
+- [x] **Step 4: Use backend scoreboard in feature API**
 
 Update `features/contests/api.ts` so:
 - HTTP adapter scoreboard is used when available
 - mock OI/IOI fallback stays only for mock contests
 - Arena remains derived from submissions/scoreboard
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run:
 - `npm run test -- tests/unit/http-adapter.test.ts tests/unit/scoreboard.test.ts tests/unit/feature-api.test.ts`
@@ -355,7 +355,7 @@ git commit -m "feat: connect contests and scoreboard"
 - Create: `docs/development/api-integration-smoke.md`
 - Modify tests only if needed to reflect final API contract.
 
-- [ ] **Step 1: Run focused automated checks**
+- [x] **Step 1: Run focused automated checks**
 
 Run:
 - `npm run test`
@@ -364,7 +364,7 @@ Run:
 - `npm run typecheck`
 - `npm run build`
 
-- [ ] **Step 2: Run backend availability smoke**
+- [x] **Step 2: Run backend availability smoke**
 
 If the backend can be started locally, use:
 - SOJ backend on `http://localhost:8080`
@@ -382,7 +382,7 @@ Smoke the following browser-visible flow:
 
 If backend seed data or services are missing, document the exact blocker and keep automated adapter tests as the source of verification.
 
-- [ ] **Step 3: Update integration docs**
+- [x] **Step 3: Update integration docs**
 
 Update the OpenAPI inventory with resolved and still-open gaps.
 
@@ -392,7 +392,7 @@ Create `docs/development/api-integration-smoke.md` with:
 - expected smoke flow
 - known backend gaps
 
-- [ ] **Step 4: Final commit**
+- [x] **Step 4: Final commit**
 
 Commit:
 
