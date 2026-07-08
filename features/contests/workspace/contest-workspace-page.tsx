@@ -13,7 +13,7 @@ import type { ContestSummary, JudgeLanguage, ProblemDetail } from "@/lib/api/typ
 import { createBrowserApiClient } from "@/lib/api/client";
 import { getApiMode } from "@/lib/api/mode";
 import { restoreSession } from "@/lib/auth/session";
-import { isContestRegistered, subscribeToContestRegistrationChanges } from "@/lib/domain/contest-registration-session";
+import { contestRegistrationUserKey, isContestRegistered, subscribeToContestRegistrationChanges } from "@/lib/domain/contest-registration-session";
 
 type ContestWorkspacePageProps = {
   contest: ContestSummary & {
@@ -279,6 +279,11 @@ function browserHasSession() {
   return Boolean(restoreSession(window.localStorage));
 }
 
+function browserUserKey() {
+  if (typeof window === "undefined") return null;
+  return contestRegistrationUserKey(restoreSession(window.localStorage)?.user);
+}
+
 function useBrowserSessionAvailable() {
   return useSyncExternalStore(
     subscribeToSessionChanges,
@@ -290,7 +295,7 @@ function useBrowserSessionAvailable() {
 function useLocalContestRegistration(contestId: number) {
   return useSyncExternalStore(
     subscribeToContestRegistrationChanges,
-    () => (typeof window === "undefined" ? false : isContestRegistered(window.localStorage, contestId)),
+    () => (typeof window === "undefined" ? false : isContestRegistered(window.localStorage, browserUserKey(), contestId)),
     () => false,
   );
 }
