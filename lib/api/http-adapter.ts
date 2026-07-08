@@ -113,7 +113,14 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
             page_size: 100,
           },
         });
-        const items = data.items.map((problem) => mapProblemSummary(problem));
+        const statsByProblem = await Promise.all(
+          data.items.map((problem) =>
+            request<ProblemStatsResponse>(`/api/v1/problems/${problem.id}/stats`, {
+              accessToken: options.accessToken,
+            }),
+          ),
+        );
+        const items = data.items.map((problem, index) => mapProblemSummary(problem, statsByProblem[index]));
         return { items, total: data.total };
       },
       get: async (id) => {
