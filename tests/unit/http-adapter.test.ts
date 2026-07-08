@@ -61,6 +61,150 @@ describe("http adapter", () => {
     });
   });
 
+  it("maps a backend problem page to problem summaries", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        data: {
+          items: [
+            problemResponse({
+              id: 101,
+              slug: "two-sum",
+              title: "Two Sum",
+              difficulty: "easy",
+              status: "published",
+              tags: ["array", "hash-table"],
+              timeLimitMs: 1500,
+              memoryLimitKb: 131072,
+            }),
+          ],
+          total: 1,
+          page: 1,
+          page_size: 100,
+        },
+        error: null,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const problems = await createHttpAdapter().problems.list();
+
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/problems?page=1&page_size=100", {
+      cache: "no-store",
+    });
+    expect(problems).toEqual({
+      items: [
+        {
+          id: 101,
+          slug: "two-sum",
+          title: "Two Sum",
+          difficulty: "easy",
+          tags: ["array", "hash-table"],
+          status: "todo",
+          acceptedCount: 0,
+          submissionCount: 0,
+        },
+      ],
+      total: 1,
+    });
+  });
+
+  it("combines backend problem, statement, and stats into a problem detail", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const path = String(url).replace("http://localhost:8080", "");
+      if (path === "/api/v1/problems/101") {
+        return Response.json({
+          data: problemResponse({
+            id: 101,
+            slug: "two-sum",
+            title: "Two Sum",
+            difficulty: "easy",
+            status: "published",
+            tags: ["array", "hash-table"],
+            timeLimitMs: 1500,
+            memoryLimitKb: 131072,
+          }),
+          error: null,
+        });
+      }
+      if (path === "/api/v1/problems/101/statement") {
+        return Response.json({
+          data: {
+            title: "Two Sum",
+            description: "Find two values with the target sum.",
+            input_description: "The first line contains n and target.",
+            output_description: "Print two indices.",
+            samples: [{ input: "4 9\n2 7 11 15", output: "1 2", explanation: "2 + 7 = 9" }],
+            hint: null,
+            source: null,
+            problem_id: 101,
+            version: 3,
+            created_at: "2026-07-07T10:00:00Z",
+          },
+          error: null,
+        });
+      }
+      if (path === "/api/v1/problems/101/stats") {
+        return Response.json({
+          data: {
+            problem_id: 101,
+            total_submissions: 20,
+            accepted_submissions: 12,
+            status_counts: { accepted: 12, wrong_answer: 8 },
+          },
+          error: null,
+        });
+      }
+      return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const problem = await createHttpAdapter().problems.get(101);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "http://localhost:8080/api/v1/problems/101", { cache: "no-store" });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "http://localhost:8080/api/v1/problems/101/statement", { cache: "no-store" });
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "http://localhost:8080/api/v1/problems/101/stats", { cache: "no-store" });
+    expect(problem).toMatchObject({
+      id: 101,
+      slug: "two-sum",
+      title: "Two Sum",
+      difficulty: "easy",
+      tags: ["array", "hash-table"],
+      status: "todo",
+      acceptedCount: 12,
+      submissionCount: 20,
+      statement: "Find two values with the target sum.",
+      input: "The first line contains n and target.",
+      output: "Print two indices.",
+      examples: [{ input: "4 9\n2 7 11 15", output: "1 2" }],
+      timeLimitMs: 1500,
+      memoryLimitKb: 131072,
+    });
+  });
+
+  it("does not reuse backend publication status as solve status in HTTP mode", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          data: {
+            items: [
+              problemResponse({ id: 102, slug: "draft-problem", title: "Draft Problem", difficulty: "medium", status: "draft" }),
+              problemResponse({ id: 103, slug: "archived-problem", title: "Archived Problem", difficulty: "hard", status: "archived" }),
+            ],
+            total: 2,
+            page: 1,
+            page_size: 100,
+          },
+          error: null,
+        }),
+      ),
+    );
+
+    const problems = await createHttpAdapter().problems.list();
+
+    expect(problems.items.map((problem) => problem.status)).toEqual(["todo", "todo"]);
+  });
+
   it("throws ApiError with backend error code, message, and status", async () => {
     vi.stubGlobal(
       "fetch",
@@ -278,5 +422,34 @@ function userResponse(overrides: { id: number; username: string }) {
     status: "active",
     created_at: "2026-07-07T10:00:00Z",
     updated_at: "2026-07-07T10:00:00Z",
+  };
+}
+
+function problemResponse(overrides: {
+  id: number;
+  slug: string;
+  title: string;
+  difficulty: "easy" | "medium" | "hard";
+  status: "draft" | "published" | "archived";
+  tags?: string[];
+  timeLimitMs?: number;
+  memoryLimitKb?: number;
+}) {
+  return {
+    id: overrides.id,
+    title: overrides.title,
+    slug: overrides.slug,
+    difficulty: overrides.difficulty,
+    visibility: "public",
+    status: overrides.status,
+    tags: overrides.tags ?? [],
+    limits: {
+      time_limit_ms: overrides.timeLimitMs ?? 1000,
+      memory_limit_kb: overrides.memoryLimitKb ?? 262144,
+    },
+    owner_user_id: 1,
+    created_at: "2026-07-07T10:00:00Z",
+    updated_at: "2026-07-07T10:00:00Z",
+    published_at: overrides.status === "published" ? "2026-07-07T10:00:00Z" : null,
   };
 }

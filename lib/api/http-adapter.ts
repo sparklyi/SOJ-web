@@ -1,8 +1,22 @@
 import { ApiError } from "./errors";
 import { request } from "./http-client";
-import type { AuthResponse, LanguageResponse, LoginRequest, PageResponse, RefreshRequest, RegisterRequest, UserResponse } from "./backend-types";
+import type {
+  AuthResponse,
+  LanguageResponse,
+  LoginRequest,
+  PageResponse,
+  ProblemResponse,
+  ProblemStatementResponse,
+  ProblemStatsResponse,
+  RefreshRequest,
+  RegisterRequest,
+  UserResponse,
+} from "./backend-types";
 import type { AuthSession } from "@/lib/auth/session";
 import type { ApiClient, CurrentUser, JudgeLanguage, PageResult } from "./types";
+import { mapProblemDetail, mapProblemSummary } from "./problem-mappers";
+
+const LANGUAGE_LIST_PATH = "/api/v1/admin/languages";
 
 function notConnected(): never {
   throw new ApiError("HTTP API adapter is not connected yet.", "api.not_connected", 501);
@@ -91,8 +105,31 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
       },
     },
     problems: {
-      list: async () => notConnected(),
-      get: async () => notConnected(),
+      list: async () => {
+        const data = await request<PageResponse<ProblemResponse>>("/api/v1/problems", {
+          accessToken: options.accessToken,
+          query: {
+            page: 1,
+            page_size: 100,
+          },
+        });
+        const items = data.items.map((problem) => mapProblemSummary(problem));
+        return { items, total: data.total };
+      },
+      get: async (id) => {
+        const [problem, statement, stats] = await Promise.all([
+          request<ProblemResponse>(`/api/v1/problems/${id}`, {
+            accessToken: options.accessToken,
+          }),
+          request<ProblemStatementResponse>(`/api/v1/problems/${id}/statement`, {
+            accessToken: options.accessToken,
+          }),
+          request<ProblemStatsResponse>(`/api/v1/problems/${id}/stats`, {
+            accessToken: options.accessToken,
+          }),
+        ]);
+        return mapProblemDetail(problem, statement, stats);
+      },
     },
     submissions: {
       list: async () => notConnected(),
@@ -104,7 +141,7 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
     },
     languages: {
       list: async (filter = {}): Promise<PageResult<JudgeLanguage>> => {
-        const data = await request<PageResponse<LanguageResponse>>("/api/v1/admin/languages", {
+        const data = await request<PageResponse<LanguageResponse>>(LANGUAGE_LIST_PATH, {
           accessToken: options.accessToken,
           query: {
             page: 1,
