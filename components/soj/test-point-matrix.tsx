@@ -15,6 +15,9 @@ const statusClass: Record<JudgeStatus, string> = {
   wrong_answer: "border-soj-danger/50 bg-soj-danger/10 text-soj-danger",
   runtime_error: "border-soj-danger/50 bg-soj-danger/10 text-soj-danger",
   compile_error: "border-soj-warning/50 bg-soj-warning/10 text-soj-warning",
+  time_limit: "border-soj-warning/50 bg-soj-warning/10 text-soj-warning",
+  memory_limit: "border-soj-warning/50 bg-soj-warning/10 text-soj-warning",
+  canceled: "border-soj-line bg-soj-surface text-soj-muted",
   system_error: "border-soj-danger/50 bg-soj-danger/10 text-soj-danger",
 };
 

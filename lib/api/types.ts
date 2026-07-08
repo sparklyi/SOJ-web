@@ -49,7 +49,17 @@ export type JudgeStatus =
   | "wrong_answer"
   | "runtime_error"
   | "compile_error"
+  | "time_limit"
+  | "memory_limit"
+  | "canceled"
   | "system_error";
+
+export type CreateSubmissionInput = {
+  problemId: number;
+  contestId?: number;
+  languageId: number;
+  sourceCode: string;
+};
 
 export type SubmissionSummary = {
   id: number;
@@ -61,6 +71,31 @@ export type SubmissionSummary = {
   timeMs?: number;
   memoryKb?: number;
   submittedAt: string;
+};
+
+export type CreateRunInput = {
+  problemId: number;
+  languageId: number;
+  sourceCode: string;
+  stdin?: string;
+};
+
+export type RunResult = {
+  stdout?: string;
+  stderr?: string;
+  compileOutput?: string;
+  errorMessage?: string;
+  timeMs?: number;
+  memoryKb?: number;
+};
+
+export type RunSummary = RunResult & {
+  id: number;
+  problemId: number;
+  languageId: number;
+  status: JudgeStatus;
+  createdAt: string;
+  finishedAt?: string;
 };
 
 export type JudgeLanguage = {
@@ -103,6 +138,11 @@ export type ApiClient = {
   submissions: {
     list: () => Promise<PageResult<SubmissionSummary>>;
     get: (id: number) => Promise<SubmissionSummary>;
+    create: (input: CreateSubmissionInput) => Promise<SubmissionSummary>;
+  };
+  runs: {
+    create: (input: CreateRunInput) => Promise<RunSummary>;
+    get: (id: number) => Promise<RunSummary>;
   };
   contests: {
     list: () => Promise<PageResult<ContestSummary>>;

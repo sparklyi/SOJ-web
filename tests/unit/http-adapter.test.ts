@@ -222,6 +222,210 @@ describe("http adapter", () => {
     expect(problems.items.map((problem) => problem.status)).toEqual(["todo", "todo"]);
   });
 
+  it("maps a backend submission page to submission summaries", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        data: {
+          items: [
+            submissionResponse({
+              id: 501,
+              problemId: 101,
+              contestId: 7,
+              status: "time_limit",
+              score: 40,
+              timeMs: 1001,
+              memoryKb: 65536,
+            }),
+            submissionResponse({
+              id: 502,
+              problemId: 102,
+              contestId: null,
+              status: "memory_limit",
+              score: 0,
+              timeMs: null,
+              memoryKb: null,
+            }),
+          ],
+          total: 2,
+          page: 1,
+          page_size: 100,
+        },
+        error: null,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const submissions = await createHttpAdapter().submissions.list();
+
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/submissions?page=1&page_size=100", { cache: "no-store" });
+    expect(submissions).toEqual({
+      items: [
+        {
+          id: 501,
+          problemId: 101,
+          problemTitle: "Problem #101",
+          contestId: 7,
+          status: "time_limit",
+          score: 40,
+          timeMs: 1001,
+          memoryKb: 65536,
+          submittedAt: "2026-07-07T10:12:00Z",
+        },
+        {
+          id: 502,
+          problemId: 102,
+          problemTitle: "Problem #102",
+          contestId: undefined,
+          status: "memory_limit",
+          score: 0,
+          timeMs: undefined,
+          memoryKb: undefined,
+          submittedAt: "2026-07-07T10:12:00Z",
+        },
+      ],
+      total: 2,
+    });
+  });
+
+  it("creates a submission with backend field names and maps the response", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json(
+        {
+          data: submissionResponse({
+            id: 601,
+            problemId: 101,
+            contestId: 7,
+            status: "queued",
+            score: 0,
+          }),
+          error: null,
+        },
+        { status: 202 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const submission = await createHttpAdapter({ accessToken: "submit-token" }).submissions.create({
+      problemId: 101,
+      contestId: 7,
+      languageId: 54,
+      sourceCode: "int main() { return 0; }",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/submissions", {
+      cache: "no-store",
+      method: "POST",
+      headers: {
+        Authorization: "Bearer submit-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        problem_id: 101,
+        contest_id: 7,
+        language_id: 54,
+        source_code: "int main() { return 0; }",
+      }),
+    });
+    expect(submission).toMatchObject({
+      id: 601,
+      problemId: 101,
+      problemTitle: "Problem #101",
+      contestId: 7,
+      status: "queued",
+      submittedAt: "2026-07-07T10:12:00Z",
+    });
+  });
+
+  it("creates and gets runs with backend field names and mapped output fields", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const path = String(url).replace("http://localhost:8080", "");
+      if (path === "/api/v1/runs") {
+        return Response.json(
+          {
+            data: runResponse({
+              id: 701,
+              problemId: 101,
+              languageId: 54,
+              status: "running",
+              stdout: null,
+              stderr: null,
+              compileOutput: null,
+              timeMs: null,
+              memoryKb: null,
+            }),
+            error: null,
+          },
+          { status: 202 },
+        );
+      }
+      if (path === "/api/v1/runs/701") {
+        return Response.json({
+          data: runResponse({
+            id: 701,
+            problemId: 101,
+            languageId: 54,
+            status: "accepted",
+            stdout: "42\n",
+            stderr: "",
+            compileOutput: "",
+            timeMs: 38,
+            memoryKb: 8192,
+          }),
+          error: null,
+        });
+      }
+      return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createHttpAdapter({ accessToken: "run-token" });
+    const created = await client.runs.create({
+      problemId: 101,
+      languageId: 54,
+      sourceCode: "int main() { return 0; }",
+      stdin: "input\n",
+    });
+    const completed = await client.runs.get(701);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "http://localhost:8080/api/v1/runs", {
+      cache: "no-store",
+      method: "POST",
+      headers: {
+        Authorization: "Bearer run-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        problem_id: 101,
+        language_id: 54,
+        source_code: "int main() { return 0; }",
+        stdin: "input\n",
+      }),
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "http://localhost:8080/api/v1/runs/701", {
+      cache: "no-store",
+      headers: { Authorization: "Bearer run-token" },
+    });
+    expect(created).toMatchObject({
+      id: 701,
+      problemId: 101,
+      languageId: 54,
+      status: "running",
+      stdout: undefined,
+      timeMs: undefined,
+      createdAt: "2026-07-07T10:12:00Z",
+    });
+    expect(completed).toMatchObject({
+      id: 701,
+      status: "accepted",
+      stdout: "42\n",
+      stderr: "",
+      compileOutput: "",
+      timeMs: 38,
+      memoryKb: 8192,
+      finishedAt: "2026-07-07T10:12:03Z",
+    });
+  });
+
   it("combines backend problem, statement, and stats into a problem detail", async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request) => {
       const path = String(url).replace("http://localhost:8080", "");
@@ -631,6 +835,62 @@ function problemStatsResponse(overrides: { problemId: number; totalSubmissions?:
     total_submissions: overrides.totalSubmissions ?? 0,
     accepted_submissions: overrides.acceptedSubmissions ?? 0,
     status_counts: {},
+  };
+}
+
+function submissionResponse(overrides: {
+  id: number;
+  problemId: number;
+  contestId?: number | null;
+  status: "queued" | "running" | "accepted" | "wrong_answer" | "compile_error" | "runtime_error" | "time_limit" | "memory_limit" | "system_error" | "canceled";
+  score: number;
+  timeMs?: number | null;
+  memoryKb?: number | null;
+}) {
+  return {
+    id: overrides.id,
+    user_id: 7,
+    problem_id: overrides.problemId,
+    contest_id: overrides.contestId ?? null,
+    language_id: 54,
+    status: overrides.status,
+    score: overrides.score,
+    time_ms: overrides.timeMs ?? null,
+    memory_kb: overrides.memoryKb ?? null,
+    error_message: null,
+    submitted_at: "2026-07-07T10:12:00Z",
+    judged_at: null,
+    updated_at: "2026-07-07T10:12:00Z",
+  };
+}
+
+function runResponse(overrides: {
+  id: number;
+  problemId: number;
+  languageId: number;
+  status: "queued" | "running" | "accepted" | "wrong_answer" | "compile_error" | "runtime_error" | "time_limit" | "memory_limit" | "system_error" | "canceled";
+  stdout?: string | null;
+  stderr?: string | null;
+  compileOutput?: string | null;
+  errorMessage?: string | null;
+  timeMs?: number | null;
+  memoryKb?: number | null;
+}) {
+  return {
+    id: overrides.id,
+    user_id: 7,
+    problem_id: overrides.problemId,
+    language_id: overrides.languageId,
+    status: overrides.status,
+    stdout: overrides.stdout ?? null,
+    stderr: overrides.stderr ?? null,
+    compile_output: overrides.compileOutput ?? null,
+    time_ms: overrides.timeMs ?? null,
+    memory_kb: overrides.memoryKb ?? null,
+    error_message: overrides.errorMessage ?? null,
+    created_at: "2026-07-07T10:12:00Z",
+    finished_at: overrides.status === "accepted" ? "2026-07-07T10:12:03Z" : null,
+    updated_at: "2026-07-07T10:12:03Z",
   };
 }
 
