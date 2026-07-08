@@ -3,6 +3,10 @@ import { createMockSession } from "@/lib/auth/session";
 import { mockContests, mockLanguages, mockProblems, mockSubmissions, mockUser } from "@/lib/mock/fixtures";
 import type { ApiClient, CurrentUser } from "./types";
 
+type MockAdapterOptions = {
+  currentUser?: CurrentUser;
+};
+
 function mockAuthUser(input: { email: string; username?: string }): CurrentUser {
   const handle = input.username ?? input.email.split("@")[0] ?? mockUser.handle;
   return {
@@ -12,14 +16,16 @@ function mockAuthUser(input: { email: string; username?: string }): CurrentUser 
   };
 }
 
-export function createMockAdapter(): ApiClient {
+export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
+  const currentUser = options.currentUser ?? mockUser;
+
   return {
     auth: {
       login: async (input) => createMockSession(mockAuthUser(input)),
       register: async (input) => createMockSession(mockAuthUser(input)),
-      refresh: async () => createMockSession(mockUser),
+      refresh: async () => createMockSession(currentUser),
       logout: async () => undefined,
-      me: async () => mockUser,
+      me: async () => currentUser,
     },
     problems: {
       list: async () => ({ items: mockProblems, total: mockProblems.length }),

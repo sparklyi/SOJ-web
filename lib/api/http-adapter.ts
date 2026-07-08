@@ -72,12 +72,10 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
         });
         return mapAuthSession(data);
       },
-      logout: async (input = {}) => {
+      logout: async () => {
         await request<undefined>("/api/v1/auth/logout", {
           accessToken: options.accessToken,
           method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ refresh_token: input.refreshToken }),
         });
       },
       me: async () => {

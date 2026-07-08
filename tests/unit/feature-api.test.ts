@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { getCurrentUser } from "@/features/auth/api";
+import { createMockSession, saveSession } from "@/lib/auth/session";
+import { mockUser } from "@/lib/mock/fixtures";
 import { getContest, getContestArenaEvents, getContestScoreboard, listContests } from "@/features/contests/api";
 import { listEnabledLanguages } from "@/features/languages/api";
 import { getProblem, listProblems } from "@/features/problems/api";
@@ -10,8 +12,52 @@ import { getSubmission, listSubmissions } from "@/features/submissions/api";
 const client = createApiClient({ mode: "mock" });
 
 describe("feature api modules", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.localStorage.clear();
+  });
+
   it("returns current user from auth boundary", async () => {
     await expect(getCurrentUser(client)).resolves.toMatchObject({ handle: "lin-chen" });
+  });
+
+  it("creates an HTTP browser client with the saved access token", async () => {
+    const session = createMockSession(mockUser);
+    saveSession(window.localStorage, session);
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        data: {
+          id: 7,
+          email: "lin@example.com",
+          username: "lin-chen",
+          avatar_url: null,
+          bio: null,
+          role: "user",
+          status: "active",
+          created_at: "2026-07-07T10:00:00Z",
+          updated_at: "2026-07-07T10:00:00Z",
+        },
+        error: null,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(createApiClient({ mode: "http" }).auth.me()).resolves.toMatchObject({ handle: "lin-chen" });
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/me", {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${session.accessToken}` },
+    });
+
+  });
+
+  it("uses the saved browser session user in mock mode", async () => {
+    saveSession(window.localStorage, createMockSession({ ...mockUser, handle: "saved-user", displayName: "Saved User" }));
+
+    await expect(createApiClient({ mode: "mock" }).auth.me()).resolves.toMatchObject({
+      handle: "saved-user",
+      displayName: "Saved User",
+    });
+
   });
 
   it("returns enabled judge languages from the language catalog", async () => {
