@@ -72,6 +72,46 @@ describe("feature api modules", () => {
     await expect(getProblem(404, client)).rejects.toBeInstanceOf(ApiError);
   });
 
+  it("filters problems against page-facing solve status", async () => {
+    const apiClient = {
+      ...client,
+      problems: {
+        list: vi.fn(async () => ({
+          items: [
+            {
+              id: 1,
+              slug: "alpha",
+              title: "Alpha",
+              difficulty: "easy" as const,
+              tags: ["math"],
+              status: "todo" as const,
+              acceptedCount: 0,
+              submissionCount: 0,
+            },
+            {
+              id: 2,
+              slug: "beta",
+              title: "Beta",
+              difficulty: "medium" as const,
+              tags: ["dp"],
+              status: "accepted" as const,
+              acceptedCount: 4,
+              submissionCount: 5,
+            },
+          ],
+          total: 2,
+        })),
+        get: client.problems.get,
+      },
+    };
+
+    const problems = await listProblems({ status: "todo" }, apiClient);
+
+    expect(problems.items).toHaveLength(1);
+    expect(problems.items[0]?.slug).toBe("alpha");
+    expect(problems.total).toBe(1);
+  });
+
   it("returns submissions with display state", async () => {
     const submissions = await listSubmissions(client);
     expect(submissions.items[0]?.displayState.label).toBeTruthy();
