@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { CodeWorkspace } from "@/components/soj/code-workspace";
 import { ContestClock } from "@/components/soj/contest-clock";
 import { SignalFeed } from "@/components/soj/signal-feed";
@@ -11,6 +11,8 @@ import { TestPointMatrix } from "@/components/soj/test-point-matrix";
 import { Button } from "@/components/ui/button";
 import type { ContestSummary, JudgeLanguage, ProblemDetail } from "@/lib/api/types";
 import { createBrowserApiClient } from "@/lib/api/client";
+import { getApiMode } from "@/lib/api/mode";
+import { restoreSession } from "@/lib/auth/session";
 
 type ContestWorkspacePageProps = {
   contest: ContestSummary & {
@@ -55,10 +57,12 @@ export function ContestWorkspacePage({ contest, problem, languages }: ContestWor
     | { status: "success"; submissionId: number }
     | { status: "error"; message: string }
   >({ status: "idle" });
-  const canSubmit = contest.canSubmit && Boolean(workspace.languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
+  const hasSession = useBrowserSessionAvailable();
+  const needsSession = getApiMode() === "http" && !hasSession;
+  const canSubmit = !needsSession && contest.canSubmit && Boolean(workspace.languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
 
   const handleSubmit = useCallback(async () => {
-    if (!workspace.languageId || !workspace.sourceCode.trim() || !contest.canSubmit) return;
+    if (needsSession || !workspace.languageId || !workspace.sourceCode.trim() || !contest.canSubmit) return;
 
     setSubmitState({ status: "pending" });
     try {
@@ -75,7 +79,7 @@ export function ContestWorkspacePage({ contest, problem, languages }: ContestWor
         message: error instanceof Error ? error.message : "Submission failed.",
       });
     }
-  }, [contest.canSubmit, contest.id, problem.id, workspace.languageId, workspace.sourceCode]);
+  }, [contest.canSubmit, contest.id, needsSession, problem.id, workspace.languageId, workspace.sourceCode]);
 
   return (
     <div className="grid gap-6">
@@ -217,9 +221,17 @@ int main() {
                 {contest.status === "frozen" ? "Submissions still run, public rank is frozen." : "Wrong answers add attempts and ACM penalty after acceptance."}
               </p>
               <Button disabled={!canSubmit} size="lg" className="w-full sm:w-auto" onClick={handleSubmit}>
-                {submitState.status === "pending" ? "Submitting..." : "Submit solution"}
+                {needsSession ? "Sign in to submit" : submitState.status === "pending" ? "Submitting..." : "Submit solution"}
               </Button>
             </div>
+            {needsSession ? (
+              <p className="text-sm text-soj-muted">
+                <Link className="text-soj-accent underline-offset-4 hover:underline" href="/auth/login">
+                  Sign in
+                </Link>{" "}
+                to submit in this contest.
+              </p>
+            ) : null}
             <ContestSubmissionResult state={submitState} />
           </section>
 
@@ -258,6 +270,25 @@ int main() {
   );
 }
 
+function browserHasSession() {
+  if (typeof window === "undefined") return false;
+  return Boolean(restoreSession(window.localStorage));
+}
+
+function useBrowserSessionAvailable() {
+  return useSyncExternalStore(
+    subscribeToSessionChanges,
+    () => getApiMode() === "mock" || browserHasSession(),
+    () => getApiMode() === "mock",
+  );
+}
+
+function subscribeToSessionChanges(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => undefined;
+  window.addEventListener("storage", onStoreChange);
+  return () => window.removeEventListener("storage", onStoreChange);
+}
+
 function ContestSubmissionResult({
   state,
 }: {
@@ -281,7 +312,7 @@ function ContestSubmissionResult({
   }
 
   if (state.status === "error") {
-    return <p className="text-sm text-red-300">{state.message}</p>;
+    return <p className="text-sm text-soj-danger">{state.message}</p>;
   }
 
   return <p className="text-sm text-soj-muted">Sending source to contest judge...</p>;

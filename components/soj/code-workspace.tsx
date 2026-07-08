@@ -72,9 +72,7 @@ export function CodeWorkspace({ languages, initialLanguageId, value = "", onChan
             value={selectedLanguageId}
             onChange={(event) => {
               const nextLanguageId = event.target.value;
-              const nextLanguage = languages.find((item) => String(item.id) === nextLanguageId);
               setSelectedLanguageId(nextLanguageId);
-              setSourceCode(starterFor(nextLanguage, initial, value));
             }}
           >
             {languages.length === 0 ? <option value="">No languages</option> : null}
