@@ -10,11 +10,16 @@ import type {
   ProblemStatsResponse,
   RefreshRequest,
   RegisterRequest,
+  RunCreateRequest,
+  RunResponse,
+  SubmissionCreateRequest,
+  SubmissionResponse,
   UserResponse,
 } from "./backend-types";
 import type { AuthSession } from "@/lib/auth/session";
 import type { ApiClient, CurrentUser, JudgeLanguage, PageResult } from "./types";
 import { mapProblemDetail, mapProblemSummary } from "./problem-mappers";
+import { mapRunSummary, mapSubmissionSummary } from "./submission-mappers";
 
 const LANGUAGE_LIST_PATH = "/api/v1/admin/languages";
 
@@ -139,8 +144,58 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
       },
     },
     submissions: {
-      list: async () => notConnected(),
-      get: async () => notConnected(),
+      list: async () => {
+        const data = await request<PageResponse<SubmissionResponse>>("/api/v1/submissions", {
+          accessToken: options.accessToken,
+          query: {
+            page: 1,
+            page_size: 100,
+          },
+        });
+        return { items: data.items.map(mapSubmissionSummary), total: data.total };
+      },
+      get: async (id) => {
+        const data = await request<SubmissionResponse>(`/api/v1/submissions/${id}`, {
+          accessToken: options.accessToken,
+        });
+        return mapSubmissionSummary(data);
+      },
+      create: async (input) => {
+        const data = await request<SubmissionResponse>("/api/v1/submissions", {
+          accessToken: options.accessToken,
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            problem_id: input.problemId,
+            contest_id: input.contestId,
+            language_id: input.languageId,
+            source_code: input.sourceCode,
+          } satisfies SubmissionCreateRequest),
+        });
+        return mapSubmissionSummary(data);
+      },
+    },
+    runs: {
+      create: async (input) => {
+        const data = await request<RunResponse>("/api/v1/runs", {
+          accessToken: options.accessToken,
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            problem_id: input.problemId,
+            language_id: input.languageId,
+            source_code: input.sourceCode,
+            stdin: input.stdin,
+          } satisfies RunCreateRequest),
+        });
+        return mapRunSummary(data);
+      },
+      get: async (id) => {
+        const data = await request<RunResponse>(`/api/v1/runs/${id}`, {
+          accessToken: options.accessToken,
+        });
+        return mapRunSummary(data);
+      },
     },
     contests: {
       list: async () => notConnected(),

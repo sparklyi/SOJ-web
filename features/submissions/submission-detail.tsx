@@ -90,6 +90,9 @@ function feedbackLine(status: JudgeStatus) {
     wrong_answer: "Mismatch at point 4.",
     runtime_error: "Runtime terminated before producing a valid answer.",
     compile_error: "Compiler rejected the submitted source.",
+    time_limit: "Execution exceeded the configured time limit.",
+    memory_limit: "Execution exceeded the configured memory limit.",
+    canceled: "Judging was canceled before completion.",
     system_error: "Judge worker reported an internal system error.",
   };
   return lines[status];

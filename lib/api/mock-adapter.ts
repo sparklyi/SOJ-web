@@ -1,11 +1,14 @@
 import { notFound } from "./errors";
 import { createMockSession } from "@/lib/auth/session";
 import { mockContests, mockLanguages, mockProblems, mockSubmissions, mockUser } from "@/lib/mock/fixtures";
-import type { ApiClient, CurrentUser } from "./types";
+import type { ApiClient, CurrentUser, RunSummary, SubmissionSummary } from "./types";
 
 type MockAdapterOptions = {
   currentUser?: CurrentUser;
 };
+
+const createdSubmissions: SubmissionSummary[] = [];
+const createdRuns: RunSummary[] = [];
 
 function mockAuthUser(input: { email: string; username?: string }): CurrentUser {
   const handle = input.username ?? input.email.split("@")[0] ?? mockUser.handle;
@@ -36,11 +39,50 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       },
     },
     submissions: {
-      list: async () => ({ items: mockSubmissions, total: mockSubmissions.length }),
+      list: async () => {
+        const items = [...createdSubmissions, ...mockSubmissions];
+        return { items, total: items.length };
+      },
       get: async (id) => {
-        const submission = mockSubmissions.find((item) => item.id === id);
+        const submission = [...createdSubmissions, ...mockSubmissions].find((item) => item.id === id);
         if (!submission) throw notFound("Submission", id);
         return submission;
+      },
+      create: async (input) => {
+        const problem = mockProblems.find((item) => item.id === input.problemId);
+        const submission: SubmissionSummary = {
+          id: Date.now(),
+          problemId: input.problemId,
+          problemTitle: problem?.title ?? `Problem #${input.problemId}`,
+          contestId: input.contestId,
+          status: "queued",
+          score: 0,
+          submittedAt: new Date().toISOString(),
+        };
+        createdSubmissions.unshift(submission);
+        return submission;
+      },
+    },
+    runs: {
+      create: async (input) => {
+        const run: RunSummary = {
+          id: Date.now(),
+          problemId: input.problemId,
+          languageId: input.languageId,
+          status: "queued",
+          stdout: "",
+          stderr: "",
+          compileOutput: undefined,
+          errorMessage: undefined,
+          createdAt: new Date().toISOString(),
+        };
+        createdRuns.unshift(run);
+        return run;
+      },
+      get: async (id) => {
+        const run = createdRuns.find((item) => item.id === id);
+        if (!run) throw notFound("Run", id);
+        return run;
       },
     },
     contests: {

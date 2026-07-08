@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useCallback, useState } from "react";
 import { CodeWorkspace } from "@/components/soj/code-workspace";
 import { ContestClock } from "@/components/soj/contest-clock";
 import { SignalFeed } from "@/components/soj/signal-feed";
@@ -7,6 +10,7 @@ import { SubmissionTimeline } from "@/components/soj/submission-timeline";
 import { TestPointMatrix } from "@/components/soj/test-point-matrix";
 import { Button } from "@/components/ui/button";
 import type { ContestSummary, JudgeLanguage, ProblemDetail } from "@/lib/api/types";
+import { createBrowserApiClient } from "@/lib/api/client";
 
 type ContestWorkspacePageProps = {
   contest: ContestSummary & {
@@ -41,6 +45,37 @@ export function ContestWorkspacePage({ contest, problem, languages }: ContestWor
   const alias = contestProblem?.alias ?? "A";
   const freezeLabel = contest.status === "frozen" ? "Rank updates hidden" : "Rank updates live";
   const sample = problem.examples[0];
+  const [workspace, setWorkspace] = useState<{ languageId?: number; sourceCode: string }>({
+    languageId: languages[0]?.id,
+    sourceCode: "",
+  });
+  const [submitState, setSubmitState] = useState<
+    | { status: "idle" }
+    | { status: "pending" }
+    | { status: "success"; submissionId: number }
+    | { status: "error"; message: string }
+  >({ status: "idle" });
+  const canSubmit = contest.canSubmit && Boolean(workspace.languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
+
+  const handleSubmit = useCallback(async () => {
+    if (!workspace.languageId || !workspace.sourceCode.trim() || !contest.canSubmit) return;
+
+    setSubmitState({ status: "pending" });
+    try {
+      const submission = await createBrowserApiClient().submissions.create({
+        problemId: problem.id,
+        contestId: contest.id,
+        languageId: workspace.languageId,
+        sourceCode: workspace.sourceCode,
+      });
+      setSubmitState({ status: "success", submissionId: submission.id });
+    } catch (error) {
+      setSubmitState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Submission failed.",
+      });
+    }
+  }, [contest.canSubmit, contest.id, problem.id, workspace.languageId, workspace.sourceCode]);
 
   return (
     <div className="grid gap-6">
@@ -165,6 +200,7 @@ export function ContestWorkspacePage({ contest, problem, languages }: ContestWor
             </div>
             <CodeWorkspace
               languages={languages}
+              onChange={setWorkspace}
               value={`#include <bits/stdc++.h>
 using namespace std;
 
@@ -180,10 +216,11 @@ int main() {
               <p className="text-sm leading-6 text-soj-muted">
                 {contest.status === "frozen" ? "Submissions still run, public rank is frozen." : "Wrong answers add attempts and ACM penalty after acceptance."}
               </p>
-              <Button disabled={!contest.canSubmit} size="lg" className="w-full sm:w-auto">
-                Submit solution
+              <Button disabled={!canSubmit} size="lg" className="w-full sm:w-auto" onClick={handleSubmit}>
+                {submitState.status === "pending" ? "Submitting..." : "Submit solution"}
               </Button>
             </div>
+            <ContestSubmissionResult state={submitState} />
           </section>
 
           <section aria-label="Judge feedback" className="soj-workspace-panel grid content-start gap-4 p-5">
@@ -219,4 +256,33 @@ int main() {
       </div>
     </div>
   );
+}
+
+function ContestSubmissionResult({
+  state,
+}: {
+  state:
+    | { status: "idle" }
+    | { status: "pending" }
+    | { status: "success"; submissionId: number }
+    | { status: "error"; message: string };
+}) {
+  if (state.status === "idle") return null;
+
+  if (state.status === "success") {
+    return (
+      <p className="text-sm text-soj-muted">
+        Submission queued.{" "}
+        <Link className="text-soj-accent underline-offset-4 hover:underline" href={`/submissions/${state.submissionId}`}>
+          View details
+        </Link>
+      </p>
+    );
+  }
+
+  if (state.status === "error") {
+    return <p className="text-sm text-red-300">{state.message}</p>;
+  }
+
+  return <p className="text-sm text-soj-muted">Sending source to contest judge...</p>;
 }
