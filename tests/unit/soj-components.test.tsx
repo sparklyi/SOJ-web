@@ -4,12 +4,14 @@ import { CodeWorkspace } from "@/components/soj/code-workspace";
 import { ScoreboardGrid } from "@/components/soj/scoreboard-grid";
 import { SubmissionTimeline } from "@/components/soj/submission-timeline";
 import { VerdictBadge } from "@/components/soj/verdict-badge";
+import { ContestWorkspacePage } from "@/features/contests/workspace/contest-workspace-page";
 import { ProblemSubmitPanel } from "@/features/problems/problem-submit-panel";
 import { createMockSession, saveSession } from "@/lib/auth/session";
-import { buildProblem } from "@/lib/mock/builders";
+import { buildContest, buildProblem } from "@/lib/mock/builders";
 import { mockLanguages, mockUser } from "@/lib/mock/fixtures";
 
 const submissionsCreate = vi.fn();
+const previousApiMode = process.env.NEXT_PUBLIC_SOJ_API_MODE;
 
 vi.mock("@/lib/api/client", () => ({
   createBrowserApiClient: () => ({
@@ -24,7 +26,7 @@ describe("soj product components", () => {
     vi.unstubAllGlobals();
     vi.clearAllMocks();
     window.localStorage.clear();
-    delete process.env.NEXT_PUBLIC_SOJ_API_MODE;
+    process.env.NEXT_PUBLIC_SOJ_API_MODE = previousApiMode;
   });
 
   it("renders verdict states", () => {
@@ -84,6 +86,35 @@ describe("soj product components", () => {
         problemId: 44,
         languageId: mockLanguages[0]?.id,
         sourceCode: "edited source",
+      });
+    });
+  });
+
+  it("disables HTTP contest submit without a browser session", () => {
+    process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
+    render(<ContestWorkspacePage contest={{ ...buildContest({ id: 88 }), phase: "live", canSubmit: true }} problem={buildProblem({ id: 1 })} languages={mockLanguages} />);
+
+    expect(screen.getByRole("button", { name: "Sign in to submit" })).toBeDisabled();
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/auth/login");
+  });
+
+  it("posts edited contest source with contest context when signed in", async () => {
+    process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
+    submissionsCreate.mockResolvedValue({ id: 654 });
+    saveSession(window.localStorage, createMockSession(mockUser));
+    const contest = buildContest({ id: 88 });
+    const problem = buildProblem({ id: 1 });
+    render(<ContestWorkspacePage contest={{ ...contest, phase: "live", canSubmit: true }} problem={problem} languages={mockLanguages} />);
+
+    fireEvent.change(screen.getByLabelText("Source code"), { target: { value: "contest edited source" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit solution" }));
+
+    await waitFor(() => {
+      expect(submissionsCreate).toHaveBeenCalledWith({
+        problemId: 1,
+        contestId: 88,
+        languageId: mockLanguages[0]?.id,
+        sourceCode: "contest edited source",
       });
     });
   });
