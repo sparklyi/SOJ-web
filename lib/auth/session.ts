@@ -1,7 +1,8 @@
 import type { CurrentUser } from "@/lib/api/types";
 
 export type AuthSession = {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   user: CurrentUser;
   expiresAt: string;
 };
@@ -20,7 +21,7 @@ export function restoreSession(store: SessionStore, now: Date = new Date()) {
 
   try {
     const session = JSON.parse(value) as AuthSession;
-    if (!session.token || !session.user || Date.parse(session.expiresAt) <= now.getTime()) {
+    if (!session.accessToken || !session.refreshToken || !session.user || Date.parse(session.expiresAt) <= now.getTime()) {
       clearSession(store);
       return null;
     }
@@ -41,7 +42,8 @@ export function clearSession(store: SessionStore) {
 
 export function createMockSession(user: CurrentUser, now: Date = new Date()): AuthSession {
   return {
-    token: `mock-${user.id}-${now.getTime()}`,
+    accessToken: `mock-access-${user.id}-${now.getTime()}`,
+    refreshToken: `mock-refresh-${user.id}-${now.getTime()}`,
     user,
     expiresAt: new Date(now.getTime() + 1000 * 60 * 60 * 12).toISOString(),
   };

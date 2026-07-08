@@ -2,9 +2,7 @@ import { createApiClient } from "@/lib/api/client";
 import type { ApiClient } from "@/lib/api/types";
 import { buildArenaEvents } from "@/lib/domain/arena";
 import { canRegister, canSubmit, getContestPhase } from "@/lib/domain/contest";
-import { buildScoreboardModel } from "@/lib/domain/scoreboard";
 import { sortSubmissionsByNewest } from "@/lib/domain/submission";
-import { mockAcmScoreboardRows, mockOiScoreboardRows } from "@/lib/mock/fixtures";
 
 export async function listContests(client: ApiClient = createApiClient()) {
   const result = await client.contests.list();
@@ -29,13 +27,7 @@ export async function getContest(id: number, client: ApiClient = createApiClient
 }
 
 export async function getContestScoreboard(id: number, client: ApiClient = createApiClient()) {
-  const contest = await client.contests.get(id);
-
-  if (contest.type === "acm") {
-    return buildScoreboardModel({ type: "acm", rows: mockAcmScoreboardRows });
-  }
-
-  return buildScoreboardModel({ type: "oi", rows: mockOiScoreboardRows });
+  return client.contests.scoreboard(id);
 }
 
 export async function getContestArenaEvents(id: number, client: ApiClient = createApiClient()) {

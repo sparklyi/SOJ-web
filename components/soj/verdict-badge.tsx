@@ -9,6 +9,9 @@ const labels: Record<JudgeStatus, string> = {
   wrong_answer: "Wrong Answer",
   runtime_error: "Runtime Error",
   compile_error: "Compile Error",
+  time_limit: "Time Limit Exceeded",
+  memory_limit: "Memory Limit Exceeded",
+  canceled: "Canceled",
   system_error: "System Error",
 };
 
@@ -20,6 +23,9 @@ const tones: Record<JudgeStatus, React.ComponentProps<typeof StatusPill>["tone"]
   wrong_answer: "danger",
   runtime_error: "danger",
   compile_error: "warning",
+  time_limit: "warning",
+  memory_limit: "warning",
+  canceled: "neutral",
   system_error: "danger",
 };
 

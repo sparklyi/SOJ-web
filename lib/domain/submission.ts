@@ -18,6 +18,9 @@ const states: Record<JudgeStatus, Omit<SubmissionDisplayState, "status">> = {
   wrong_answer: { label: "Wrong Answer", tone: "danger", terminal: true, order: 40 },
   runtime_error: { label: "Runtime Error", tone: "danger", terminal: true, order: 40 },
   compile_error: { label: "Compile Error", tone: "warning", terminal: true, order: 40 },
+  time_limit: { label: "Time Limit Exceeded", tone: "warning", terminal: true, order: 40 },
+  memory_limit: { label: "Memory Limit Exceeded", tone: "warning", terminal: true, order: 40 },
+  canceled: { label: "Canceled", tone: "neutral", terminal: true, order: 40 },
   system_error: { label: "System Error", tone: "danger", terminal: true, order: 40 },
 };
 

@@ -1,3 +1,6 @@
+import type { AuthSession } from "@/lib/auth/session";
+import type { ScoreboardModel } from "@/lib/domain/scoreboard";
+
 export type ApiMode = "mock" | "http";
 
 export type ProblemDifficulty = "easy" | "medium" | "hard";
@@ -39,6 +42,22 @@ export type ContestSummary = {
   problems: Array<{ problemId: number; alias: string; title: string }>;
 };
 
+export type ContestRegistrationInput = {
+  displayName: string;
+  email: string;
+  inviteCode?: string;
+};
+
+export type ContestRegistration = {
+  id: number;
+  contestId: number;
+  userId: number;
+  displayName: string;
+  email: string;
+  status: "active" | "canceled";
+  registeredAt: string;
+};
+
 export type JudgeStatus =
   | "queued"
   | "compiling"
@@ -47,7 +66,17 @@ export type JudgeStatus =
   | "wrong_answer"
   | "runtime_error"
   | "compile_error"
+  | "time_limit"
+  | "memory_limit"
+  | "canceled"
   | "system_error";
+
+export type CreateSubmissionInput = {
+  problemId: number;
+  contestId?: number;
+  languageId: number;
+  sourceCode: string;
+};
 
 export type SubmissionSummary = {
   id: number;
@@ -59,6 +88,31 @@ export type SubmissionSummary = {
   timeMs?: number;
   memoryKb?: number;
   submittedAt: string;
+};
+
+export type CreateRunInput = {
+  problemId: number;
+  languageId: number;
+  sourceCode: string;
+  stdin?: string;
+};
+
+export type RunResult = {
+  stdout?: string;
+  stderr?: string;
+  compileOutput?: string;
+  errorMessage?: string;
+  timeMs?: number;
+  memoryKb?: number;
+};
+
+export type RunSummary = RunResult & {
+  id: number;
+  problemId: number;
+  languageId: number;
+  status: JudgeStatus;
+  createdAt: string;
+  finishedAt?: string;
 };
 
 export type JudgeLanguage = {
@@ -88,6 +142,10 @@ export type PageResult<T> = {
 
 export type ApiClient = {
   auth: {
+    login: (input: { email: string; password: string }) => Promise<AuthSession>;
+    register: (input: { email: string; username: string; password: string }) => Promise<AuthSession>;
+    refresh: (input: { refreshToken: string }) => Promise<AuthSession>;
+    logout: (input?: { refreshToken?: string }) => Promise<void>;
     me: () => Promise<CurrentUser | null>;
   };
   problems: {
@@ -97,10 +155,17 @@ export type ApiClient = {
   submissions: {
     list: () => Promise<PageResult<SubmissionSummary>>;
     get: (id: number) => Promise<SubmissionSummary>;
+    create: (input: CreateSubmissionInput) => Promise<SubmissionSummary>;
+  };
+  runs: {
+    create: (input: CreateRunInput) => Promise<RunSummary>;
+    get: (id: number) => Promise<RunSummary>;
   };
   contests: {
     list: () => Promise<PageResult<ContestSummary>>;
     get: (id: number) => Promise<ContestSummary>;
+    register: (id: number, input: ContestRegistrationInput) => Promise<ContestRegistration>;
+    scoreboard: (id: number) => Promise<ScoreboardModel>;
   };
   languages: {
     list: (filter?: { enabled?: boolean; engine?: string }) => Promise<PageResult<JudgeLanguage>>;
