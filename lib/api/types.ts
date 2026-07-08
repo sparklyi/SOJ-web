@@ -1,3 +1,5 @@
+import type { AuthSession } from "@/lib/auth/session";
+
 export type ApiMode = "mock" | "http";
 
 export type ProblemDifficulty = "easy" | "medium" | "hard";
@@ -88,6 +90,10 @@ export type PageResult<T> = {
 
 export type ApiClient = {
   auth: {
+    login: (input: { email: string; password: string }) => Promise<AuthSession>;
+    register: (input: { email: string; username: string; password: string }) => Promise<AuthSession>;
+    refresh: (input: { refreshToken: string }) => Promise<AuthSession>;
+    logout: (input?: { refreshToken?: string }) => Promise<void>;
     me: () => Promise<CurrentUser | null>;
   };
   problems: {

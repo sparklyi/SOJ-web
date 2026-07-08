@@ -1,7 +1,8 @@
 import { ApiError } from "./errors";
 import { request } from "./http-client";
-import type { LanguageResponse, PageResponse } from "./backend-types";
-import type { ApiClient, JudgeLanguage, PageResult } from "./types";
+import type { AuthResponse, LanguageResponse, LoginRequest, PageResponse, RefreshRequest, RegisterRequest, UserResponse } from "./backend-types";
+import type { AuthSession } from "@/lib/auth/session";
+import type { ApiClient, CurrentUser, JudgeLanguage, PageResult } from "./types";
 
 function notConnected(): never {
   throw new ApiError("HTTP API adapter is not connected yet.", "api.not_connected", 501);
@@ -26,10 +27,70 @@ function mapLanguage(input: LanguageResponse): JudgeLanguage {
   };
 }
 
+function mapUser(input: UserResponse): CurrentUser {
+  return {
+    id: input.id,
+    handle: input.username,
+    displayName: input.username,
+    role: input.role,
+  };
+}
+
+function mapAuthSession(input: AuthResponse, now: Date = new Date()): AuthSession {
+  return {
+    accessToken: input.access_token,
+    refreshToken: input.refresh_token,
+    user: mapUser(input.user),
+    expiresAt: new Date(now.getTime() + input.expires_in * 1000).toISOString(),
+  };
+}
+
 export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
   return {
     auth: {
-      me: async () => notConnected(),
+      login: async (input) => {
+        const data = await request<AuthResponse>("/api/v1/auth/login", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email: input.email, password: input.password } satisfies LoginRequest),
+        });
+        return mapAuthSession(data);
+      },
+      register: async (input) => {
+        const data = await request<AuthResponse>("/api/v1/auth/register", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email: input.email, username: input.username, password: input.password } satisfies RegisterRequest),
+        });
+        return mapAuthSession(data);
+      },
+      refresh: async (input) => {
+        const data = await request<AuthResponse>("/api/v1/auth/refresh", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ refresh_token: input.refreshToken } satisfies RefreshRequest),
+        });
+        return mapAuthSession(data);
+      },
+      logout: async (input = {}) => {
+        await request<undefined>("/api/v1/auth/logout", {
+          accessToken: options.accessToken,
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ refresh_token: input.refreshToken }),
+        });
+      },
+      me: async () => {
+        try {
+          const data = await request<UserResponse>("/api/v1/me", {
+            accessToken: options.accessToken,
+          });
+          return mapUser(data);
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 401) return null;
+          throw error;
+        }
+      },
     },
     problems: {
       list: async () => notConnected(),
