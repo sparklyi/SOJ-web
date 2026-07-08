@@ -1,13 +1,13 @@
 import type { JudgeLanguage, ProblemDetail } from "@/lib/api/types";
 import { ProblemStatement } from "@/components/soj/problem-statement";
-import { ProblemSubmitPanel } from "./problem-submit-panel";
+import { ProblemSubmitPanelLoader } from "./problem-submit-panel-loader";
 
 type ProblemDetailViewProps = {
   problem: ProblemDetail;
-  languages: JudgeLanguage[];
+  languages?: JudgeLanguage[];
 };
 
-export function ProblemDetailView({ problem, languages }: ProblemDetailViewProps) {
+export function ProblemDetailView({ problem, languages = [] }: ProblemDetailViewProps) {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
       <div className="soj-reading-stage min-w-0 p-5 md:p-7">
@@ -50,7 +50,7 @@ export function ProblemDetailView({ problem, languages }: ProblemDetailViewProps
           </ul>
         </section>
       </div>
-      <ProblemSubmitPanel problem={problem} languages={languages} />
+      <ProblemSubmitPanelLoader initialLanguages={languages} problem={problem} />
     </div>
   );
 }

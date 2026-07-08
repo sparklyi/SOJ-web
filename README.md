@@ -70,7 +70,8 @@ The default configuration uses mock data:
 
 ```bash
 NEXT_PUBLIC_SOJ_API_MODE=mock
-NEXT_PUBLIC_SOJ_API_BASE_URL=http://localhost:8080
+# NEXT_PUBLIC_SOJ_API_BASE_URL=http://localhost:8080
+SOJ_API_INTERNAL_BASE_URL=http://localhost:8080
 ```
 
 ### Run Locally
@@ -86,7 +87,8 @@ Open [http://localhost:3000](http://localhost:3000).
 | Variable | Default | Description |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SOJ_API_MODE` | `mock` | Selects the frontend API adapter. Use `mock` for local review or `http` for backend integration. |
-| `NEXT_PUBLIC_SOJ_API_BASE_URL` | `http://localhost:8080` | Base URL for the SOJ backend when `NEXT_PUBLIC_SOJ_API_MODE=http`. |
+| `NEXT_PUBLIC_SOJ_API_BASE_URL` | browser: `/soj-api`, server/test: `http://localhost:8080` | Public API base when `NEXT_PUBLIC_SOJ_API_MODE=http`. Leave unset to use the same-origin Next.js proxy. |
+| `SOJ_API_INTERNAL_BASE_URL` | `http://localhost:8080` | Backend URL used by server-side requests and the `/soj-api/*` rewrite target. |
 
 ## Scripts
 
@@ -126,6 +128,7 @@ SOJ-web uses an adapter-based API boundary:
 
 - `mock` mode serves deterministic frontend fixtures from `lib/mock`.
 - `http` mode calls the backend through `lib/api/http-adapter.ts`.
+- Browser calls use the `/soj-api/*` same-origin proxy by default to avoid local CORS issues.
 
 Language selection in the code workspace is driven by the judge language catalog. In HTTP mode, enabled SOJ agent languages are read from the backend language endpoint. In mock mode, the same contract is represented by mock fixtures.
 
@@ -244,7 +247,8 @@ cp .env.example .env.local
 
 ```bash
 NEXT_PUBLIC_SOJ_API_MODE=mock
-NEXT_PUBLIC_SOJ_API_BASE_URL=http://localhost:8080
+# NEXT_PUBLIC_SOJ_API_BASE_URL=http://localhost:8080
+SOJ_API_INTERNAL_BASE_URL=http://localhost:8080
 ```
 
 ### 本地启动
@@ -260,7 +264,8 @@ npm run dev
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SOJ_API_MODE` | `mock` | 选择前端 API 适配器。本地评审使用 `mock`，真实后端联调用 `http`。 |
-| `NEXT_PUBLIC_SOJ_API_BASE_URL` | `http://localhost:8080` | `NEXT_PUBLIC_SOJ_API_MODE=http` 时的 SOJ 后端地址。 |
+| `NEXT_PUBLIC_SOJ_API_BASE_URL` | 浏览器：`/soj-api`，服务端/测试：`http://localhost:8080` | `NEXT_PUBLIC_SOJ_API_MODE=http` 时的公开 API 地址。保持未设置即可使用 Next.js 同源代理。 |
+| `SOJ_API_INTERNAL_BASE_URL` | `http://localhost:8080` | 服务端请求和 `/soj-api/*` rewrite 使用的后端地址。 |
 
 ## 常用脚本
 
@@ -300,6 +305,7 @@ SOJ-web 使用基于适配器的 API 边界：
 
 - `mock` 模式从 `lib/mock` 提供稳定的前端夹具数据。
 - `http` 模式通过 `lib/api/http-adapter.ts` 调用后端。
+- 浏览器请求默认走 `/soj-api/*` 同源代理，避免本地 CORS 阻塞。
 
 代码工作区的语言选择由评测语言目录驱动。HTTP 模式会读取后端启用的 SOJ agent 语言；Mock 模式使用相同契约的模拟数据。
 

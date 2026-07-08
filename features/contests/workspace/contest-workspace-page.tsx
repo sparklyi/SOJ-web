@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { CodeWorkspace } from "@/components/soj/code-workspace";
 import { ContestClock } from "@/components/soj/contest-clock";
 import { SignalFeed } from "@/components/soj/signal-feed";
@@ -7,6 +10,11 @@ import { SubmissionTimeline } from "@/components/soj/submission-timeline";
 import { TestPointMatrix } from "@/components/soj/test-point-matrix";
 import { Button } from "@/components/ui/button";
 import type { ContestSummary, JudgeLanguage, ProblemDetail } from "@/lib/api/types";
+import { createBrowserApiClient } from "@/lib/api/client";
+import { getApiMode } from "@/lib/api/mode";
+import { restoreSession } from "@/lib/auth/session";
+import { contestRegistrationUserKey, isContestRegistered, subscribeToContestRegistrationChanges } from "@/lib/domain/contest-registration-session";
+import { listEnabledLanguages } from "@/features/languages/api";
 
 type ContestWorkspacePageProps = {
   contest: ContestSummary & {
@@ -14,7 +22,7 @@ type ContestWorkspacePageProps = {
     canSubmit: boolean;
   };
   problem: ProblemDetail;
-  languages: JudgeLanguage[];
+  languages?: JudgeLanguage[];
 };
 
 const timelineItems = [
@@ -36,11 +44,63 @@ function formatMemory(value: number) {
   return `${Math.round(value / 1024)} MB`;
 }
 
-export function ContestWorkspacePage({ contest, problem, languages }: ContestWorkspacePageProps) {
+export function ContestWorkspacePage({ contest, problem, languages: initialLanguages = [] }: ContestWorkspacePageProps) {
+  const [languages, setLanguages] = useState<JudgeLanguage[]>(initialLanguages);
+  const [languageError, setLanguageError] = useState<string>();
   const contestProblem = contest.problems.find((item) => item.problemId === problem.id);
   const alias = contestProblem?.alias ?? "A";
   const freezeLabel = contest.status === "frozen" ? "Rank updates hidden" : "Rank updates live";
   const sample = problem.examples[0];
+  const [workspace, setWorkspace] = useState<{ languageId?: number; sourceCode: string }>({
+    languageId: languages[0]?.id,
+    sourceCode: "",
+  });
+  const [submitState, setSubmitState] = useState<
+    | { status: "idle" }
+    | { status: "pending" }
+    | { status: "success"; submissionId: number }
+    | { status: "error"; message: string }
+  >({ status: "idle" });
+  const hasSession = useBrowserSessionAvailable();
+  const locallyRegistered = useLocalContestRegistration(contest.id);
+  const needsSession = getApiMode() === "http" && !hasSession;
+  const lifecycleAllowsSubmit = contest.status === "running" || contest.status === "frozen";
+  const effectiveCanSubmit = contest.canSubmit || (locallyRegistered && lifecycleAllowsSubmit);
+  const canSubmit = !needsSession && effectiveCanSubmit && Boolean(workspace.languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
+
+  useEffect(() => {
+    if (initialLanguages.length > 0) return;
+
+    listEnabledLanguages(createBrowserApiClient())
+      .then((result) => {
+        setLanguages(result.items);
+        setLanguageError(undefined);
+      })
+      .catch((error: unknown) => {
+        setLanguages([]);
+        setLanguageError(error instanceof Error ? error.message : "Language catalog is not available to this backend session yet.");
+      });
+  }, [initialLanguages.length]);
+
+  const handleSubmit = useCallback(async () => {
+    if (needsSession || !workspace.languageId || !workspace.sourceCode.trim() || !effectiveCanSubmit) return;
+
+    setSubmitState({ status: "pending" });
+    try {
+      const submission = await createBrowserApiClient().submissions.create({
+        problemId: problem.id,
+        contestId: contest.id,
+        languageId: workspace.languageId,
+        sourceCode: workspace.sourceCode,
+      });
+      setSubmitState({ status: "success", submissionId: submission.id });
+    } catch (error) {
+      setSubmitState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Submission failed.",
+      });
+    }
+  }, [contest.id, effectiveCanSubmit, needsSession, problem.id, workspace.languageId, workspace.sourceCode]);
 
   return (
     <div className="grid gap-6">
@@ -88,7 +148,7 @@ export function ContestWorkspacePage({ contest, problem, languages }: ContestWor
             <div className="grid grid-cols-2 gap-2">
               <div className="soj-submission-chip">
                 <span>Submit</span>
-                <strong>{contest.canSubmit ? "Open" : "Blocked"}</strong>
+                <strong>{effectiveCanSubmit ? "Open" : "Blocked"}</strong>
               </div>
               <div className="soj-submission-chip">
                 <span>Rank</span>
@@ -161,10 +221,19 @@ export function ContestWorkspacePage({ contest, problem, languages }: ContestWor
                 <h2 className="text-xl font-semibold text-soj-text">Solve loop</h2>
                 <p className="mt-1 text-sm text-soj-muted">Edit, submit, and read judge signal without context switching.</p>
               </div>
-              <StatusPill tone={contest.canSubmit ? "accent" : "danger"}>{contest.canSubmit ? "Live" : "Review"}</StatusPill>
+              <StatusPill tone={effectiveCanSubmit ? "accent" : "danger"}>{effectiveCanSubmit ? "Live" : "Review"}</StatusPill>
             </div>
+            {languageError ? (
+              <p className="rounded-soj-md border border-soj-warning/35 bg-soj-warning/10 px-3 py-2 text-sm text-soj-muted">{languageError}</p>
+            ) : null}
+            {!languageError && languages.length === 0 ? (
+              <p className="rounded-soj-md border border-soj-warning/35 bg-soj-warning/10 px-3 py-2 text-sm text-soj-muted">
+                Language catalog is empty for this backend session.
+              </p>
+            ) : null}
             <CodeWorkspace
               languages={languages}
+              onChange={setWorkspace}
               value={`#include <bits/stdc++.h>
 using namespace std;
 
@@ -180,10 +249,19 @@ int main() {
               <p className="text-sm leading-6 text-soj-muted">
                 {contest.status === "frozen" ? "Submissions still run, public rank is frozen." : "Wrong answers add attempts and ACM penalty after acceptance."}
               </p>
-              <Button disabled={!contest.canSubmit} size="lg" className="w-full sm:w-auto">
-                Submit solution
+              <Button disabled={!canSubmit} size="lg" className="w-full sm:w-auto" onClick={handleSubmit}>
+                {needsSession ? "Sign in to submit" : submitState.status === "pending" ? "Submitting..." : "Submit solution"}
               </Button>
             </div>
+            {needsSession ? (
+              <p className="text-sm text-soj-muted">
+                <Link className="text-soj-accent underline-offset-4 hover:underline" href="/auth/login">
+                  Sign in
+                </Link>{" "}
+                to submit in this contest.
+              </p>
+            ) : null}
+            <ContestSubmissionResult state={submitState} />
           </section>
 
           <section aria-label="Judge feedback" className="soj-workspace-panel grid content-start gap-4 p-5">
@@ -219,4 +297,74 @@ int main() {
       </div>
     </div>
   );
+}
+
+function browserHasSession() {
+  if (typeof window === "undefined") return false;
+  return Boolean(restoreSession(window.localStorage));
+}
+
+function browserUserKey() {
+  if (typeof window === "undefined") return null;
+  return contestRegistrationUserKey(restoreSession(window.localStorage)?.user);
+}
+
+function useBrowserSessionAvailable() {
+  const [available, setAvailable] = useState(() => getApiMode() === "mock");
+
+  useEffect(() => {
+    function update() {
+      setAvailable(getApiMode() === "mock" || browserHasSession());
+    }
+
+    update();
+    window.addEventListener("storage", update);
+    return () => window.removeEventListener("storage", update);
+  }, []);
+
+  return available;
+}
+
+function useLocalContestRegistration(contestId: number) {
+  const [registered, setRegistered] = useState(false);
+
+  useEffect(() => {
+    function update() {
+      setRegistered(isContestRegistered(window.localStorage, browserUserKey(), contestId));
+    }
+
+    update();
+    return subscribeToContestRegistrationChanges(update);
+  }, [contestId]);
+
+  return registered;
+}
+
+function ContestSubmissionResult({
+  state,
+}: {
+  state:
+    | { status: "idle" }
+    | { status: "pending" }
+    | { status: "success"; submissionId: number }
+    | { status: "error"; message: string };
+}) {
+  if (state.status === "idle") return null;
+
+  if (state.status === "success") {
+    return (
+      <p className="text-sm text-soj-muted">
+        Submission queued.{" "}
+        <Link className="text-soj-accent underline-offset-4 hover:underline" href={`/submissions/${state.submissionId}`}>
+          View details
+        </Link>
+      </p>
+    );
+  }
+
+  if (state.status === "error") {
+    return <p className="text-sm text-soj-danger">{state.message}</p>;
+  }
+
+  return <p className="text-sm text-soj-muted">Sending source to contest judge...</p>;
 }

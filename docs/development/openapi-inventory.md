@@ -2,7 +2,20 @@
 
 Source: `../SOJ/api/openapi.yaml`
 
-This inventory is the frontend contract checkpoint before page work starts. Mock mode may model fields that are not available yet, but every such field must be listed here as a backend contract gap.
+This inventory is the frontend contract checkpoint for the v2 API adaptation. Mock mode may model fields that are not available yet, but every such field must be listed here as a backend contract gap.
+
+## Integration Status
+
+HTTP mode now adapts the SOJ OpenAPI contract through `lib/api/http-adapter.ts` and keeps the page-facing model in `lib/api/types.ts` stable.
+
+Connected in HTTP mode:
+
+- Auth login, register, refresh, logout, and current user.
+- Problem list, detail, statement, stats, and language selection.
+- Submission list, detail, create, self-run create, and self-run detail.
+- Contest list, detail, registration, and ACM scoreboard.
+
+Browser-origin requests should use the same-origin `/soj-api/*` proxy configured in `next.config.ts`; server-side requests can use `SOJ_API_INTERNAL_BASE_URL` or `NEXT_PUBLIC_SOJ_API_BASE_URL` when an absolute backend URL is required.
 
 ## Auth
 
@@ -62,6 +75,12 @@ Available schemas:
 
 Available submission fields support queued, running, judged, score, time, memory, case summaries, and safe error summaries.
 
+Frontend notes:
+
+- Submission list requires a user token in HTTP mode.
+- Detail visibility remains enforced by backend owner/admin/root/contest rules.
+- Page-level browser clients read the local session token before calling protected detail or create endpoints.
+
 ## Contests
 
 Used by v2:
@@ -79,6 +98,12 @@ Available schemas:
 - `ScoreboardEnvelope`
 
 First release does not consume contest create/update/delete endpoints.
+
+Frontend notes:
+
+- `ContestSummary.type` defaults to `acm` until the backend exposes contest scoring mode.
+- `ContestSummary.registered` defaults to false from the backend payload. The frontend uses a user-scoped local registration bridge after a successful registration so the v2 workspace can transition immediately.
+- Contest problem titles are rendered from alias/problem id until the backend returns enriched problem titles in contest payloads.
 
 ## ACM Scoreboard
 
@@ -128,4 +153,11 @@ Mock mode must model Arena events separately until the backend contract is exten
 
 ## Known Follow-Up
 
-Before real API integration, update this inventory and reconcile frontend mock fields with backend schema changes.
+Backend contract follow-ups before removing frontend bridges:
+
+- Add a public language list endpoint for regular users. Current OpenAPI exposes `/api/v1/admin/languages`, which is not the right long-term public contract.
+- Add current-user contest registration state to contest list/detail responses.
+- Add contest scoring mode to contest list/detail responses.
+- Add enriched contest problem titles or a documented frontend enrichment endpoint.
+- Add OI/IOI scoreboard fields listed above if those modes remain product scope.
+- Add Arena event feed fields listed above if the live signal surface remains product scope.
