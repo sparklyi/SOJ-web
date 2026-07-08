@@ -133,4 +133,43 @@ describe("feature api modules", () => {
     const arena = await getContestArenaEvents(1, client);
     expect(arena.length).toBeGreaterThan(1);
   });
+
+  it("uses client contest scoreboard when the adapter implements it", async () => {
+    const scoreboard = {
+      type: "acm" as const,
+      rows: [
+        {
+          rank: 1,
+          id: "backend-team",
+          handle: "backend-team",
+          solved: 9,
+          penalty: 12,
+          problems: [],
+        },
+      ],
+    };
+    const apiClient = {
+      ...client,
+      contests: {
+        list: client.contests.list,
+        get: vi.fn(async () => ({
+          id: 99,
+          title: "Backend Cup",
+          type: "acm" as const,
+          status: "running" as const,
+          startsAt: "2026-07-08T10:00:00Z",
+          endsAt: "2026-07-08T12:00:00Z",
+          freezeAt: "2026-07-08T11:30:00Z",
+          registered: false,
+          problems: [],
+        })),
+        register: vi.fn(),
+        scoreboard: vi.fn(async () => scoreboard),
+      },
+    };
+
+    await expect(getContestScoreboard(99, apiClient)).resolves.toBe(scoreboard);
+    expect(apiClient.contests.scoreboard).toHaveBeenCalledWith(99);
+    expect(apiClient.contests.get).not.toHaveBeenCalled();
+  });
 });

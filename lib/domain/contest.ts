@@ -14,15 +14,15 @@ export function getContestPhase(contest: Pick<ContestSummary, "status">): Contes
   return statusPhase[contest.status];
 }
 
-export function canRegister(contest: Pick<ContestSummary, "status" | "registered">) {
+export function canRegister(contest: Pick<ContestSummary, "status" | "registered">): boolean {
   return !contest.registered && contest.status === "scheduled";
 }
 
-export function canSubmit(contest: Pick<ContestSummary, "status" | "registered">) {
+export function canSubmit(contest: Pick<ContestSummary, "status" | "registered">): boolean {
   return contest.registered && (contest.status === "running" || contest.status === "frozen");
 }
 
-export function getContestDurationMinutes(contest: Pick<ContestSummary, "startsAt" | "endsAt">) {
+export function getContestDurationMinutes(contest: Pick<ContestSummary, "startsAt" | "endsAt">): number {
   const start = Date.parse(contest.startsAt);
   const end = Date.parse(contest.endsAt);
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
