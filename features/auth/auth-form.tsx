@@ -89,6 +89,7 @@ function validate(input: { email: string; username: string; password: string }, 
   if (input.email && !input.email.includes("@")) errors.email = "Enter a valid email address.";
   if (isRegister && !input.username) errors.username = "Username is required.";
   if (!input.password) errors.password = "Password is required.";
+  if (input.password && input.password.length < 8) errors.password = "Password must be at least 8 characters.";
   return errors;
 }
 

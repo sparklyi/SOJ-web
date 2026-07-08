@@ -253,8 +253,7 @@ describe("http adapter", () => {
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/auth/logout", {
       cache: "no-store",
       method: "POST",
-      headers: { Authorization: "Bearer access-token", "content-type": "application/json" },
-      body: JSON.stringify({ refresh_token: "refresh-token" }),
+      headers: { Authorization: "Bearer access-token" },
     });
   });
 });
