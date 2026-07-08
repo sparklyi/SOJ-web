@@ -1,36 +1,15 @@
 import { ApiError } from "./errors";
+import { request } from "./http-client";
+import type { LanguageResponse, PageResponse } from "./backend-types";
 import type { ApiClient, JudgeLanguage, PageResult } from "./types";
 
 function notConnected(): never {
   throw new ApiError("HTTP API adapter is not connected yet.", "api.not_connected", 501);
 }
 
-type Envelope<T> = {
-  data?: T;
-  error?: { code: string; message: string } | null;
+type HttpAdapterOptions = {
+  accessToken?: string;
 };
-
-type LanguageResponse = {
-  id: number;
-  engine: string;
-  engine_language_id: string;
-  name: string;
-  version?: string | null;
-  compile_command?: string | null;
-  run_command?: string | null;
-  default_time_limit_ms: number;
-  default_memory_limit_kb: number;
-  enabled: boolean;
-};
-
-type LanguagePageResponse = {
-  items: LanguageResponse[];
-  total: number;
-};
-
-function apiBaseUrl() {
-  return process.env.NEXT_PUBLIC_SOJ_API_BASE_URL ?? "http://localhost:8080";
-}
 
 function mapLanguage(input: LanguageResponse): JudgeLanguage {
   return {
@@ -47,22 +26,7 @@ function mapLanguage(input: LanguageResponse): JudgeLanguage {
   };
 }
 
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${apiBaseUrl()}${path}`, { cache: "no-store" });
-  const envelope = (await response.json()) as Envelope<T>;
-
-  if (!response.ok || envelope.error) {
-    throw new ApiError(envelope.error?.message ?? "HTTP API request failed.", envelope.error?.code ?? "api.request_failed", response.status);
-  }
-
-  if (typeof envelope.data === "undefined") {
-    throw new ApiError("HTTP API response did not include data.", "api.invalid_response", response.status);
-  }
-
-  return envelope.data;
-}
-
-export function createHttpAdapter(): ApiClient {
+export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
   return {
     auth: {
       me: async () => notConnected(),
@@ -81,10 +45,15 @@ export function createHttpAdapter(): ApiClient {
     },
     languages: {
       list: async (filter = {}): Promise<PageResult<JudgeLanguage>> => {
-        const params = new URLSearchParams({ page: "1", page_size: "100" });
-        if (typeof filter.enabled === "boolean") params.set("enabled", String(filter.enabled));
-        if (filter.engine) params.set("engine", filter.engine);
-        const data = await getJson<LanguagePageResponse>(`/api/v1/admin/languages?${params.toString()}`);
+        const data = await request<PageResponse<LanguageResponse>>("/api/v1/admin/languages", {
+          accessToken: options.accessToken,
+          query: {
+            page: 1,
+            page_size: 100,
+            enabled: filter.enabled,
+            engine: filter.engine,
+          },
+        });
         const items = data.items.map(mapLanguage);
         return { items, total: data.total };
       },
