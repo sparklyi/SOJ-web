@@ -13,6 +13,7 @@ import type { ContestSummary, JudgeLanguage, ProblemDetail } from "@/lib/api/typ
 import { createBrowserApiClient } from "@/lib/api/client";
 import { getApiMode } from "@/lib/api/mode";
 import { restoreSession } from "@/lib/auth/session";
+import { isContestRegistered, subscribeToContestRegistrationChanges } from "@/lib/domain/contest-registration-session";
 
 type ContestWorkspacePageProps = {
   contest: ContestSummary & {
@@ -58,11 +59,14 @@ export function ContestWorkspacePage({ contest, problem, languages }: ContestWor
     | { status: "error"; message: string }
   >({ status: "idle" });
   const hasSession = useBrowserSessionAvailable();
+  const locallyRegistered = useLocalContestRegistration(contest.id);
   const needsSession = getApiMode() === "http" && !hasSession;
-  const canSubmit = !needsSession && contest.canSubmit && Boolean(workspace.languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
+  const lifecycleAllowsSubmit = contest.status === "running" || contest.status === "frozen";
+  const effectiveCanSubmit = contest.canSubmit || (locallyRegistered && lifecycleAllowsSubmit);
+  const canSubmit = !needsSession && effectiveCanSubmit && Boolean(workspace.languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
 
   const handleSubmit = useCallback(async () => {
-    if (needsSession || !workspace.languageId || !workspace.sourceCode.trim() || !contest.canSubmit) return;
+    if (needsSession || !workspace.languageId || !workspace.sourceCode.trim() || !effectiveCanSubmit) return;
 
     setSubmitState({ status: "pending" });
     try {
@@ -79,7 +83,7 @@ export function ContestWorkspacePage({ contest, problem, languages }: ContestWor
         message: error instanceof Error ? error.message : "Submission failed.",
       });
     }
-  }, [contest.canSubmit, contest.id, needsSession, problem.id, workspace.languageId, workspace.sourceCode]);
+  }, [contest.id, effectiveCanSubmit, needsSession, problem.id, workspace.languageId, workspace.sourceCode]);
 
   return (
     <div className="grid gap-6">
@@ -127,7 +131,7 @@ export function ContestWorkspacePage({ contest, problem, languages }: ContestWor
             <div className="grid grid-cols-2 gap-2">
               <div className="soj-submission-chip">
                 <span>Submit</span>
-                <strong>{contest.canSubmit ? "Open" : "Blocked"}</strong>
+                <strong>{effectiveCanSubmit ? "Open" : "Blocked"}</strong>
               </div>
               <div className="soj-submission-chip">
                 <span>Rank</span>
@@ -200,7 +204,7 @@ export function ContestWorkspacePage({ contest, problem, languages }: ContestWor
                 <h2 className="text-xl font-semibold text-soj-text">Solve loop</h2>
                 <p className="mt-1 text-sm text-soj-muted">Edit, submit, and read judge signal without context switching.</p>
               </div>
-              <StatusPill tone={contest.canSubmit ? "accent" : "danger"}>{contest.canSubmit ? "Live" : "Review"}</StatusPill>
+              <StatusPill tone={effectiveCanSubmit ? "accent" : "danger"}>{effectiveCanSubmit ? "Live" : "Review"}</StatusPill>
             </div>
             <CodeWorkspace
               languages={languages}
@@ -280,6 +284,14 @@ function useBrowserSessionAvailable() {
     subscribeToSessionChanges,
     () => getApiMode() === "mock" || browserHasSession(),
     () => getApiMode() === "mock",
+  );
+}
+
+function useLocalContestRegistration(contestId: number) {
+  return useSyncExternalStore(
+    subscribeToContestRegistrationChanges,
+    () => (typeof window === "undefined" ? false : isContestRegistered(window.localStorage, contestId)),
+    () => false,
   );
 }
 
