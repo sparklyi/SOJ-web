@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import type { JudgeLanguage, ProblemDetail } from "@/lib/api/types";
 import { getAcceptanceRate } from "@/lib/domain/problem";
 import { CodeWorkspace } from "@/components/soj/code-workspace";
@@ -9,6 +9,8 @@ import { ProblemStatus } from "@/components/soj/problem-status";
 import { StatusPill } from "@/components/soj/status-pill";
 import { Button } from "@/components/ui/button";
 import { createBrowserApiClient } from "@/lib/api/client";
+import { getApiMode } from "@/lib/api/mode";
+import { restoreSession } from "@/lib/auth/session";
 
 type ProblemSubmitPanelProps = {
   problem: ProblemDetail;
@@ -27,10 +29,12 @@ export function ProblemSubmitPanel({ problem, languages }: ProblemSubmitPanelPro
     | { status: "success"; submissionId: number }
     | { status: "error"; message: string }
   >({ status: "idle" });
-  const canSubmit = Boolean(workspace.languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
+  const hasSession = useBrowserSessionAvailable();
+  const needsSession = getApiMode() === "http" && !hasSession;
+  const canSubmit = !needsSession && Boolean(workspace.languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
 
   const handleSubmit = useCallback(async () => {
-    if (!workspace.languageId || !workspace.sourceCode.trim()) return;
+    if (needsSession || !workspace.languageId || !workspace.sourceCode.trim()) return;
 
     setSubmitState({ status: "pending" });
     try {
@@ -46,7 +50,7 @@ export function ProblemSubmitPanel({ problem, languages }: ProblemSubmitPanelPro
         message: error instanceof Error ? error.message : "Submission failed.",
       });
     }
-  }, [problem.id, workspace.languageId, workspace.sourceCode]);
+  }, [needsSession, problem.id, workspace.languageId, workspace.sourceCode]);
 
   return (
     <aside className="grid gap-4 lg:sticky lg:top-24 lg:self-start">
@@ -84,11 +88,38 @@ export function ProblemSubmitPanel({ problem, languages }: ProblemSubmitPanelPro
       </section>
       <CodeWorkspace languages={languages} onChange={setWorkspace} />
       <Button type="button" className="w-full" disabled={!canSubmit} onClick={handleSubmit}>
-        {submitState.status === "pending" ? "Submitting..." : "Submit solution"}
+        {needsSession ? "Sign in to submit" : submitState.status === "pending" ? "Submitting..." : "Submit solution"}
       </Button>
+      {needsSession ? (
+        <p className="text-sm text-soj-muted">
+          <Link className="text-soj-accent underline-offset-4 hover:underline" href="/auth/login">
+            Sign in
+          </Link>{" "}
+          to submit with your account.
+        </p>
+      ) : null}
       <SubmissionResult state={submitState} />
     </aside>
   );
+}
+
+function browserHasSession() {
+  if (typeof window === "undefined") return false;
+  return Boolean(restoreSession(window.localStorage));
+}
+
+function useBrowserSessionAvailable() {
+  return useSyncExternalStore(
+    subscribeToSessionChanges,
+    () => getApiMode() === "mock" || browserHasSession(),
+    () => getApiMode() === "mock",
+  );
+}
+
+function subscribeToSessionChanges(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => undefined;
+  window.addEventListener("storage", onStoreChange);
+  return () => window.removeEventListener("storage", onStoreChange);
 }
 
 function SubmissionResult({
@@ -114,7 +145,7 @@ function SubmissionResult({
   }
 
   if (state.status === "error") {
-    return <p className="text-sm text-red-300">{state.message}</p>;
+    return <p className="text-sm text-soj-danger">{state.message}</p>;
   }
 
   return <p className="text-sm text-soj-muted">Sending source to judge...</p>;

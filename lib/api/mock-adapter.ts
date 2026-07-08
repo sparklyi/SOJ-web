@@ -9,6 +9,8 @@ type MockAdapterOptions = {
 
 const createdSubmissions: SubmissionSummary[] = [];
 const createdRuns: RunSummary[] = [];
+let nextSubmissionId = 10_000;
+let nextRunId = 20_000;
 
 function mockAuthUser(input: { email: string; username?: string }): CurrentUser {
   const handle = input.username ?? input.email.split("@")[0] ?? mockUser.handle;
@@ -51,7 +53,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       create: async (input) => {
         const problem = mockProblems.find((item) => item.id === input.problemId);
         const submission: SubmissionSummary = {
-          id: Date.now(),
+          id: nextSubmissionId++,
           problemId: input.problemId,
           problemTitle: problem?.title ?? `Problem #${input.problemId}`,
           contestId: input.contestId,
@@ -66,7 +68,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
     runs: {
       create: async (input) => {
         const run: RunSummary = {
-          id: Date.now(),
+          id: nextRunId++,
           problemId: input.problemId,
           languageId: input.languageId,
           status: "queued",
