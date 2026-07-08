@@ -135,8 +135,8 @@ describe("soj product components", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Lin" } });
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "lin@example.com" } });
+    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "  Lin  " } });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "  lin@example.com  " } });
     fireEvent.change(screen.getByLabelText("Invite code"), { target: { value: "INVITE-7" } });
     fireEvent.click(screen.getByRole("button", { name: "Register" }));
 
@@ -175,7 +175,7 @@ describe("soj product components", () => {
     process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
     submissionsCreate.mockResolvedValue({ id: 777 });
     saveSession(window.localStorage, createMockSession(mockUser));
-    markContestRegistered(window.localStorage, 88);
+    markContestRegistered(window.localStorage, mockUser.id, 88);
     const contest = buildContest({ id: 88, registered: false, status: "running" });
     const problem = buildProblem({ id: 1 });
     render(<ContestWorkspacePage contest={{ ...contest, phase: "live", canSubmit: false }} problem={problem} languages={mockLanguages} />);
@@ -191,5 +191,20 @@ describe("soj product components", () => {
         sourceCode: "contest local registration source",
       });
     });
+  });
+
+  it("does not unlock contest workspace from another user's local registration", () => {
+    process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
+    saveSession(window.localStorage, createMockSession({ ...mockUser, id: 7, handle: "lin-chen" }));
+    markContestRegistered(window.localStorage, 7, 88);
+    saveSession(window.localStorage, createMockSession({ ...mockUser, id: 8, handle: "mira" }));
+
+    const contest = buildContest({ id: 88, registered: false, status: "running" });
+    render(<ContestWorkspacePage contest={{ ...contest, phase: "live", canSubmit: false }} problem={buildProblem({ id: 1 })} languages={mockLanguages} />);
+
+    fireEvent.change(screen.getByLabelText("Source code"), { target: { value: "other user source" } });
+
+    expect(screen.getByRole("button", { name: "Submit solution" })).toBeDisabled();
+    expect(submissionsCreate).not.toHaveBeenCalled();
   });
 });

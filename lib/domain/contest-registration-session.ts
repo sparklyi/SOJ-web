@@ -1,19 +1,38 @@
 export const contestRegistrationStorageKey = "soj.contestRegistrations";
 export const contestRegistrationChangeEvent = "soj:contest-registration-change";
 
+type ContestRegistrationUser = {
+  id?: number;
+  handle?: string;
+};
+
 type ContestRegistrationStore = {
   getItem: (key: string) => string | null;
   setItem: (key: string, value: string) => void;
 };
 
-export function isContestRegistered(store: ContestRegistrationStore, contestId: number): boolean {
-  return readContestRegistrations(store).has(contestId);
+type ContestRegistrationUserKey = string | number | null;
+
+export function contestRegistrationUserKey(user: ContestRegistrationUser | null | undefined): string | null {
+  if (!user) return null;
+  if (Number.isInteger(user.id)) return `id:${user.id}`;
+  return user.handle ? `handle:${user.handle}` : null;
 }
 
-export function markContestRegistered(store: ContestRegistrationStore, contestId: number): void {
-  const registrations = readContestRegistrations(store);
+export function isContestRegistered(store: ContestRegistrationStore, userKey: ContestRegistrationUserKey, contestId: number): boolean {
+  const key = normalizeUserKey(userKey);
+  if (!key) return false;
+  return readContestRegistrations(store, key).has(contestId);
+}
+
+export function markContestRegistered(store: ContestRegistrationStore, userKey: ContestRegistrationUserKey, contestId: number): void {
+  const key = normalizeUserKey(userKey);
+  if (!key) return;
+  const registrationsByUser = readContestRegistrationMap(store);
+  const registrations = new Set(registrationsByUser[key] ?? []);
   registrations.add(contestId);
-  store.setItem(contestRegistrationStorageKey, JSON.stringify([...registrations]));
+  registrationsByUser[key] = [...registrations];
+  store.setItem(contestRegistrationStorageKey, JSON.stringify(registrationsByUser));
   dispatchContestRegistrationChange();
 }
 
@@ -27,16 +46,31 @@ export function subscribeToContestRegistrationChanges(onStoreChange: () => void)
   };
 }
 
-function readContestRegistrations(store: ContestRegistrationStore) {
+function readContestRegistrations(store: ContestRegistrationStore, userKey: string) {
+  return new Set(readContestRegistrationMap(store)[userKey] ?? []);
+}
+
+function normalizeUserKey(userKey: ContestRegistrationUserKey) {
+  if (typeof userKey === "number") return `id:${userKey}`;
+  return userKey;
+}
+
+function readContestRegistrationMap(store: ContestRegistrationStore): Record<string, number[]> {
   const value = store.getItem(contestRegistrationStorageKey);
-  if (!value) return new Set<number>();
+  if (!value) return {};
 
   try {
-    const ids = JSON.parse(value) as unknown;
-    if (!Array.isArray(ids)) return new Set<number>();
-    return new Set(ids.filter((id): id is number => Number.isInteger(id)));
+    const parsed = JSON.parse(value) as unknown;
+    if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") return {};
+
+    return Object.fromEntries(
+      Object.entries(parsed).map(([userKey, ids]) => [
+        userKey,
+        Array.isArray(ids) ? ids.filter((id): id is number => Number.isInteger(id)) : [],
+      ]),
+    );
   } catch {
-    return new Set<number>();
+    return {};
   }
 }
 

@@ -8,7 +8,7 @@ import { createBrowserApiClient } from "@/lib/api/client";
 import { getApiMode } from "@/lib/api/mode";
 import type { ContestStatus, ContestSummary } from "@/lib/api/types";
 import { restoreSession } from "@/lib/auth/session";
-import { isContestRegistered, markContestRegistered, subscribeToContestRegistrationChanges } from "@/lib/domain/contest-registration-session";
+import { contestRegistrationUserKey, isContestRegistered, markContestRegistered, subscribeToContestRegistrationChanges } from "@/lib/domain/contest-registration-session";
 
 type ContestRegistrationProps = {
   contest: ContestSummary & {
@@ -53,14 +53,19 @@ export function ContestRegistration({ contest }: ContestRegistrationProps) {
     event.preventDefault();
     if (!canSubmitRegistration) return;
 
+    const userKey = browserUserKey();
+    const displayName = form.displayName.trim();
+    const email = form.email.trim();
+    const inviteCode = form.inviteCode.trim();
+
     setState({ status: "pending" });
     try {
       await createBrowserApiClient().contests.register(contest.id, {
-        displayName: form.displayName,
-        email: form.email,
-        ...(form.inviteCode.trim() ? { inviteCode: form.inviteCode.trim() } : {}),
+        displayName,
+        email,
+        ...(inviteCode ? { inviteCode } : {}),
       });
-      if (typeof window !== "undefined") markContestRegistered(window.localStorage, contest.id);
+      if (typeof window !== "undefined") markContestRegistered(window.localStorage, userKey, contest.id);
       setState({ status: "success" });
     } catch (error) {
       setState({ status: "error", message: error instanceof Error ? error.message : "Registration failed." });
@@ -127,7 +132,7 @@ export function ContestRegistration({ contest }: ContestRegistrationProps) {
             </p>
           ) : null}
           {state.status === "success" ? <p className="text-sm text-soj-muted">Registration saved for this browser.</p> : null}
-          {state.status === "error" ? <p className="text-sm text-soj-danger">{state.message}</p> : null}
+          {state.status === "error" ? <p className="text-sm text-soj-danger" role="alert">{state.message}</p> : null}
         </form>
       ) : (
         <Button type="button" size="lg" variant="secondary" disabled>
@@ -147,6 +152,10 @@ function browserHasSession() {
   return Boolean(browserSession());
 }
 
+function browserUserKey() {
+  return contestRegistrationUserKey(browserSession()?.user);
+}
+
 function useBrowserSessionAvailable() {
   return useSyncExternalStore(
     subscribeToSessionChanges,
@@ -158,7 +167,7 @@ function useBrowserSessionAvailable() {
 function useLocalContestRegistration(contestId: number) {
   return useSyncExternalStore(
     subscribeToContestRegistrationChanges,
-    () => (typeof window === "undefined" ? false : isContestRegistered(window.localStorage, contestId)),
+    () => (typeof window === "undefined" ? false : isContestRegistered(window.localStorage, browserUserKey(), contestId)),
     () => false,
   );
 }
