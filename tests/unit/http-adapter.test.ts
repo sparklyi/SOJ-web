@@ -61,36 +61,64 @@ describe("http adapter", () => {
     });
   });
 
-  it("maps a backend problem page to problem summaries", async () => {
-    const fetchMock = vi.fn(async () =>
-      Response.json({
-        data: {
-          items: [
-            problemResponse({
-              id: 101,
-              slug: "two-sum",
-              title: "Two Sum",
-              difficulty: "easy",
-              status: "published",
-              tags: ["array", "hash-table"],
-              timeLimitMs: 1500,
-              memoryLimitKb: 131072,
-            }),
-          ],
-          total: 1,
-          page: 1,
-          page_size: 100,
-        },
-        error: null,
-      }),
-    );
+  it("maps a backend problem page with per-item stats to problem summaries", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const path = String(url).replace("http://localhost:8080", "");
+      if (path === "/api/v1/problems?page=1&page_size=100") {
+        return Response.json({
+          data: {
+            items: [
+              problemResponse({
+                id: 101,
+                slug: "two-sum",
+                title: "Two Sum",
+                difficulty: "easy",
+                status: "published",
+                tags: ["array", "hash-table"],
+                timeLimitMs: 1500,
+                memoryLimitKb: 131072,
+              }),
+              problemResponse({
+                id: 102,
+                slug: "knapsack",
+                title: "Knapsack",
+                difficulty: "medium",
+                status: "published",
+                tags: ["dp"],
+              }),
+            ],
+            total: 2,
+            page: 1,
+            page_size: 100,
+          },
+          error: null,
+        });
+      }
+      if (path === "/api/v1/problems/101/stats") {
+        return Response.json({
+          data: problemStatsResponse({ problemId: 101, totalSubmissions: 20, acceptedSubmissions: 12 }),
+          error: null,
+        });
+      }
+      if (path === "/api/v1/problems/102/stats") {
+        return Response.json({
+          data: problemStatsResponse({ problemId: 102, totalSubmissions: 8, acceptedSubmissions: 3 }),
+          error: null,
+        });
+      }
+      return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const problems = await createHttpAdapter().problems.list();
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/problems?page=1&page_size=100", {
-      cache: "no-store",
-    });
+    expect(requestedUrls(fetchMock)).toEqual(
+      expect.arrayContaining([
+        "http://localhost:8080/api/v1/problems?page=1&page_size=100",
+        "http://localhost:8080/api/v1/problems/101/stats",
+        "http://localhost:8080/api/v1/problems/102/stats",
+      ]),
+    );
     expect(problems).toEqual({
       items: [
         {
@@ -100,12 +128,98 @@ describe("http adapter", () => {
           difficulty: "easy",
           tags: ["array", "hash-table"],
           status: "todo",
-          acceptedCount: 0,
-          submissionCount: 0,
+          acceptedCount: 12,
+          submissionCount: 20,
+        },
+        {
+          id: 102,
+          slug: "knapsack",
+          title: "Knapsack",
+          difficulty: "medium",
+          tags: ["dp"],
+          status: "todo",
+          acceptedCount: 3,
+          submissionCount: 8,
         },
       ],
-      total: 1,
+      total: 2,
     });
+  });
+
+  it("propagates typed ApiError when a problem list stats request fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL | Request) => {
+        const path = String(url).replace("http://localhost:8080", "");
+        if (path === "/api/v1/problems?page=1&page_size=100") {
+          return Response.json({
+            data: {
+              items: [
+                problemResponse({
+                  id: 101,
+                  slug: "two-sum",
+                  title: "Two Sum",
+                  difficulty: "easy",
+                  status: "published",
+                }),
+              ],
+              total: 1,
+              page: 1,
+              page_size: 100,
+            },
+            error: null,
+          });
+        }
+        return Response.json(
+          {
+            data: null,
+            error: { code: "problem.stats_unavailable", message: "Problem stats unavailable." },
+          },
+          { status: 503 },
+        );
+      }),
+    );
+
+    await expect(createHttpAdapter().problems.list()).rejects.toMatchObject({
+      name: "ApiError",
+      code: "problem.stats_unavailable",
+      message: "Problem stats unavailable.",
+      status: 503,
+    } satisfies Partial<ApiError>);
+  });
+
+  it("does not reuse backend publication status as solve status in HTTP mode", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL | Request) => {
+        const path = String(url).replace("http://localhost:8080", "");
+        if (path === "/api/v1/problems?page=1&page_size=100") {
+          return Response.json({
+            data: {
+              items: [
+                problemResponse({ id: 102, slug: "draft-problem", title: "Draft Problem", difficulty: "medium", status: "draft" }),
+                problemResponse({ id: 103, slug: "archived-problem", title: "Archived Problem", difficulty: "hard", status: "archived" }),
+              ],
+              total: 2,
+              page: 1,
+              page_size: 100,
+            },
+            error: null,
+          });
+        }
+        if (path === "/api/v1/problems/102/stats") {
+          return Response.json({ data: problemStatsResponse({ problemId: 102 }), error: null });
+        }
+        if (path === "/api/v1/problems/103/stats") {
+          return Response.json({ data: problemStatsResponse({ problemId: 103 }), error: null });
+        }
+        return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
+      }),
+    );
+
+    const problems = await createHttpAdapter().problems.list();
+
+    expect(problems.items.map((problem) => problem.status)).toEqual(["todo", "todo"]);
   });
 
   it("combines backend problem, statement, and stats into a problem detail", async () => {
@@ -114,15 +228,15 @@ describe("http adapter", () => {
       if (path === "/api/v1/problems/101") {
         return Response.json({
           data: problemResponse({
-            id: 101,
-            slug: "two-sum",
-            title: "Two Sum",
-            difficulty: "easy",
-            status: "published",
-            tags: ["array", "hash-table"],
-            timeLimitMs: 1500,
-            memoryLimitKb: 131072,
-          }),
+              id: 101,
+              slug: "two-sum",
+              title: "Two Sum",
+              difficulty: "easy",
+              status: "published",
+              tags: ["array", "hash-table"],
+              timeLimitMs: 1500,
+              memoryLimitKb: 131072,
+            }),
           error: null,
         });
       }
@@ -145,12 +259,7 @@ describe("http adapter", () => {
       }
       if (path === "/api/v1/problems/101/stats") {
         return Response.json({
-          data: {
-            problem_id: 101,
-            total_submissions: 20,
-            accepted_submissions: 12,
-            status_counts: { accepted: 12, wrong_answer: 8 },
-          },
+          data: problemStatsResponse({ problemId: 101, totalSubmissions: 20, acceptedSubmissions: 12 }),
           error: null,
         });
       }
@@ -160,9 +269,13 @@ describe("http adapter", () => {
 
     const problem = await createHttpAdapter().problems.get(101);
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, "http://localhost:8080/api/v1/problems/101", { cache: "no-store" });
-    expect(fetchMock).toHaveBeenNthCalledWith(2, "http://localhost:8080/api/v1/problems/101/statement", { cache: "no-store" });
-    expect(fetchMock).toHaveBeenNthCalledWith(3, "http://localhost:8080/api/v1/problems/101/stats", { cache: "no-store" });
+    expect(requestedUrls(fetchMock)).toEqual(
+      expect.arrayContaining([
+        "http://localhost:8080/api/v1/problems/101",
+        "http://localhost:8080/api/v1/problems/101/statement",
+        "http://localhost:8080/api/v1/problems/101/stats",
+      ]),
+    );
     expect(problem).toMatchObject({
       id: 101,
       slug: "two-sum",
@@ -181,28 +294,71 @@ describe("http adapter", () => {
     });
   });
 
-  it("does not reuse backend publication status as solve status in HTTP mode", async () => {
+  it("propagates typed ApiError when a problem detail statement request fails", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        Response.json({
-          data: {
-            items: [
-              problemResponse({ id: 102, slug: "draft-problem", title: "Draft Problem", difficulty: "medium", status: "draft" }),
-              problemResponse({ id: 103, slug: "archived-problem", title: "Archived Problem", difficulty: "hard", status: "archived" }),
-            ],
-            total: 2,
-            page: 1,
-            page_size: 100,
+      vi.fn(async (url: string | URL | Request) => {
+        const path = String(url).replace("http://localhost:8080", "");
+        if (path === "/api/v1/problems/101") {
+          return Response.json({
+            data: problemResponse({ id: 101, slug: "two-sum", title: "Two Sum", difficulty: "easy", status: "published" }),
+            error: null,
+          });
+        }
+        if (path === "/api/v1/problems/101/stats") {
+          return Response.json({ data: problemStatsResponse({ problemId: 101 }), error: null });
+        }
+        return Response.json(
+          {
+            data: null,
+            error: { code: "problem.statement_not_found", message: "Problem statement not found." },
           },
-          error: null,
-        }),
-      ),
+          { status: 404 },
+        );
+      }),
     );
 
-    const problems = await createHttpAdapter().problems.list();
+    await expect(createHttpAdapter().problems.get(101)).rejects.toMatchObject({
+      name: "ApiError",
+      code: "problem.statement_not_found",
+      message: "Problem statement not found.",
+      status: 404,
+    } satisfies Partial<ApiError>);
+  });
 
-    expect(problems.items.map((problem) => problem.status)).toEqual(["todo", "todo"]);
+  it("propagates typed ApiError when a problem detail stats request fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL | Request) => {
+        const path = String(url).replace("http://localhost:8080", "");
+        if (path === "/api/v1/problems/101") {
+          return Response.json({
+            data: problemResponse({ id: 101, slug: "two-sum", title: "Two Sum", difficulty: "easy", status: "published" }),
+            error: null,
+          });
+        }
+        if (path === "/api/v1/problems/101/statement") {
+          return Response.json({
+            data: problemStatementResponse({ problemId: 101 }),
+            error: null,
+          });
+        }
+        return Response.json(
+          {
+            data: null,
+            error: { code: "problem.stats_unavailable", message: "Problem stats unavailable." },
+          },
+          { status: 503 },
+        );
+      }),
+    );
+
+    await expect(createHttpAdapter().problems.get(101)).rejects.toMatchObject({
+      name: "ApiError",
+      code: "problem.stats_unavailable",
+      message: "Problem stats unavailable.",
+      status: 503,
+    } satisfies Partial<ApiError>);
   });
 
   it("throws ApiError with backend error code, message, and status", async () => {
@@ -452,4 +608,32 @@ function problemResponse(overrides: {
     updated_at: "2026-07-07T10:00:00Z",
     published_at: overrides.status === "published" ? "2026-07-07T10:00:00Z" : null,
   };
+}
+
+function problemStatementResponse(overrides: { problemId: number }) {
+  return {
+    title: "Two Sum",
+    description: "Find two values with the target sum.",
+    input_description: "The first line contains n and target.",
+    output_description: "Print two indices.",
+    samples: [{ input: "4 9\n2 7 11 15", output: "1 2" }],
+    hint: null,
+    source: null,
+    problem_id: overrides.problemId,
+    version: 3,
+    created_at: "2026-07-07T10:00:00Z",
+  };
+}
+
+function problemStatsResponse(overrides: { problemId: number; totalSubmissions?: number; acceptedSubmissions?: number }) {
+  return {
+    problem_id: overrides.problemId,
+    total_submissions: overrides.totalSubmissions ?? 0,
+    accepted_submissions: overrides.acceptedSubmissions ?? 0,
+    status_counts: {},
+  };
+}
+
+function requestedUrls(fetchMock: ReturnType<typeof vi.fn>) {
+  return fetchMock.mock.calls.map(([url]) => String(url));
 }
