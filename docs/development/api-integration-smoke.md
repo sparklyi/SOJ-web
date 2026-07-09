@@ -56,16 +56,16 @@ Open `http://localhost:3000` and use these flows:
 1. Register or login from `/auth/register` or `/auth/login`.
 2. Open `/problems`, then a problem detail page.
 3. Open a problem detail page and confirm the statement renders.
-4. If the session can access the backend language catalog, select any enabled language and submit source from the problem workspace.
+4. Select any enabled language from the public backend language catalog and submit source from the problem workspace.
 5. Follow the success link to `/submissions/{id}`.
 6. Open `/contests`, register for a contest, then enter its workspace.
-7. If the session can access the backend language catalog, submit from the contest workspace and open the contest scoreboard.
+7. Submit from the contest workspace and open the contest scoreboard.
 
 ## Expected Behavior
 
 - Auth stores the access token in the browser session and `/me` loads with that token.
 - Problem list/detail render backend problem, statement, stats, and limits.
-- Language selection loads backend judge language rows when the session can access the language endpoint.
+- Language selection loads enabled backend judge language rows from the public language endpoint.
 - Practice and contest submissions call backend create endpoints with `problem_id`, `contest_id`, `language_id`, and `source_code`.
 - Submission detail loads from the browser session so protected backend visibility rules apply.
 - Contest registration posts display name, email, and optional invite code.
@@ -73,11 +73,6 @@ Open `http://localhost:3000` and use these flows:
 
 ## Known Backend Contract Gaps
 
-- Public language list endpoint is not available yet; frontend currently calls `/api/v1/admin/languages`.
-  Regular users receive `admin_required`, so browser submit UI can load the page but cannot complete source submission until the backend exposes a public language catalog or the session is admin/root.
-- Contest list/detail responses do not expose current-user registration state; frontend uses a user-scoped local bridge after successful registration.
-- Contest scoring mode is not exposed; HTTP mode defaults contests to ACM.
-- Contest problem titles are not enriched in contest payloads; frontend labels them from alias/problem id.
 - OI/IOI scoreboard fields and Arena event feed fields are not available in OpenAPI yet.
 
 These gaps are also tracked in `docs/development/openapi-inventory.md`.

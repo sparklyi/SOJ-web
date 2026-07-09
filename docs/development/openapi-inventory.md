@@ -81,6 +81,21 @@ Frontend notes:
 - Detail visibility remains enforced by backend owner/admin/root/contest rules.
 - Page-level browser clients read the local session token before calling protected detail or create endpoints.
 
+## Languages
+
+Used by v2:
+
+- `GET /api/v1/languages`
+
+Available schemas:
+
+- `LanguagePageEnvelope`
+- `LanguageResponse`
+
+Frontend notes:
+
+- HTTP mode requests enabled SOJ agent languages for regular users without admin permissions.
+
 ## Contests
 
 Used by v2:
@@ -101,9 +116,9 @@ First release does not consume contest create/update/delete endpoints.
 
 Frontend notes:
 
-- `ContestSummary.type` defaults to `acm` until the backend exposes contest scoring mode.
-- `ContestSummary.registered` defaults to false from the backend payload. The frontend uses a user-scoped local registration bridge after a successful registration so the v2 workspace can transition immediately.
-- Contest problem titles are rendered from alias/problem id until the backend returns enriched problem titles in contest payloads.
+- `ContestSummary.type` maps from backend `scoring_mode`.
+- `ContestSummary.registered` maps from backend current-user registration state. The frontend still keeps a user-scoped local registration bridge immediately after a successful registration so the workspace can transition before the next fetch.
+- Contest problem titles use backend-enriched `problems[].title` with an alias fallback.
 
 ## ACM Scoreboard
 
@@ -128,7 +143,7 @@ This is enough for ACM live, frozen, and final table views.
 
 Not available in the current OpenAPI contract:
 
-- Contest type or scoring mode field.
+- Non-ACM scoring mode values.
 - Per-row total score for OI/IOI.
 - Per-cell partial score.
 - Per-cell max score.
@@ -155,9 +170,5 @@ Mock mode must model Arena events separately until the backend contract is exten
 
 Backend contract follow-ups before removing frontend bridges:
 
-- Add a public language list endpoint for regular users. Current OpenAPI exposes `/api/v1/admin/languages`, which is not the right long-term public contract.
-- Add current-user contest registration state to contest list/detail responses.
-- Add contest scoring mode to contest list/detail responses.
-- Add enriched contest problem titles or a documented frontend enrichment endpoint.
 - Add OI/IOI scoreboard fields listed above if those modes remain product scope.
 - Add Arena event feed fields listed above if the live signal surface remains product scope.
