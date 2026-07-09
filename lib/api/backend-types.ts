@@ -194,6 +194,7 @@ export type ContestProblem = {
   problem_id: number;
   alias: string;
   sort_order: number;
+  title?: string;
 };
 
 export type ContestResponse = {
@@ -203,6 +204,8 @@ export type ContestResponse = {
   description?: string | null;
   visibility: ContestVisibility;
   status: BackendContestStatus;
+  scoring_mode: "acm";
+  registered: boolean;
   start_at: string;
   end_at: string;
   freeze_at: string;

@@ -39,7 +39,7 @@ describe("http adapter", () => {
     const languages = await createHttpAdapter().languages.list({ enabled: true, engine: "soj-agent" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/admin/languages?page=1&page_size=100&enabled=true&engine=soj-agent",
+      "http://localhost:8080/api/v1/languages?page=1&page_size=100&enabled=true&engine=soj-agent",
       { cache: "no-store" },
     );
     expect(languages).toEqual({
@@ -437,8 +437,9 @@ describe("http adapter", () => {
                 id: 11,
                 title: "Signal Cup",
                 status: "published",
+                registered: true,
                 startAt: "2999-07-08T11:00:00Z",
-                problems: [{ problem_id: 101, alias: "A", sort_order: 1 }],
+                problems: [{ problem_id: 101, alias: "A", sort_order: 1, title: "Two Sum" }],
               }),
             ],
             total: 1,
@@ -482,8 +483,8 @@ describe("http adapter", () => {
       title: "Signal Cup",
       type: "acm",
       status: "scheduled",
-      registered: false,
-      problems: [{ problemId: 101, alias: "A", title: "Problem A" }],
+      registered: true,
+      problems: [{ problemId: 101, alias: "A", title: "Two Sum" }],
     });
     expect(contest).toMatchObject({
       id: 11,
@@ -823,7 +824,7 @@ describe("http adapter", () => {
 
     await createHttpAdapter({ accessToken: "test-token" }).languages.list();
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/admin/languages?page=1&page_size=100", {
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/languages?page=1&page_size=100", {
       cache: "no-store",
       headers: { Authorization: "Bearer test-token" },
     });
@@ -1080,10 +1081,11 @@ function contestResponse(overrides: {
   id: number;
   title: string;
   status: "draft" | "published" | "running" | "ended" | "archived";
+  registered?: boolean;
   startAt?: string;
   endAt?: string;
   freezeAt?: string;
-  problems?: Array<{ problem_id: number; alias: string; sort_order: number }>;
+  problems?: Array<{ problem_id: number; alias: string; sort_order: number; title?: string }>;
 }) {
   return {
     id: overrides.id,
@@ -1092,6 +1094,8 @@ function contestResponse(overrides: {
     description: null,
     visibility: "public",
     status: overrides.status,
+    scoring_mode: "acm" as const,
+    registered: overrides.registered ?? false,
     start_at: overrides.startAt ?? "2026-07-08T10:00:00Z",
     end_at: overrides.endAt ?? "2026-07-08T12:00:00Z",
     freeze_at: overrides.freezeAt ?? "2026-07-08T11:30:00Z",

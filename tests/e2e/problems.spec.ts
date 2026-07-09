@@ -5,9 +5,9 @@ test("problem list renders search, filters, and data rows", async ({ page }) => 
 
   await expect(page.getByRole("heading", { name: "Problem set" })).toBeVisible();
   await expect(page.getByLabel("Search problems")).toBeVisible();
-  await expect(page.locator("form").getByText("Difficulty")).toBeVisible();
-  await expect(page.locator("form").getByText("Status")).toBeVisible();
-  await expect(page.locator("form").getByText("Tag")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Difficulty" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Status" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Tag" })).toBeVisible();
 
   await expect(page.getByRole("link", { name: /Signal Path/i })).toBeVisible();
   await expect(page.getByText("Solved", { exact: true })).toBeVisible();

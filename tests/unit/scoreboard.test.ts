@@ -66,21 +66,22 @@ describe("scoreboard model", () => {
     expect(mapContestResponse(contestResponse({ status: "draft" }), now).status).toBe("ended");
   });
 
-  it("maps contest problems with backend aliases and placeholder titles", () => {
+  it("maps contest problems with backend aliases and titles", () => {
     const contest = mapContestResponse(
       contestResponse({
+        registered: true,
         problems: [
-          { problem_id: 202, alias: "B", sort_order: 2 },
+          { problem_id: 202, alias: "B", sort_order: 2, title: "Binary Grid" },
           { problem_id: 101, alias: "A", sort_order: 1 },
         ],
       }),
     );
 
     expect(contest.type).toBe("acm");
-    expect(contest.registered).toBe(false);
+    expect(contest.registered).toBe(true);
     expect(contest.problems).toEqual([
       { problemId: 101, alias: "A", title: "Problem A" },
-      { problemId: 202, alias: "B", title: "Problem B" },
+      { problemId: 202, alias: "B", title: "Binary Grid" },
     ]);
   });
 
@@ -143,10 +144,11 @@ describe("scoreboard model", () => {
 
 function contestResponse(overrides: {
   status?: "draft" | "published" | "running" | "ended" | "archived";
+  registered?: boolean;
   startAt?: string;
   endAt?: string;
   freezeAt?: string;
-  problems?: Array<{ problem_id: number; alias: string; sort_order: number }>;
+  problems?: Array<{ problem_id: number; alias: string; sort_order: number; title?: string }>;
 } = {}) {
   return {
     id: 1,
@@ -155,6 +157,8 @@ function contestResponse(overrides: {
     description: null,
     visibility: "public" as const,
     status: overrides.status ?? "published",
+    scoring_mode: "acm" as const,
+    registered: overrides.registered ?? false,
     start_at: overrides.startAt ?? "2026-07-08T10:00:00Z",
     end_at: overrides.endAt ?? "2026-07-08T12:00:00Z",
     freeze_at: overrides.freezeAt ?? "2026-07-08T11:30:00Z",

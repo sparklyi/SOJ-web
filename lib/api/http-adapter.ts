@@ -25,7 +25,7 @@ import { mapContestRegistration, mapContestResponse, mapContestScoreboard } from
 import { mapProblemDetail, mapProblemSummary } from "./problem-mappers";
 import { mapRunSummary, mapSubmissionSummary } from "./submission-mappers";
 
-const LANGUAGE_LIST_PATH = "/api/v1/admin/languages";
+const LANGUAGE_LIST_PATH = "/api/v1/languages";
 
 type HttpAdapterOptions = {
   accessToken?: string;

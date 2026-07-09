@@ -6,18 +6,18 @@ export function mapContestResponse(input: ContestResponse, now: Date = new Date(
   return {
     id: input.id,
     title: input.title,
-    type: "acm",
+    type: input.scoring_mode,
     status: mapContestStatus(input, now),
     startsAt: input.start_at,
     endsAt: input.end_at,
     freezeAt: input.freeze_at,
-    registered: false,
+    registered: input.registered,
     problems: [...input.problems]
       .sort((a, b) => a.sort_order - b.sort_order || a.alias.localeCompare(b.alias))
       .map((problem) => ({
         problemId: problem.problem_id,
         alias: problem.alias,
-        title: `Problem ${problem.alias}`,
+        title: problem.title ?? `Problem ${problem.alias}`,
       })),
   };
 }
