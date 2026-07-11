@@ -84,6 +84,54 @@ export type ProblemStatsResponse = {
   status_counts: Record<string, number>;
 };
 
+export type TestcaseSetResponse = {
+  id: number;
+  problem_id: number;
+  version: number;
+  checksum_sha256: string;
+  size_bytes: number;
+  case_count: number;
+  status: "uploading" | "ready" | "disabled";
+  is_current: boolean;
+  created_at: string;
+};
+
+export type ProblemCheckResponse = {
+  id: number;
+  problem_id: number;
+  statement_id?: number | null;
+  testcase_set_id?: number | null;
+  status: "queued" | "running" | "completed" | "failed" | "canceled";
+  summary: {
+    case_count: number;
+    expected_case_count: number;
+    finding_count: number;
+    error_count: number;
+    warning_count: number;
+    info_count: number;
+    storage_readable: boolean;
+    zip_readable: boolean;
+    valid: boolean;
+  };
+  findings: Array<{
+    id: number;
+    severity: "info" | "warning" | "error";
+    code: string;
+    message: string;
+    case_index?: number | null;
+    testcase_key?: string | null;
+  }>;
+};
+
+export type ProblemAuthoringStateResponse = {
+  problem: ProblemResponse;
+  statement?: ProblemStatementResponse | null;
+  testcase_set?: TestcaseSetResponse | null;
+  latest_check?: ProblemCheckResponse | null;
+  publishable: boolean;
+  blockers: Array<{ code: string; message: string }>;
+};
+
 export type LanguageResponse = {
   id: number;
   engine: string;

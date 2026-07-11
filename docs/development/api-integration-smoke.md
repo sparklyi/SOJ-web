@@ -51,6 +51,14 @@ Run the frontend against the backend:
 NEXT_PUBLIC_SOJ_API_MODE=http npm run dev
 ```
 
+Run the repeatable authoring-to-judge browser integration, which starts and cleans up the sibling SOJ Compose stack:
+
+```bash
+npm run test:e2e:http
+```
+
+Set `SOJ_BACKEND_DIR=/path/to/SOJ` when the repositories are not siblings. Set `SOJ_HTTP_REUSE_BACKEND=1` to reuse an already-running backend stack during local iteration.
+
 Open `http://localhost:3000` and use these flows:
 
 1. Register or login from `/auth/register` or `/auth/login`.
@@ -60,6 +68,7 @@ Open `http://localhost:3000` and use these flows:
 5. Follow the success link to `/submissions/{id}`.
 6. Open `/contests`, register for a contest, then enter its workspace.
 7. Submit from the contest workspace and open the contest scoreboard.
+8. Open `/manage/problems`, create a draft, save its statement, upload a testcase zip, run validation, and publish it.
 
 ## Expected Behavior
 
@@ -70,6 +79,8 @@ Open `http://localhost:3000` and use these flows:
 - Submission detail loads from the browser session so protected backend visibility rules apply.
 - Contest registration posts display name, email, and optional invite code.
 - ACM scoreboard renders backend rows in HTTP mode.
+- Direct publication before a valid current-testcase check returns `422 problem.check_required`.
+- The authoring browser smoke publishes only after validation and then confirms an accepted submission for the new problem.
 
 ## Known Backend Contract Gaps
 

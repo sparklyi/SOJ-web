@@ -31,6 +31,7 @@ SOJ-web is the v2 frontend for SOJ, an online judge product for practice, contes
 - Submission queue and submission detail lifecycle views.
 - Mock API mode for fast frontend iteration before full backend integration.
 - HTTP adapter boundary for connecting to the SOJ backend contract.
+- Problem authoring workspace for drafts, statements, testcase uploads, validation, and guarded publication.
 - Unit tests, browser E2E tests, linting, style checks, and production build checks in CI.
 
 ## Tech Stack

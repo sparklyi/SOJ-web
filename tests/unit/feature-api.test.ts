@@ -76,6 +76,7 @@ describe("feature api modules", () => {
     const apiClient = {
       ...client,
       problems: {
+        ...client.problems,
         list: vi.fn(async () => ({
           items: [
             {
@@ -101,7 +102,6 @@ describe("feature api modules", () => {
           ],
           total: 2,
         })),
-        get: client.problems.get,
       },
     };
 

@@ -222,6 +222,87 @@ describe("http adapter", () => {
     expect(problems.items.map((problem) => problem.status)).toEqual(["todo", "todo"]);
   });
 
+  it("maps the authenticated problem authoring workflow", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const path = String(url).replace("http://localhost:8080", "");
+      if (path === "/api/v1/problems?page=1&page_size=100&mine=true") {
+        return Response.json({
+          data: { items: [problemResponse({ id: 201, slug: "author-problem", title: "Author Problem", difficulty: "medium", status: "draft" })], total: 1, page: 1, page_size: 100 },
+          error: null,
+        });
+      }
+      if (path === "/api/v1/problems/201/authoring") {
+        return Response.json({
+          data: {
+            problem: problemResponse({ id: 201, slug: "author-problem", title: "Author Problem", difficulty: "medium", status: "draft" }),
+            statement: problemStatementResponse({ problemId: 201 }),
+            testcase_set: { id: 9, problem_id: 201, version: 2, checksum_sha256: "abc", size_bytes: 120, case_count: 1, status: "ready", is_current: true, created_at: "2026-07-11T10:00:00Z" },
+            latest_check: problemCheckResponse({ id: 15, problemId: 201, testcaseSetId: 9, valid: true }),
+            publishable: true,
+            blockers: [],
+          },
+          error: null,
+        });
+      }
+      if (path === "/api/v1/problems/201/testcase-sets") {
+        expect(init?.body).toBeInstanceOf(FormData);
+        const form = init?.body as FormData;
+        expect(form.get("case_count")).toBe("1");
+        expect(form.get("archive")).toBeInstanceOf(File);
+        expect(form.get("checksum_sha256")).toMatch(/^[a-f0-9]{64}$/);
+        return Response.json({ data: { id: 10, problem_id: 201, version: 3, checksum_sha256: "def", size_bytes: 140, case_count: 1, status: "ready", is_current: true, created_at: "2026-07-11T10:10:00Z" }, error: null }, { status: 201 });
+      }
+      if (path === "/api/v1/problems/201/checks") {
+        return Response.json({ data: problemCheckResponse({ id: 16, problemId: 201, testcaseSetId: 10, valid: true }), error: null }, { status: 201 });
+      }
+      return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createHttpAdapter({ accessToken: "owner-token" });
+
+    const mine = await client.problems.listMine();
+    const state = await client.problems.getAuthoringState(201);
+    const testcaseSet = await client.problems.uploadTestcases(201, { archive: new File(["zip"], "cases.zip", { type: "application/zip" }), caseCount: 1 });
+    const check = await client.problems.runCheck(201);
+
+    expect(mine.items[0]).toMatchObject({ id: 201, publicationStatus: "draft", ownerUserId: 1 });
+    expect(state).toMatchObject({ publishable: true, testcaseSet: { id: 9 }, latestCheck: { id: 15, summary: { valid: true } } });
+    expect(testcaseSet.id).toBe(10);
+    expect(check.id).toBe(16);
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer owner-token");
+    }
+  });
+
+  it("sends problem create, edit, statement, and publish commands", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const path = String(url).replace("http://localhost:8080", "");
+      const body = typeof init?.body === "string" ? JSON.parse(init.body) : null;
+      if (path === "/api/v1/problems" && init?.method === "POST") {
+        expect(body).toMatchObject({ title: "New Problem", slug: "new-problem", visibility: "private" });
+        return Response.json({ data: problemResponse({ id: 301, slug: "new-problem", title: "New Problem", difficulty: "easy", status: "draft" }), error: null }, { status: 201 });
+      }
+      if (path === "/api/v1/problems/301/statement") {
+        expect(body.samples).toEqual([{ input: "1", output: "1" }]);
+        return Response.json({ data: problemStatementResponse({ problemId: 301 }), error: null }, { status: 201 });
+      }
+      if (path === "/api/v1/problems/301" && init?.method === "PATCH") {
+        return Response.json({ data: problemResponse({ id: 301, slug: "new-problem", title: "New Problem", difficulty: "easy", status: body.status ?? "draft" }), error: null });
+      }
+      return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createHttpAdapter({ accessToken: "owner-token" });
+
+    const created = await client.problems.create({ title: "New Problem", slug: "new-problem", difficulty: "easy", visibility: "private", timeLimitMs: 1000, memoryLimitKb: 262144, tags: ["math"] });
+    await client.problems.saveStatement(301, { title: "New Problem", description: "Solve it", inputDescription: "Input", outputDescription: "Output", samples: [{ input: "1", output: "1" }], hint: "", source: "" });
+    await client.problems.update(301, { tags: ["math", "implementation"] });
+    const published = await client.problems.publish(301);
+
+    expect(created.id).toBe(301);
+    expect(published.publicationStatus).toBe("published");
+  });
+
   it("maps a backend submission page to submission summaries", async () => {
     const fetchMock = vi.fn(async () =>
       Response.json({
@@ -1140,6 +1221,32 @@ function scoreboardResponse() {
         ],
       },
     ],
+  };
+}
+
+function problemCheckResponse(overrides: { id: number; problemId: number; testcaseSetId: number; valid: boolean }) {
+  return {
+    id: overrides.id,
+    problem_id: overrides.problemId,
+    testcase_set_id: overrides.testcaseSetId,
+    requested_by: 1,
+    status: "completed",
+    summary: {
+      case_count: 1,
+      expected_case_count: 1,
+      finding_count: overrides.valid ? 0 : 1,
+      error_count: overrides.valid ? 0 : 1,
+      warning_count: 0,
+      info_count: 0,
+      storage_readable: true,
+      zip_readable: true,
+      valid: overrides.valid,
+    },
+    findings: overrides.valid
+      ? []
+      : [{ id: 1, run_id: overrides.id, severity: "error", code: "testcase.output_missing", message: "missing output", details: {}, created_at: "2026-07-11T10:00:00Z" }],
+    created_at: "2026-07-11T10:00:00Z",
+    updated_at: "2026-07-11T10:00:00Z",
   };
 }
 

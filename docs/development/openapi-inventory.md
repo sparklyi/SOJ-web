@@ -14,6 +14,7 @@ Connected in HTTP mode:
 - Problem list, detail, statement, stats, and language selection.
 - Submission list, detail, create, self-run create, and self-run detail.
 - Contest list, detail, registration, and ACM scoreboard.
+- Owner problem listing, problem creation/editing, statement versions, testcase archive upload, validation checks, authoring state, and publication.
 
 Browser-origin requests should use the same-origin `/soj-api/*` proxy configured in `next.config.ts`; server-side requests can use `SOJ_API_INTERNAL_BASE_URL` or `NEXT_PUBLIC_SOJ_API_BASE_URL` when an absolute backend URL is required.
 
@@ -43,6 +44,13 @@ Used by v2:
 - `GET /api/v1/problems/{id}`
 - `GET /api/v1/problems/{id}/statement`
 - `GET /api/v1/problems/{id}/stats`
+- `GET /api/v1/problems?mine=true`
+- `POST /api/v1/problems`
+- `PATCH /api/v1/problems/{id}`
+- `POST /api/v1/problems/{id}/statement`
+- `POST /api/v1/problems/{id}/testcase-sets`
+- `POST /api/v1/problems/{id}/checks`
+- `GET /api/v1/problems/{id}/authoring`
 
 Available schemas:
 
@@ -51,7 +59,7 @@ Available schemas:
 - `ProblemStatementEnvelope`
 - `ProblemStatsEnvelope`
 
-First release does not consume problem create/update/testcase admin endpoints.
+The author console consumes owner-scoped problem create/update, statement, testcase, check, and publish endpoints. Publication remains controlled by backend authoring blockers for the current testcase set.
 
 ## Submissions And Runs
 
