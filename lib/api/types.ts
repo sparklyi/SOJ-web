@@ -5,6 +5,8 @@ export type ApiMode = "mock" | "http";
 
 export type ProblemDifficulty = "easy" | "medium" | "hard";
 export type ProblemStatus = "todo" | "attempted" | "accepted";
+export type ProblemPublicationStatus = "draft" | "published" | "archived";
+export type ProblemVisibility = "private" | "public" | "contest_only";
 
 export type ProblemSummary = {
   id: number;
@@ -25,6 +27,89 @@ export type ProblemDetail = ProblemSummary & {
   constraints: string[];
   timeLimitMs: number;
   memoryLimitKb: number;
+};
+
+export type AuthoringProblem = {
+  id: number;
+  title: string;
+  slug: string;
+  difficulty: ProblemDifficulty;
+  visibility: ProblemVisibility;
+  publicationStatus: ProblemPublicationStatus;
+  tags: string[];
+  timeLimitMs: number;
+  memoryLimitKb: number;
+  ownerUserId: number;
+};
+
+export type ProblemCreateInput = Omit<AuthoringProblem, "id" | "publicationStatus" | "ownerUserId">;
+export type ProblemUpdateInput = Partial<Omit<ProblemCreateInput, "difficulty" | "visibility">> & {
+  difficulty?: ProblemDifficulty;
+  visibility?: ProblemVisibility;
+};
+
+export type ProblemStatementInput = {
+  title: string;
+  description: string;
+  inputDescription: string;
+  outputDescription: string;
+  samples: Array<{ input: string; output: string; explanation?: string }>;
+  hint: string;
+  source: string;
+};
+
+export type AuthoringStatement = ProblemStatementInput & {
+  problemId: number;
+  version: number;
+};
+
+export type AuthoringTestcaseSet = {
+  id: number;
+  problemId: number;
+  version: number;
+  checksumSha256: string;
+  sizeBytes: number;
+  caseCount: number;
+  status: "uploading" | "ready" | "disabled";
+  isCurrent: boolean;
+};
+
+export type ProblemCheckFinding = {
+  id: number;
+  severity: "info" | "warning" | "error";
+  code: string;
+  message: string;
+  caseIndex?: number;
+  testcaseKey?: string;
+};
+
+export type ProblemCheckRun = {
+  id: number;
+  problemId: number;
+  statementId?: number;
+  testcaseSetId?: number;
+  status: "queued" | "running" | "completed" | "failed" | "canceled";
+  summary: {
+    caseCount: number;
+    expectedCaseCount: number;
+    findingCount: number;
+    errorCount: number;
+    warningCount: number;
+    infoCount: number;
+    storageReadable: boolean;
+    zipReadable: boolean;
+    valid: boolean;
+  };
+  findings: ProblemCheckFinding[];
+};
+
+export type ProblemAuthoringState = {
+  problem: AuthoringProblem;
+  statement?: AuthoringStatement;
+  testcaseSet?: AuthoringTestcaseSet;
+  latestCheck?: ProblemCheckRun;
+  publishable: boolean;
+  blockers: Array<{ code: string; message: string }>;
 };
 
 export type ContestType = "acm" | "oi";
@@ -151,6 +236,14 @@ export type ApiClient = {
   problems: {
     list: () => Promise<PageResult<ProblemSummary>>;
     get: (id: number) => Promise<ProblemDetail>;
+    listMine: () => Promise<PageResult<AuthoringProblem>>;
+    create: (input: ProblemCreateInput) => Promise<AuthoringProblem>;
+    update: (id: number, input: ProblemUpdateInput) => Promise<AuthoringProblem>;
+    saveStatement: (id: number, input: ProblemStatementInput) => Promise<AuthoringStatement>;
+    uploadTestcases: (id: number, input: { archive: File; caseCount: number }) => Promise<AuthoringTestcaseSet>;
+    getAuthoringState: (id: number) => Promise<ProblemAuthoringState>;
+    runCheck: (id: number) => Promise<ProblemCheckRun>;
+    publish: (id: number) => Promise<AuthoringProblem>;
   };
   submissions: {
     list: () => Promise<PageResult<SubmissionSummary>>;

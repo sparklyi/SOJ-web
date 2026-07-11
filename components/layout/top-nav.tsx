@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/ui/cn";
+import { getApiMode } from "@/lib/api/mode";
+import { restoreSession } from "@/lib/auth/session";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -16,7 +18,9 @@ const navItems = [
 export function TopNav() {
   const pathname = usePathname() ?? "/";
   const navRef = useRef<HTMLElement>(null);
-  const activeHref = navItems.find((item) => pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`)))?.href ?? "/";
+  const [canAuthor, setCanAuthor] = useState(() => getApiMode() === "mock");
+  const visibleItems = canAuthor ? [...navItems, { href: "/manage/problems", label: "Author" }] : navItems;
+  const activeHref = visibleItems.find((item) => pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`)))?.href ?? "/";
 
   useEffect(() => {
     const activeLink = navRef.current?.querySelector<HTMLAnchorElement>(`a[data-href="${activeHref}"]`);
@@ -24,6 +28,15 @@ export function TopNav() {
       activeLink.scrollIntoView({ block: "nearest", inline: "center" });
     }
   }, [activeHref]);
+
+  useEffect(() => {
+    function updateAuthorAccess() {
+      setCanAuthor(getApiMode() === "mock" || Boolean(restoreSession(window.localStorage)));
+    }
+    updateAuthorAccess();
+    window.addEventListener("storage", updateAuthorAccess);
+    return () => window.removeEventListener("storage", updateAuthorAccess);
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-soj-line/70 bg-soj-bg/82 backdrop-blur-xl">
@@ -42,7 +55,7 @@ export function TopNav() {
         </Link>
         <nav ref={navRef} aria-label="Primary" className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ul className="flex min-w-max items-center gap-1">
-            {navItems.map((item) => (
+            {visibleItems.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
@@ -86,6 +99,11 @@ export function TopNav() {
               <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/settings">
                 Settings
               </Link>
+              {canAuthor ? (
+                <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/problems">
+                  Author problems
+                </Link>
+              ) : null}
               <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/auth/login">
                 Login
               </Link>
