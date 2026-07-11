@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:http": "./scripts/http-authoring-e2e.sh",
     "ci:fast": "npm run typecheck && npm run lint && npm run lint:style && npm run test && npm run build",
     "ci:e2e": "npm run test:e2e",
     "ci": "npm run ci:fast && npm run ci:e2e"
