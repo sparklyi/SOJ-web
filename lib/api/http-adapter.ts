@@ -165,10 +165,17 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
         });
         return mapAuthSession(data);
       },
-      logout: async () => {
+      logout: async (input) => {
+        const body = input?.refreshToken ? JSON.stringify({ refresh_token: input.refreshToken } satisfies { refresh_token: string }) : undefined;
         await request<undefined>("/api/v1/auth/logout", {
           accessToken: options.accessToken,
           method: "POST",
+          ...(body
+            ? {
+                headers: { "content-type": "application/json" },
+                body,
+              }
+            : {}),
         });
       },
       me: async () => {
@@ -399,10 +406,26 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
         return mapContestRegistration(data);
       },
       scoreboard: async (id) => {
-        const data = await request<ScoreboardResponse>(`/api/v1/contests/${id}/scoreboard`, {
-          accessToken: options.accessToken,
-        });
-        return mapContestScoreboard(data);
+        const rows: ScoreboardResponse["rows"] = [];
+        let cursor: string | undefined;
+        let firstPage: ScoreboardResponse | undefined;
+
+        for (let page = 0; page < 10; page += 1) {
+          const data = await request<ScoreboardResponse>(`/api/v1/contests/${id}/scoreboard`, {
+            accessToken: options.accessToken,
+            query: { page_size: 100, cursor },
+          });
+          firstPage ??= data;
+          rows.push(...data.rows);
+          cursor = data.next_cursor;
+          if (!cursor) break;
+        }
+
+        if (cursor || !firstPage) {
+          throw new ApiError("Scoreboard has too many rows to load.", "api.pagination_limit", 200);
+        }
+
+        return mapContestScoreboard({ ...firstPage, rows, next_cursor: undefined });
       },
     },
     languages: {
@@ -412,7 +435,6 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
           query: {
             page: 1,
             page_size: 100,
-            enabled: filter.enabled,
             engine: filter.engine,
           },
         });

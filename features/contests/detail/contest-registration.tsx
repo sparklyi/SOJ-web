@@ -27,9 +27,9 @@ const hintByStatus: Record<ContestStatus, string> = {
 
 export function ContestRegistration({ contest }: ContestRegistrationProps) {
   const firstProblemId = contest.problems[0]?.problemId;
+  const apiMode = getApiMode();
   const hasSession = useBrowserSessionAvailable();
-  const locallyRegistered = useLocalContestRegistration(contest.id);
-  const registered = contest.registered || locallyRegistered;
+  const locallyRegistered = useLocalContestRegistration(contest.id, apiMode === "mock");
   const [form, setForm] = useState(() => ({
     displayName: browserSession()?.user.displayName ?? browserSession()?.user.handle ?? "",
     email: "",
@@ -40,14 +40,15 @@ export function ContestRegistration({ contest }: ContestRegistrationProps) {
     | { status: "pending" }
     | { status: "success" }
     | { status: "error"; message: string }
-  >({ status: registered ? "success" : "idle" });
-  const needsSession = getApiMode() === "http" && !hasSession;
+  >({ status: "idle" });
+  const registered = contest.registered || (apiMode === "mock" && locallyRegistered) || state.status === "success";
+  const needsSession = apiMode === "http" && !hasSession;
   const canSubmitRegistration = contest.canRegister && !registered && !needsSession && state.status !== "pending";
-  const canEnter = (registered || contest.canSubmit || state.status === "success") && Boolean(firstProblemId);
+  const canEnter = (registered || contest.canSubmit) && Boolean(firstProblemId);
   const statusPill = useMemo(() => {
-    if (registered || state.status === "success") return <StatusPill tone="success">Registered</StatusPill>;
+    if (registered) return <StatusPill tone="success">Registered</StatusPill>;
     return <StatusPill tone={contest.canRegister ? "accent" : "warning"}>{contest.canRegister ? "Registration open" : "Registration closed"}</StatusPill>;
-  }, [contest.canRegister, registered, state.status]);
+  }, [contest.canRegister, registered]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,7 +66,7 @@ export function ContestRegistration({ contest }: ContestRegistrationProps) {
         email,
         ...(inviteCode ? { inviteCode } : {}),
       });
-      if (typeof window !== "undefined") markContestRegistered(window.localStorage, userKey, contest.id);
+      if (apiMode === "mock" && typeof window !== "undefined") markContestRegistered(window.localStorage, userKey, contest.id);
       setState({ status: "success" });
     } catch (error) {
       setState({ status: "error", message: error instanceof Error ? error.message : "Registration failed." });
@@ -172,17 +173,21 @@ function useBrowserSessionAvailable() {
   return available;
 }
 
-function useLocalContestRegistration(contestId: number) {
+function useLocalContestRegistration(contestId: number, enabled: boolean) {
   const [registered, setRegistered] = useState(false);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     function update() {
       setRegistered(isContestRegistered(window.localStorage, browserUserKey(), contestId));
     }
 
     update();
     return subscribeToContestRegistrationChanges(update);
-  }, [contestId]);
+  }, [contestId, enabled]);
 
   return registered;
 }

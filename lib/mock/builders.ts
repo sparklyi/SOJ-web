@@ -47,6 +47,7 @@ export function buildSubmission(overrides: Partial<SubmissionSummary> = {}): Sub
     id: overrides.id ?? 1,
     problemId: 1,
     problemTitle: "Signal Path 1",
+    contestTitle: "SOJ Signal Cup",
     contestId: 1,
     status: "running",
     score: 0,

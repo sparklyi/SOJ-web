@@ -1,0 +1,34 @@
+name: soj-web
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SOJ_API_MODE: http
+        NEXT_PUBLIC_SOJ_API_BASE_URL: /soj-api
+        SOJ_API_INTERNAL_BASE_URL: ${SOJ_API_INTERNAL_BASE_URL:-http://api:8080}
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_SOJ_API_MODE: http
+      NEXT_PUBLIC_SOJ_API_BASE_URL: /soj-api
+      SOJ_API_INTERNAL_BASE_URL: ${SOJ_API_INTERNAL_BASE_URL:-http://api:8080}
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "${SOJ_WEB_PORT:-3000}:3000"
+    networks:
+      - soj-backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 5
+
+networks:
+  soj-backend:
+    external: true
+    name: ${SOJ_BACKEND_NETWORK:-soj_default}

@@ -8,6 +8,10 @@ describe("api mode", () => {
     expect(getApiMode({})).toBe("mock");
   });
 
+  it("defaults to HTTP mode for production when no mode is configured", () => {
+    expect(getApiMode({ NODE_ENV: "production" })).toBe("http");
+  });
+
   it("returns fixture problems in mock mode", async () => {
     const client = createApiClient({ mode: "mock" });
     const problems = await client.problems.list();

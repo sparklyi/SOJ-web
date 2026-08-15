@@ -83,11 +83,23 @@ npm run dev
 
 打开 [http://localhost:3000](http://localhost:3000)。
 
+### 生产容器
+
+生产镜像使用 Next.js standalone 输出，并且始终以 HTTP API 模式构建。它要求后端 Compose 网络中的 API 服务名为 `api:8080`：
+
+```bash
+docker compose -p soj -f ../SOJ/deploy/docker-compose.yaml -f ../SOJ/deploy/docker-compose.prod.yaml up -d
+docker network inspect soj_default >/dev/null
+docker compose --env-file .env -f docker-compose.production.yml up --build -d
+```
+
+浏览器请求统一使用同源 `/soj-api/*`，Next 会在共享 Compose 网络中将其 rewrite 到 `http://api:8080`。如果后端 Compose 使用了其他 project name，请设置 `SOJ_BACKEND_NETWORK`。
+
 ## 环境变量
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SOJ_API_MODE` | `mock` | 选择前端 API 适配器。本地评审使用 `mock`，真实后端联调用 `http`。 |
+| `NEXT_PUBLIC_SOJ_API_MODE` | 本地：`mock`，生产：`http` | 选择前端 API 适配器。本地评审使用 `mock`，真实后端联调用 `http`。 |
 | `NEXT_PUBLIC_SOJ_API_BASE_URL` | 浏览器：`/soj-api`，服务端/测试：`http://localhost:8080` | `NEXT_PUBLIC_SOJ_API_MODE=http` 时的公开 API 地址。保持未设置即可使用 Next.js 同源代理。 |
 | `SOJ_API_INTERNAL_BASE_URL` | `http://localhost:8080` | 服务端请求和 `/soj-api/*` rewrite 使用的后端地址。 |
 
@@ -128,6 +140,7 @@ SOJ-web 使用基于适配器的 API 边界：
 
 - `mock` 模式从 `lib/mock` 提供稳定的前端夹具数据。
 - `http` 模式通过 `lib/api/http-adapter.ts` 调用后端。
+- 生产构建在未设置模式时默认使用 HTTP；本地评审必须显式选择 `mock`。
 - 浏览器请求默认走 `/soj-api/*` 同源代理，避免本地 CORS 阻塞。
 
 代码工作区的语言选择由评测语言目录驱动。HTTP 模式会读取后端启用的 SOJ agent 语言；Mock 模式使用相同契约的模拟数据。

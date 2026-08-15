@@ -171,9 +171,8 @@ describe("soj product components", () => {
     });
   });
 
-  it("allows contest workspace submit from local registration state with contest context", async () => {
+  it("does not unlock HTTP contest workspace from local registration state", async () => {
     process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
-    submissionsCreate.mockResolvedValue({ id: 777 });
     saveSession(window.localStorage, createMockSession(mockUser));
     markContestRegistered(window.localStorage, mockUser.id, 88);
     const contest = buildContest({ id: 88, registered: false, status: "running" });
@@ -183,14 +182,8 @@ describe("soj product components", () => {
     fireEvent.change(screen.getByLabelText("Source code"), { target: { value: "contest local registration source" } });
     fireEvent.click(screen.getByRole("button", { name: "Submit solution" }));
 
-    await waitFor(() => {
-      expect(submissionsCreate).toHaveBeenCalledWith({
-        problemId: 1,
-        contestId: 88,
-        languageId: mockLanguages[0]?.id,
-        sourceCode: "contest local registration source",
-      });
-    });
+    expect(screen.getByRole("button", { name: "Submit solution" })).toBeDisabled();
+    expect(submissionsCreate).not.toHaveBeenCalled();
   });
 
   it("does not unlock contest workspace from another user's local registration", () => {
