@@ -83,11 +83,23 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Production Container
+
+The production image uses Next.js standalone output and always builds HTTP API mode. It expects the backend Compose network to expose the backend API as `api:8080`:
+
+```bash
+docker compose -p soj -f ../SOJ/deploy/docker-compose.yaml -f ../SOJ/deploy/docker-compose.prod.yaml up -d
+docker network inspect soj_default >/dev/null
+docker compose --env-file .env -f docker-compose.production.yml up --build -d
+```
+
+The browser calls same-origin `/soj-api/*`; Next rewrites that path to `http://api:8080` inside the shared Compose network. Set `SOJ_BACKEND_NETWORK` when the backend Compose project uses a different project name.
+
 ## Environment Variables
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SOJ_API_MODE` | `mock` | Selects the frontend API adapter. Use `mock` for local review or `http` for backend integration. |
+| `NEXT_PUBLIC_SOJ_API_MODE` | local: `mock`, production: `http` | Selects the frontend API adapter. Use `mock` for local review or `http` for backend integration. |
 | `NEXT_PUBLIC_SOJ_API_BASE_URL` | browser: `/soj-api`, server/test: `http://localhost:8080` | Public API base when `NEXT_PUBLIC_SOJ_API_MODE=http`. Leave unset to use the same-origin Next.js proxy. |
 | `SOJ_API_INTERNAL_BASE_URL` | `http://localhost:8080` | Backend URL used by server-side requests and the `/soj-api/*` rewrite target. |
 
@@ -128,6 +140,7 @@ SOJ-web uses an adapter-based API boundary:
 
 - `mock` mode serves deterministic frontend fixtures from `lib/mock`.
 - `http` mode calls the backend through `lib/api/http-adapter.ts`.
+- Production builds default to HTTP when the mode is omitted; mock mode must be explicitly selected for local review.
 - Browser calls use the `/soj-api/*` same-origin proxy by default to avoid local CORS issues.
 
 Language selection in the code workspace is driven by the judge language catalog. In HTTP mode, enabled SOJ agent languages are read from the backend language endpoint. In mock mode, the same contract is represented by mock fixtures.

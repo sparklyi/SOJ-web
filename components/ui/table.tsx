@@ -1,4 +1,4 @@
-import type { HTMLAttributes, TableHTMLAttributes } from "react";
+import type { HTMLAttributes, TableHTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
 import { cn } from "@/lib/ui/cn";
 
 export function Table({ className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
@@ -13,10 +13,10 @@ export function TableRow({ className, ...props }: HTMLAttributes<HTMLTableRowEle
   return <tr className={cn("group border-b border-soj-line/60 transition duration-200 hover:bg-soj-surface/62", className)} {...props} />;
 }
 
-export function TableCell({ className, ...props }: HTMLAttributes<HTMLTableCellElement>) {
+export function TableCell({ className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
   return <td className={cn("px-3 py-3 align-middle", className)} {...props} />;
 }
 
-export function TableHeaderCell({ className, ...props }: HTMLAttributes<HTMLTableCellElement>) {
+export function TableHeaderCell({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
   return <th className={cn("px-3 py-3 font-medium", className)} {...props} />;
 }

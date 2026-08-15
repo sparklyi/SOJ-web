@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiBaseUrl, buildQuery } from "@/lib/api/http-client";
+import { isNotFoundError } from "@/lib/api/errors";
+import { apiBaseUrl, buildQuery, request } from "@/lib/api/http-client";
 
 describe("http client", () => {
   afterEach(() => {
@@ -23,5 +24,34 @@ describe("http client", () => {
     expect(buildQuery({ tag: ["dp", "math"], page: 2, empty: undefined, enabled: true })).toBe(
       "?tag=dp&tag=math&page=2&enabled=true",
     );
+  });
+
+  it.each(["problem.not_found", "contest.not_found", "submission.not_found", "contest.problem_not_found", "source_not_found"]) (
+    "normalizes backend 404 code %s for route handling",
+    async (code) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () =>
+          Response.json(
+            { data: null, error: { code, message: "Resource was not found." } },
+            { status: 404 },
+          ),
+        ),
+      );
+
+      const error = await request("/api/v1/resource/1").catch((cause: unknown) => cause);
+
+      expect(error).toMatchObject({ code: "not_found", status: 404 });
+      expect(isNotFoundError(error)).toBe(true);
+    },
+  );
+
+  it("normalizes an HTTP 404 even when the response has no backend error code", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 404 })));
+
+    const error = await request("/api/v1/resource/1").catch((cause: unknown) => cause);
+
+    expect(error).toMatchObject({ code: "not_found", status: 404 });
+    expect(isNotFoundError(error)).toBe(true);
   });
 });

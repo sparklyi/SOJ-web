@@ -47,10 +47,14 @@ export type ScoreboardModel =
   | {
       type: "acm";
       rows: Array<RankedScoreboardRow<AcmScoreboardRow>>;
+      view?: "live" | "frozen" | "final";
+      nextCursor?: string;
     }
   | {
       type: "oi";
       rows: Array<RankedScoreboardRow<OiScoreboardRow>>;
+      view?: "live" | "frozen" | "final";
+      nextCursor?: string;
     };
 
 export function buildScoreboardModel(input: ScoreboardInput): ScoreboardModel {

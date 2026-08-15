@@ -167,12 +167,63 @@ export type SubmissionSummary = {
   id: number;
   problemId: number;
   problemTitle: string;
+  contestTitle?: string;
   contestId?: number;
   status: JudgeStatus;
   score: number;
   timeMs?: number;
   memoryKb?: number;
+  errorMessage?: string;
+  visibility?: "visible" | "frozen";
+  result?: SubmissionResult;
+  cases?: SubmissionCase[];
+  adminDiagnostics?: SubmissionAdminDiagnostics;
+  contestImpact?: {
+    penalty?: string;
+    rankMovement?: string;
+  };
   submittedAt: string;
+};
+
+export type SubmissionResult = {
+  attemptId: number;
+  status: JudgeStatus;
+  score: number;
+  timeMs?: number;
+  memoryKb?: number;
+  firstFailedCaseIndex?: number;
+  firstFailedGroup?: string;
+  errorClass?: string;
+  safeSummary?: Record<string, unknown>;
+  updatedAt: string;
+};
+
+export type SubmissionCase = {
+  caseIndex: number;
+  groupName?: string;
+  status: JudgeStatus;
+  score: number;
+  timeMs?: number;
+  memoryKb?: number;
+  checkerMessage?: string;
+  outputDiffSummary?: string;
+};
+
+export type SubmissionAdminDiagnostics = {
+  attemptId: number;
+  attemptNo: number;
+  protocolVersion: string;
+  judgeCoreVersion: string;
+  judgeEngine: string;
+  judgeAgentId?: string;
+  languageRuntime?: string;
+  sandboxBackend?: string;
+  sandboxProfile?: string;
+  traceId?: string;
+  compileOutputSummary?: string;
+  stderrSummary?: string;
+  errorClass?: string;
+  errorMessage?: string;
 };
 
 export type CreateRunInput = {

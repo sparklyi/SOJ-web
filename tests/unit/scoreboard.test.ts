@@ -125,6 +125,7 @@ describe("scoreboard model", () => {
 
     expect(model).toEqual({
       type: "acm",
+      view: "frozen",
       rows: [
         {
           id: "7",
