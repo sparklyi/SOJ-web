@@ -19,7 +19,11 @@ function buildImpactItems(submission: SubmissionWithState): SignalFeedItem[] {
 
   const state = submission.status === "accepted" ? "Solved" : submission.displayState.terminal ? "Not solved" : "Not final";
   const stateTone = submission.status === "accepted" ? "success" : submission.displayState.terminal ? "danger" : "neutral";
-  const penaltyLabel = submission.status === "accepted" ? "Penalty impact" : "Penalty status";
+  const penaltyLabel = submission.contestImpact?.penalty
+    ? submission.status === "accepted"
+      ? "Penalty impact"
+      : "Penalty risk"
+    : "Penalty status";
   return [
     { id: "contest", label: "Contest", value: submission.contestTitle ?? `Contest #${submission.contestId}`, tone: "accent" },
     { id: "state", label: "Accepted state", value: state, tone: stateTone },
