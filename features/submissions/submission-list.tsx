@@ -26,8 +26,9 @@ function formatMemory(value?: number) {
   return typeof value === "number" ? `${value} KB` : "Pending";
 }
 
-function contestLabel(contestId?: number) {
-  return contestId ? "SOJ Signal Cup" : "Practice";
+function contestLabel(submission: SubmissionListProps["submissions"][number]) {
+  if (!submission.contestId) return "Practice";
+  return submission.contestTitle ?? `Contest #${submission.contestId}`;
 }
 
 export function SubmissionList({ submissions }: SubmissionListProps) {
@@ -79,7 +80,7 @@ export function SubmissionList({ submissions }: SubmissionListProps) {
                     <span className="font-mono text-xs text-soj-muted">P{submission.problemId}</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-soj-muted">{contestLabel(submission.contestId)}</TableCell>
+                <TableCell className="text-soj-muted">{contestLabel(submission)}</TableCell>
                 <TableCell className="text-right font-mono text-soj-text">{submission.score}</TableCell>
                 <TableCell className="text-right font-mono text-soj-muted">{formatRuntime(submission.timeMs)}</TableCell>
                 <TableCell className="text-right font-mono text-soj-muted">{formatMemory(submission.memoryKb)}</TableCell>

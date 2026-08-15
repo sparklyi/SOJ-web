@@ -13,7 +13,7 @@ export function RecentJudgeFeed({ submissions }: RecentJudgeFeedProps) {
         Recent judge signals
       </h2>
       <div className="grid gap-3">
-        {submissions.map((submission) => (
+        {submissions.length > 0 ? submissions.map((submission) => (
           <article key={submission.id} className="grid gap-3 border-b border-soj-line pb-3 last:border-b-0 last:pb-0">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-sm font-medium text-soj-text">{submission.problemTitle}</h3>
@@ -26,7 +26,7 @@ export function RecentJudgeFeed({ submissions }: RecentJudgeFeedProps) {
               ]}
             />
           </article>
-        ))}
+        )) : <p className="text-sm text-soj-muted">No judge signals are available.</p>}
       </div>
     </section>
   );

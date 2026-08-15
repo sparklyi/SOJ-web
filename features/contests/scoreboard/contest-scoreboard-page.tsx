@@ -21,7 +21,7 @@ export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboard
   const problemColumns = scoreboard.rows[0]?.problems ?? [];
   const leader = scoreboard.rows[0];
   const movementTotal = scoreboard.rows.reduce((sum, row) => sum + Math.abs(row.movement ?? 0), 0);
-  const frozen = contest.status === "frozen";
+  const frozen = scoreboard.view === "frozen" || contest.status === "frozen";
 
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">

@@ -278,6 +278,7 @@ export type ScoreboardResponse = {
   generated_at: string;
   problems: ContestProblem[];
   rows: ScoreboardRow[];
+  next_cursor?: string;
 };
 
 export type ScoreboardRow = {

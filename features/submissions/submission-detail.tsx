@@ -3,7 +3,7 @@ import { SignalFeed, type SignalFeedItem } from "@/components/soj/signal-feed";
 import { SubmissionTimeline } from "@/components/soj/submission-timeline";
 import { TestPointMatrix } from "@/components/soj/test-point-matrix";
 import { VerdictBadge } from "@/components/soj/verdict-badge";
-import type { JudgeStatus } from "@/lib/api/types";
+import type { JudgeStatus, SubmissionSummary } from "@/lib/api/types";
 import { buildSubmissionTimeline, type SubmissionTone } from "@/lib/domain/submission";
 import type { getSubmission } from "./api";
 import { SubmissionImpact } from "./submission-impact";
@@ -31,43 +31,20 @@ function formatMemory(value?: number) {
   return typeof value === "number" ? `${value} KB` : "Pending";
 }
 
-function contestLabel(contestId?: number) {
-  return contestId ? "SOJ Signal Cup" : "Practice";
+function contestLabel(submission: SubmissionSummary) {
+  if (!submission.contestId) return "Practice";
+  return submission.contestTitle ?? `Contest #${submission.contestId}`;
 }
 
 function signalTone(tone: SubmissionTone): SignalFeedItem["tone"] {
   return tone === "info" ? "neutral" : tone;
 }
 
-function statusPoints(status: JudgeStatus, score: number) {
-  if (status === "accepted") {
-    return Array.from({ length: 8 }, (_, index) => ({ index: index + 1, status, score: 12.5 }));
-  }
-
-  if (status === "wrong_answer") {
-    return Array.from({ length: 8 }, (_, index) => ({
-      index: index + 1,
-      status: (index < 3 ? "accepted" : index === 3 ? "wrong_answer" : "queued") as JudgeStatus,
-      score: index < 3 ? 10 : index === 3 ? 5 : 0,
-    }));
-  }
-
-  if (status === "running") {
-    return Array.from({ length: 8 }, (_, index) => ({
-      index: index + 1,
-      status: (index < 2 ? "accepted" : index < 5 ? "running" : "queued") as JudgeStatus,
-      score: index < 2 ? 12 : 0,
-    }));
-  }
-
-  if (status === "compiling" || status === "queued") {
-    return Array.from({ length: 8 }, (_, index) => ({ index: index + 1, status, score: 0 }));
-  }
-
-  return Array.from({ length: 8 }, (_, index) => ({
-    index: index + 1,
-    status,
-    score: index === 0 ? score : 0,
+function statusPoints(submission: SubmissionSummary) {
+  return (submission.cases ?? []).map((testCase) => ({
+    index: testCase.caseIndex,
+    status: testCase.status,
+    score: testCase.score,
   }));
 }
 
@@ -81,7 +58,11 @@ function timelineItems(submission: SubmissionDetailProps["submission"]) {
   }));
 }
 
-function feedbackLine(status: JudgeStatus) {
+function feedbackLine(submission: SubmissionSummary) {
+  const firstFailedCase = submission.result?.firstFailedCaseIndex;
+  if (submission.errorMessage) return submission.errorMessage;
+  if (typeof firstFailedCase === "number") return `Mismatch at point ${firstFailedCase}.`;
+
   const lines: Record<JudgeStatus, string> = {
     queued: "Waiting for an available judge worker.",
     compiling: "Compiler is preparing the submitted source.",
@@ -95,21 +76,38 @@ function feedbackLine(status: JudgeStatus) {
     canceled: "Judging was canceled before completion.",
     system_error: "Judge worker reported an internal system error.",
   };
-  return lines[status];
+  return lines[submission.status];
 }
 
 function runtimeItems(submission: SubmissionDetailProps["submission"]): SignalFeedItem[] {
+  const diagnostics = submission.adminDiagnostics;
   return [
     { id: "score", label: "Score", value: String(submission.score), tone: signalTone(submission.displayState.tone) },
     { id: "time", label: "Time", value: formatRuntime(submission.timeMs), tone: "neutral" },
     { id: "memory", label: "Memory", value: formatMemory(submission.memoryKb), tone: "neutral" },
-    { id: "compile", label: "Compile", value: submission.status === "compile_error" ? "Failed" : "Ready", tone: submission.status === "compile_error" ? "warning" : "success" },
-    { id: "runtime", label: "Runtime", value: submission.status === "runtime_error" ? "Aborted" : feedbackLine(submission.status), tone: submission.status === "runtime_error" ? "danger" : "neutral" },
-    { id: "system", label: "System", value: submission.status === "system_error" ? "Judge error" : "Nominal", tone: submission.status === "system_error" ? "danger" : "neutral" },
+    {
+      id: "compile",
+      label: "Compile",
+      value: submission.status === "compile_error" ? diagnostics?.compileOutputSummary ?? submission.errorMessage ?? "Failed" : "Ready",
+      tone: submission.status === "compile_error" ? "warning" : "success",
+    },
+    {
+      id: "runtime",
+      label: "Runtime",
+      value: submission.status === "runtime_error" ? diagnostics?.stderrSummary ?? submission.errorMessage ?? "Aborted" : feedbackLine(submission),
+      tone: submission.status === "runtime_error" ? "danger" : "neutral",
+    },
+    {
+      id: "system",
+      label: "System",
+      value: submission.status === "system_error" ? diagnostics?.errorMessage ?? submission.errorMessage ?? "Judge error" : "Nominal",
+      tone: submission.status === "system_error" ? "danger" : "neutral",
+    },
   ];
 }
 
 export function SubmissionDetail({ submission }: SubmissionDetailProps) {
+  const points = statusPoints(submission);
   const resources = [
     { label: "Score", value: String(submission.score), tone: "text-soj-accent" },
     { label: "Time", value: formatRuntime(submission.timeMs), tone: "text-soj-muted" },
@@ -137,7 +135,7 @@ export function SubmissionDetail({ submission }: SubmissionDetailProps) {
               <div className="grid gap-3">
                 <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-soj-text md:text-6xl">Submission #{submission.id}</h1>
                 <p className="max-w-2xl text-base leading-7 text-soj-muted">
-                  {submission.problemTitle} routed through {contestLabel(submission.contestId)} with judge feedback and resource traces.
+                  {submission.problemTitle} routed through {contestLabel(submission)} with judge feedback and resource traces.
                 </p>
               </div>
             </div>
@@ -175,7 +173,7 @@ export function SubmissionDetail({ submission }: SubmissionDetailProps) {
                 <strong>{submission.contestId ? "Contest" : "Practice"}</strong>
               </div>
             </div>
-            <p className="border-t border-soj-line/60 pt-4 text-sm leading-6 text-soj-muted">{feedbackLine(submission.status)}</p>
+            <p className="border-t border-soj-line/60 pt-4 text-sm leading-6 text-soj-muted">{feedbackLine(submission)}</p>
           </aside>
         </div>
       </section>
@@ -194,7 +192,7 @@ export function SubmissionDetail({ submission }: SubmissionDetailProps) {
             <h2 className="text-xl font-semibold">Test point matrix</h2>
             <p className="mt-1 text-sm text-soj-muted">Visible sample of point states and partial scoring.</p>
           </div>
-          <TestPointMatrix points={statusPoints(submission.status, submission.score)} />
+          {points.length > 0 ? <TestPointMatrix points={points} /> : <p className="text-sm leading-6 text-soj-muted">No case-level judge data was returned for this submission.</p>}
         </section>
       </div>
 
