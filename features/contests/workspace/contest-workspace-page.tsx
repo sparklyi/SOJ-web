@@ -47,6 +47,7 @@ function formatMemory(value: number) {
 export function ContestWorkspacePage({ contest, problem, languages: initialLanguages = [] }: ContestWorkspacePageProps) {
   const [languages, setLanguages] = useState<JudgeLanguage[]>(initialLanguages);
   const [languageError, setLanguageError] = useState<string>();
+  const apiMode = getApiMode();
   const contestProblem = contest.problems.find((item) => item.problemId === problem.id);
   const alias = contestProblem?.alias ?? "A";
   const freezeLabel = contest.status === "frozen" ? "Rank updates hidden" : "Rank updates live";
@@ -62,10 +63,10 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
     | { status: "error"; message: string }
   >({ status: "idle" });
   const hasSession = useBrowserSessionAvailable();
-  const locallyRegistered = useLocalContestRegistration(contest.id);
-  const needsSession = getApiMode() === "http" && !hasSession;
+  const locallyRegistered = useLocalContestRegistration(contest.id, apiMode === "mock");
+  const needsSession = apiMode === "http" && !hasSession;
   const lifecycleAllowsSubmit = contest.status === "running" || contest.status === "frozen";
-  const effectiveCanSubmit = contest.canSubmit || (locallyRegistered && lifecycleAllowsSubmit);
+  const effectiveCanSubmit = contest.canSubmit || (apiMode === "mock" && locallyRegistered && lifecycleAllowsSubmit);
   const canSubmit = !needsSession && effectiveCanSubmit && Boolean(workspace.languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
 
   useEffect(() => {
@@ -325,17 +326,21 @@ function useBrowserSessionAvailable() {
   return available;
 }
 
-function useLocalContestRegistration(contestId: number) {
+function useLocalContestRegistration(contestId: number, enabled: boolean) {
   const [registered, setRegistered] = useState(false);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     function update() {
       setRegistered(isContestRegistered(window.localStorage, browserUserKey(), contestId));
     }
 
     update();
     return subscribeToContestRegistrationChanges(update);
-  }, [contestId]);
+  }, [contestId, enabled]);
 
   return registered;
 }

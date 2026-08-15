@@ -5,12 +5,9 @@ import type { SubmissionTone } from "@/lib/domain/submission";
 type SubmissionWithState = SubmissionSummary & {
   displayState: {
     tone: SubmissionTone;
+    terminal: boolean;
   };
 };
-
-function signalTone(tone: SubmissionTone): SignalFeedItem["tone"] {
-  return tone === "info" ? "neutral" : tone;
-}
 
 function buildImpactItems(submission: SubmissionWithState): SignalFeedItem[] {
   if (!submission.contestId) {
@@ -20,47 +17,14 @@ function buildImpactItems(submission: SubmissionWithState): SignalFeedItem[] {
     ];
   }
 
-  if (submission.status === "accepted") {
-    return [
-      { id: "contest", label: "Contest", value: "SOJ Signal Cup", tone: "accent" },
-      { id: "state", label: "Accepted state", value: "Solved", tone: "success" },
-      { id: "penalty", label: "Penalty impact", value: "+42 min", tone: "warning" },
-      { id: "rank", label: "Rank movement", value: "+2", tone: "success" },
-    ];
-  }
-
-  if (submission.status === "wrong_answer") {
-    return [
-      { id: "contest", label: "Contest", value: "SOJ Signal Cup", tone: "accent" },
-      { id: "state", label: "Accepted state", value: "Not solved", tone: "danger" },
-      { id: "penalty", label: "Penalty risk", value: "+20 min", tone: "warning" },
-      { id: "rank", label: "Rank movement", value: "Pending", tone: "neutral" },
-    ];
-  }
-
-  if (submission.status === "compile_error") {
-    return [
-      { id: "contest", label: "Contest", value: "SOJ Signal Cup", tone: "accent" },
-      { id: "state", label: "Accepted state", value: "No run", tone: "warning" },
-      { id: "penalty", label: "Penalty impact", value: "No accepted penalty", tone: "neutral" },
-      { id: "rank", label: "Rank movement", value: "None", tone: "neutral" },
-    ];
-  }
-
-  if (submission.status === "runtime_error" || submission.status === "system_error") {
-    return [
-      { id: "contest", label: "Contest", value: "SOJ Signal Cup", tone: "accent" },
-      { id: "state", label: "Accepted state", value: "Failed run", tone: "danger" },
-      { id: "penalty", label: "Penalty risk", value: "+20 min", tone: "warning" },
-      { id: "rank", label: "Rank movement", value: "None", tone: "neutral" },
-    ];
-  }
-
+  const state = submission.status === "accepted" ? "Solved" : submission.displayState.terminal ? "Not solved" : "Not final";
+  const stateTone = submission.status === "accepted" ? "success" : submission.displayState.terminal ? "danger" : "neutral";
+  const penaltyLabel = submission.status === "accepted" ? "Penalty impact" : "Penalty status";
   return [
-    { id: "contest", label: "Contest", value: "SOJ Signal Cup", tone: "accent" },
-    { id: "state", label: "Judge state", value: submission.displayState.tone === "accent" ? "Running" : "Waiting", tone: signalTone(submission.displayState.tone) },
-    { id: "penalty", label: "Penalty impact", value: "Not final", tone: "neutral" },
-    { id: "rank", label: "Rank movement", value: "Not final", tone: "neutral" },
+    { id: "contest", label: "Contest", value: submission.contestTitle ?? `Contest #${submission.contestId}`, tone: "accent" },
+    { id: "state", label: "Accepted state", value: state, tone: stateTone },
+    { id: "penalty", label: penaltyLabel, value: submission.contestImpact?.penalty ?? "Not provided by API", tone: submission.contestImpact?.penalty ? "warning" : "neutral" },
+    { id: "rank", label: "Rank movement", value: submission.contestImpact?.rankMovement ?? "Not provided by API", tone: submission.contestImpact?.rankMovement ? "success" : "neutral" },
   ];
 }
 

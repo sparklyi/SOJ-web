@@ -28,7 +28,7 @@ export function RecommendedProblems({ problems }: RecommendedProblemsProps) {
           </TableRow>
         </TableHead>
         <tbody>
-          {problems.map((problem) => (
+          {problems.length > 0 ? problems.map((problem) => (
             <TableRow key={problem.id}>
               <TableCell>
                 <Link className="font-medium text-soj-text hover:text-soj-accent" href={`/problems/${problem.id}`}>
@@ -42,7 +42,7 @@ export function RecommendedProblems({ problems }: RecommendedProblemsProps) {
                 <StatusPill tone={problem.difficulty === "hard" ? "warning" : problem.difficulty === "medium" ? "info" : "success"}>{problem.difficulty}</StatusPill>
               </TableCell>
             </TableRow>
-          ))}
+          )) : <TableRow><TableCell colSpan={3} className="text-sm text-soj-muted">No problems are available.</TableCell></TableRow>}
         </tbody>
       </Table>
     </section>

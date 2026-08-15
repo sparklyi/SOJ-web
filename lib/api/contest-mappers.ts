@@ -35,8 +35,9 @@ export function mapContestRegistration(input: ContestRegistrationResponse): Cont
 }
 
 export function mapContestScoreboard(input: ScoreboardResponse): ScoreboardModel {
-  return {
+  const scoreboard: ScoreboardModel = {
     type: "acm",
+    view: input.view,
     rows: input.rows.map((row) => ({
       rank: row.rank,
       id: String(row.user_id),
@@ -46,6 +47,9 @@ export function mapContestScoreboard(input: ScoreboardResponse): ScoreboardModel
       problems: row.cells.map(mapScoreboardCell),
     })),
   };
+
+  if (input.next_cursor) scoreboard.nextCursor = input.next_cursor;
+  return scoreboard;
 }
 
 function mapContestStatus(input: ContestResponse, now: Date): ContestStatus {

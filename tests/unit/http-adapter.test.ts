@@ -39,7 +39,7 @@ describe("http adapter", () => {
     const languages = await createHttpAdapter().languages.list({ enabled: true, engine: "soj-agent" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8080/api/v1/languages?page=1&page_size=100&enabled=true&engine=soj-agent",
+      "http://localhost:8080/api/v1/languages?page=1&page_size=100&engine=soj-agent",
       { cache: "no-store" },
     );
     expect(languages).toEqual({
@@ -417,6 +417,56 @@ describe("http adapter", () => {
     });
   });
 
+  it("maps backend submission detail result, cases, and diagnostics", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        data: {
+          ...submissionResponse({ id: 602, problemId: 101, status: "wrong_answer", score: 35 }),
+          error_message: "checker rejected point 4",
+          visibility: "visible",
+          result: {
+            attempt_id: 902,
+            status: "wrong_answer",
+            score: 35,
+            first_failed_case_index: 4,
+            first_failed_group: "hidden",
+            error_class: "wrong_answer",
+            safe_summary: { reason: "mismatch" },
+            updated_at: "2026-07-07T10:12:39Z",
+          },
+          cases: [
+            { case_index: 1, status: "accepted", score: 10, time_ms: 2, memory_kb: 128 },
+            { case_index: 4, status: "wrong_answer", score: 5, checker_message: "checker rejected point 4" },
+          ],
+          admin_diagnostics: {
+            attempt_id: 902,
+            attempt_no: 1,
+            protocol_version: "v1",
+            judge_core_version: "core-1",
+            judge_engine: "soj-agent",
+            sandbox_backend: "runsc",
+          },
+        },
+        error: null,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const submission = await createHttpAdapter({ accessToken: "detail-token" }).submissions.get(602);
+
+    expect(submission).toMatchObject({
+      id: 602,
+      errorMessage: "checker rejected point 4",
+      visibility: "visible",
+      result: { attemptId: 902, firstFailedCaseIndex: 4, safeSummary: { reason: "mismatch" } },
+      cases: [
+        { caseIndex: 1, status: "accepted", score: 10, timeMs: 2, memoryKb: 128 },
+        { caseIndex: 4, status: "wrong_answer", score: 5, checkerMessage: "checker rejected point 4" },
+      ],
+      adminDiagnostics: { attemptId: 902, sandboxBackend: "runsc" },
+    });
+  });
+
   it("creates and gets runs with backend field names and mapped output fields", async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request) => {
       const path = String(url).replace("http://localhost:8080", "");
@@ -668,12 +718,13 @@ describe("http adapter", () => {
 
     const scoreboard = await createHttpAdapter({ accessToken: "contest-token" }).contests.scoreboard(11);
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/contests/11/scoreboard", {
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/contests/11/scoreboard?page_size=100", {
       cache: "no-store",
       headers: { Authorization: "Bearer contest-token" },
     });
     expect(scoreboard).toMatchObject({
       type: "acm",
+      view: "live",
       rows: [
         {
           rank: 1,
@@ -688,6 +739,33 @@ describe("http adapter", () => {
         },
       ],
     });
+  });
+
+  it("follows backend scoreboard cursors until all rows are loaded", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const path = String(url).replace("http://localhost:8080", "");
+      if (path === "/api/v1/contests/11/scoreboard?page_size=100") {
+        return Response.json({ data: { ...scoreboardResponse(), next_cursor: "next-page" }, error: null });
+      }
+      if (path === "/api/v1/contests/11/scoreboard?page_size=100&cursor=next-page") {
+        return Response.json({
+          data: {
+            ...scoreboardResponse(),
+            rows: [{ ...scoreboardResponse().rows[0], rank: 2, user_id: 8, display_name: "Mira" }],
+          },
+          error: null,
+        });
+      }
+      return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const scoreboard = await createHttpAdapter().contests.scoreboard(11);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "http://localhost:8080/api/v1/contests/11/scoreboard?page_size=100", { cache: "no-store" });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "http://localhost:8080/api/v1/contests/11/scoreboard?page_size=100&cursor=next-page", { cache: "no-store" });
+    expect(scoreboard.rows).toHaveLength(2);
+    expect(scoreboard.nextCursor).toBeUndefined();
   });
 
   it("combines backend problem, statement, and stats into a problem detail", async () => {
@@ -788,7 +866,7 @@ describe("http adapter", () => {
 
     await expect(createHttpAdapter().problems.get(101)).rejects.toMatchObject({
       name: "ApiError",
-      code: "problem.statement_not_found",
+      code: "not_found",
       message: "Problem statement not found.",
       status: 404,
     } satisfies Partial<ApiError>);
@@ -1021,7 +1099,8 @@ describe("http adapter", () => {
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/auth/logout", {
       cache: "no-store",
       method: "POST",
-      headers: { Authorization: "Bearer access-token" },
+      headers: { Authorization: "Bearer access-token", "content-type": "application/json" },
+      body: JSON.stringify({ refresh_token: "refresh-token" }),
     });
   });
 });

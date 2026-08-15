@@ -15,7 +15,7 @@ export function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPa
   const keyEvents = events.slice(0, 5);
   const leader = scoreboard.rows[0];
   const topRows = scoreboard.rows.slice(0, 5);
-  const frozen = contest.status === "frozen";
+  const frozen = scoreboard.view === "frozen" || contest.status === "frozen";
   const movementTotal = scoreboard.rows.reduce((sum, row) => sum + Math.abs(row.movement ?? 0), 0);
 
   return (
