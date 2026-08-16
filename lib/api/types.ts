@@ -6,7 +6,7 @@ export type ApiMode = "mock" | "http";
 
 export type ProblemDifficulty = "easy" | "medium" | "hard";
 export type ProblemStatus = "todo" | "attempted" | "accepted";
-export type ProblemPublicationStatus = "draft" | "published" | "archived";
+export type ProblemPublicationStatus = "draft" | "in_review" | "changes_requested" | "published" | "archived";
 export type ProblemVisibility = "private" | "public" | "contest_only";
 
 export type ProblemSummary = {
@@ -296,7 +296,7 @@ export type ApiClient = {
     uploadTestcases: (id: number, input: { archive: File; caseCount: number }) => Promise<AuthoringTestcaseSet>;
     getAuthoringState: (id: number) => Promise<ProblemAuthoringState>;
     runCheck: (id: number) => Promise<ProblemCheckRun>;
-    publish: (id: number) => Promise<AuthoringProblem>;
+    submitReview: (id: number) => Promise<AuthoringProblem>;
   };
   submissions: {
     list: () => Promise<PageResult<SubmissionSummary>>;

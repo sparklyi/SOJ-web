@@ -12,7 +12,7 @@ describe("problem authoring", () => {
           state={authoringState(false)}
           busy={false}
           onRunCheck={vi.fn()}
-          onPublish={vi.fn()}
+          onSubmitReview={vi.fn()}
         />
       </I18nProvider>,
     );
@@ -20,27 +20,43 @@ describe("problem authoring", () => {
     expect(screen.getByText("Publish blocked")).toBeInTheDocument();
     expect(screen.getByText("The current testcase set has validation errors.")).toBeInTheDocument();
     expect(screen.getByText("Missing output for input1.txt")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Publish problem" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit for review" })).toBeDisabled();
   });
 
-  it("enables publication only when the backend state is publishable", () => {
+  it("enables review submission only when the backend state is publishable", () => {
     render(
       <I18nProvider locale="en">
         <ProblemCheckPanel
           state={authoringState(true)}
           busy={false}
           onRunCheck={vi.fn()}
-          onPublish={vi.fn()}
+          onSubmitReview={vi.fn()}
         />
       </I18nProvider>,
     );
 
-    expect(screen.getByText("Ready to publish")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Publish problem" })).toBeEnabled();
+    expect(screen.getByText("Ready to submit for review")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Submit for review" })).toBeEnabled();
+  });
+
+  it("keeps the review action disabled while a problem is in review", () => {
+    render(
+      <I18nProvider locale="en">
+        <ProblemCheckPanel
+          state={authoringState(true, "in_review")}
+          busy={false}
+          onRunCheck={vi.fn()}
+          onSubmitReview={vi.fn()}
+        />
+      </I18nProvider>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Review in progress" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review in progress" })).toBeDisabled();
   });
 });
 
-function authoringState(valid: boolean): ProblemAuthoringState {
+function authoringState(valid: boolean, publicationStatus: ProblemAuthoringState["problem"]["publicationStatus"] = "draft"): ProblemAuthoringState {
   return {
     problem: {
       id: 1,
@@ -48,7 +64,7 @@ function authoringState(valid: boolean): ProblemAuthoringState {
       slug: "signal-path",
       difficulty: "medium",
       visibility: "private",
-      publicationStatus: "draft",
+      publicationStatus,
       tags: ["graphs"],
       timeLimitMs: 1000,
       memoryLimitKb: 262144,

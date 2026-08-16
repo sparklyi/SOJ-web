@@ -59,7 +59,7 @@ Available schemas:
 - `ProblemStatementEnvelope`
 - `ProblemStatsEnvelope`
 
-The author console consumes owner-scoped problem create/update, statement, testcase, check, and publish endpoints. Publication remains controlled by backend authoring blockers for the current testcase set.
+The author console consumes owner-scoped problem create/update, statement, testcase, check, and review-submission endpoints. Publication remains controlled by the backend review workflow after the current testcase set passes its readiness gate.
 
 ## Submissions And Runs
 

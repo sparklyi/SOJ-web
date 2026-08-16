@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createBrowserApiClient } from "@/lib/api/client";
 import type { AuthoringProblem, ProblemDifficulty } from "@/lib/api/types";
+import { publicationStatusMessageKey } from "./publication-status";
 
 type ManagerState =
   | { status: "loading" }
@@ -97,7 +98,7 @@ export function ProblemManager() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-semibold text-soj-text">{problem.title}</span>
-                          <StatusPill tone={problem.publicationStatus === "published" ? "success" : "warning"}>{publicationStatusLabel(t, problem.publicationStatus)}</StatusPill>
+                          <StatusPill tone={problem.publicationStatus === "published" ? "success" : "warning"}>{t(publicationStatusMessageKey(problem.publicationStatus))}</StatusPill>
                         </div>
                         <p className="mt-1 truncate font-mono text-xs text-soj-muted">{problem.slug}</p>
                       </div>
@@ -160,10 +161,4 @@ function managerStatusLabel(t: ReturnType<typeof useI18n>["t"], state: ManagerSt
   if (state.status === "loading") return t("authoring.loading");
   if (state.status === "auth") return t("authoring.authRequired");
   return t("authoring.error");
-}
-
-function publicationStatusLabel(t: ReturnType<typeof useI18n>["t"], status: AuthoringProblem["publicationStatus"]) {
-  if (status === "published") return t("authoring.publicationStatus.published");
-  if (status === "archived") return t("authoring.publicationStatus.archived");
-  return t("authoring.publicationStatus.draft");
 }

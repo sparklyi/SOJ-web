@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("author creates, validates, and publishes a problem", async ({ page }) => {
+test("author creates, validates, and submits a problem for review", async ({ page }) => {
   const slug = `author-flow-${Date.now()}`;
   await page.addInitScript((session) => {
     window.localStorage.setItem("soj.session", JSON.stringify(session));
@@ -40,11 +40,11 @@ test("author creates, validates, and publishes a problem", async ({ page }) => {
   await expect(page.getByText("Run a problem check.")).toBeVisible();
 
   await page.getByRole("button", { name: "Run validation" }).click();
-  await expect(page.getByText("Ready to publish")).toBeVisible();
-  await page.getByRole("button", { name: "Publish problem" }).click();
-  await expect(page.getByText("Problem published.")).toBeVisible();
+  await expect(page.getByText("Ready to submit for review")).toBeVisible();
+  await page.getByRole("button", { name: "Submit for review" }).click();
+  await expect(page.getByText("Problem submitted for review.")).toBeVisible();
   await expect(
-    page.getByLabel("Validation and publication").getByText("Published", { exact: true }),
+    page.getByLabel("Validation and publication").getByText("In review", { exact: true }),
   ).toBeVisible();
 });
 

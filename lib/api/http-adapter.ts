@@ -312,12 +312,10 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
         });
         return mapProblemCheck(data);
       },
-      publish: async (id) => {
-        const data = await request<ProblemResponse>(`/api/v1/problems/${id}`, {
+      submitReview: async (id) => {
+        const data = await request<ProblemResponse>(`/api/v1/problems/${id}/review`, {
           accessToken: options.accessToken,
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ status: "published" }),
+          method: "POST",
         });
         return mapAuthoringProblem(data);
       },

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
-test("real backend enforces validation before publishing and accepts the published problem", async ({ page }) => {
+test("real backend enforces validation before submitting a problem for review", async ({ page }) => {
   const run = Date.now();
   const slug = `http-author-${run}`;
   const archive = testcaseArchive();
@@ -54,41 +54,27 @@ test("real backend enforces validation before publishing and accepts the publish
     expect(blocked.body.error.code).toBe("problem.check_required");
 
     await page.getByRole("button", { name: "Run validation" }).click();
-    await expect(page.getByText("Ready to publish")).toBeVisible();
+    await expect(page.getByText("Ready to submit for review")).toBeVisible();
 
     await page.getByLabel("Description", { exact: true }).fill("Return the sum of two signed integers.");
     await page.getByRole("button", { name: "Save statement" }).click();
     await expect(page.getByText("Statement version saved.")).toBeVisible();
 
-    const staleStatementCheck = await publishProblem(page, problemId);
+    const staleStatementCheck = await attemptDirectPublication(page, problemId);
     expect(staleStatementCheck.status).toBe(422);
     expect(staleStatementCheck.body.error.code).toBe("problem.check_required");
 
     await page.getByRole("button", { name: "Run validation" }).click();
-    await expect(page.getByText("Ready to publish")).toBeVisible();
-    await page.getByRole("button", { name: "Publish problem" }).click();
-    await expect(page.getByText("Problem published.")).toBeVisible();
-
-    await page.goto(`/problems/${problemId}`);
-    await page.getByLabel("Source code").fill("print(2)");
-    await page.getByRole("button", { name: "Submit solution" }).click();
-    const submissionLink = page.getByRole("link", { name: "View details" });
-    await expect(submissionLink).toBeVisible();
-    const href = await submissionLink.getAttribute("href");
-    const submissionId = Number(href?.split("/").at(-1));
-
-    await expect.poll(async () => page.evaluate(async (id) => {
-      const session = JSON.parse(window.localStorage.getItem("soj.session") ?? "null") as { accessToken: string };
-      const response = await fetch(`/soj-api/api/v1/submissions/${id}`, { headers: { Authorization: `Bearer ${session.accessToken}` } });
-      const body = await response.json();
-      return body.data.status;
-    }, submissionId)).toBe("accepted");
+    await expect(page.getByText("Ready to submit for review")).toBeVisible();
+    await page.getByRole("button", { name: "Submit for review" }).click();
+    await expect(page.getByText("Problem submitted for review.")).toBeVisible();
+    await expect(page.getByLabel("Validation and publication").getByText("In review", { exact: true })).toBeVisible();
   } finally {
     rmSync(archive.dir, { recursive: true, force: true });
   }
 });
 
-async function publishProblem(page: import("@playwright/test").Page, problemId: number) {
+async function attemptDirectPublication(page: import("@playwright/test").Page, problemId: number) {
   return page.evaluate(async (id) => {
     const session = JSON.parse(window.localStorage.getItem("soj.session") ?? "null") as { accessToken: string };
     const response = await fetch(`/soj-api/api/v1/problems/${id}`, {
