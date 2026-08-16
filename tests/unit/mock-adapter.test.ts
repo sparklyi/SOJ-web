@@ -1,11 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { getApiMode } from "@/lib/api/mode";
 
 describe("api mode", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("defaults to mock mode for local review", () => {
     expect(getApiMode({})).toBe("mock");
+  });
+
+  it("reads the public mode from the client build environment", () => {
+    vi.stubEnv("NEXT_PUBLIC_SOJ_API_MODE", "http");
+    expect(getApiMode()).toBe("http");
   });
 
   it("defaults to HTTP mode for production when no mode is configured", () => {
