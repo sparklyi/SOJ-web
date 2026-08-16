@@ -1,4 +1,5 @@
 import type { CurrentUser } from "@/lib/api/types";
+import { isPermission, isRole } from "./permissions";
 
 export type AuthSession = {
   accessToken: string;
@@ -91,7 +92,11 @@ function isCurrentUser(value: unknown): value is CurrentUser {
     user.handle.length > 0 &&
     typeof user.displayName === "string" &&
     user.displayName.length > 0 &&
-    (user.role === "user" || user.role === "admin" || user.role === "root")
+    Array.isArray(user.roles) &&
+    user.roles.length > 0 &&
+    user.roles.every(isRole) &&
+    Array.isArray(user.permissions) &&
+    user.permissions.every(isPermission)
   );
 }
 
