@@ -1014,7 +1014,7 @@ describe("http adapter", () => {
         handle: "ada",
         displayName: "ada",
         roles: ["user"],
-        permissions: ["problem.solve", "submission.create", "contest.join"],
+        permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
       },
     });
     expect(Date.parse(session.expiresAt)).toBeGreaterThan(Date.now());
@@ -1042,7 +1042,7 @@ describe("http adapter", () => {
       handle: "grace",
       displayName: "grace",
       roles: ["user"],
-      permissions: ["problem.solve", "submission.create", "contest.join"],
+        permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
     });
   });
 
@@ -1083,7 +1083,7 @@ describe("http adapter", () => {
       handle: "lin",
       displayName: "lin",
       roles: ["user"],
-      permissions: ["problem.solve", "submission.create", "contest.join"],
+        permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
     });
   });
 
@@ -1135,7 +1135,7 @@ function userResponse(overrides: { id: number; username: string }) {
     avatar_url: null,
     bio: null,
     roles: ["user"],
-    permissions: ["problem.solve", "submission.create", "contest.join"],
+        permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
     status: "active",
     created_at: "2026-07-07T10:00:00Z",
     updated_at: "2026-07-07T10:00:00Z",
