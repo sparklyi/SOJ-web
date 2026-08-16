@@ -10,6 +10,7 @@ import { createBrowserApiClient } from "@/lib/api/client";
 import type { ProblemAuthoringState, ProblemStatementInput, ProblemUpdateInput } from "@/lib/api/types";
 import { ProblemMetadataForm, ProblemStatementForm, TestcaseUploadForm } from "./problem-authoring-form";
 import { ProblemCheckPanel } from "./problem-check-panel";
+import { publicationStatusMessageKey } from "./publication-status";
 
 type WorkbenchState =
   | { status: "loading" }
@@ -84,7 +85,7 @@ export function ProblemWorkbench({ problemId }: { problemId: number }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
               <LocalizedLink className="font-mono text-xs text-soj-accent" href="/manage/problems">{t("authoring.console")}</LocalizedLink>
-              <StatusPill tone={data.problem.publicationStatus === "published" ? "success" : "warning"}>{publicationStatusLabel(t, data.problem.publicationStatus)}</StatusPill>
+              <StatusPill tone={data.problem.publicationStatus === "published" ? "success" : "warning"}>{t(publicationStatusMessageKey(data.problem.publicationStatus))}</StatusPill>
             </div>
             <h1 className="mt-3 break-words text-4xl font-semibold text-soj-text md:text-5xl">{data.problem.title}</h1>
             <p className="mt-2 font-mono text-xs text-soj-muted">{data.problem.slug} / P{data.problem.id}</p>
@@ -113,7 +114,7 @@ export function ProblemWorkbench({ problemId }: { problemId: number }) {
               state={data}
               busy={busy}
               onRunCheck={() => command(() => client().runCheck(problemId), t("authoring.validationCompleted"))}
-              onPublish={() => command(() => client().publish(problemId), t("authoring.problemPublished"))}
+              onSubmitReview={() => command(() => client().submitReview(problemId), t("authoring.reviewSubmitted"))}
             />
           </aside>
         </div>
@@ -129,12 +130,6 @@ function DataPoint({ label, value }: { label: string; value: string }) {
       <p className="mt-1 truncate font-mono text-sm text-soj-text">{value}</p>
     </div>
   );
-}
-
-function publicationStatusLabel(t: ReturnType<typeof useI18n>["t"], status: ProblemAuthoringState["problem"]["publicationStatus"]) {
-  if (status === "published") return t("authoring.publicationStatus.published");
-  if (status === "archived") return t("authoring.publicationStatus.archived");
-  return t("authoring.publicationStatus.draft");
 }
 
 function testcaseStatusLabel(t: ReturnType<typeof useI18n>["t"], status: NonNullable<ProblemAuthoringState["testcaseSet"]>["status"]) {

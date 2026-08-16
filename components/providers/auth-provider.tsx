@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
+import type { Permission } from "@/lib/auth/permissions";
 import type { CurrentUser } from "@/lib/api/types";
 import { clearSession, restoreSession, sessionChangeEvent, sessionKey, type AuthSession } from "@/lib/auth/session";
 
@@ -15,6 +16,7 @@ type AuthState = {
 };
 
 type AuthContextValue = AuthState & {
+  can: (permission: Permission) => boolean;
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -82,6 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [state.session]);
 
+  const can = useCallback((permission: Permission) => state.user?.permissions.includes(permission) ?? false, [state.user]);
+
   useEffect(() => {
     mountedRef.current = true;
 
@@ -102,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
-  return <AuthContext.Provider value={{ ...state, refresh, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...state, can, refresh, logout }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

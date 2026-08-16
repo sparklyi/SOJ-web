@@ -94,22 +94,24 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         return problem;
       },
       listMine: async () => {
-        if (!currentUser) return { items: [], total: 0 };
-        const items = authoredProblems.filter((problem) => problem.ownerUserId === currentUser.id);
+        const actor = requireAuthoringAccess(currentUser);
+        const items = authoredProblems.filter((problem) => problem.ownerUserId === actor.id);
         return { items, total: items.length };
       },
       create: async (input) => {
-        const problem: AuthoringProblem = { ...input, id: nextProblemId++, publicationStatus: "draft", ownerUserId: requireMockUser(currentUser).id };
+        const problem: AuthoringProblem = { ...input, id: nextProblemId++, publicationStatus: "draft", ownerUserId: requirePermission(currentUser, "problem.create").id };
         authoredProblems.unshift(problem);
         return problem;
       },
       update: async (id, input) => {
+        requirePermission(currentUser, "problem.create");
         const index = authoredProblems.findIndex((problem) => problem.id === id);
         if (index < 0) throw notFound("Problem", id);
         authoredProblems[index] = { ...authoredProblems[index], ...input };
         return authoredProblems[index];
       },
       saveStatement: async (id, input) => {
+        requirePermission(currentUser, "problem.create");
         const statement: AuthoringStatement = { ...input, problemId: id, version: (authoringStatements.get(id)?.version ?? 0) + 1 };
         authoringStatements.set(id, statement);
         authoringChecks.delete(id);
@@ -117,6 +119,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         return statement;
       },
       uploadTestcases: async (id, input) => {
+        requirePermission(currentUser, "problem.create");
         const testcaseSet: AuthoringTestcaseSet = {
           id: nextTestcaseSetId++,
           problemId: id,
@@ -133,6 +136,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         return testcaseSet;
       },
       getAuthoringState: async (id) => {
+        requireAuthoringAccess(currentUser);
         const problem = authoredProblems.find((item) => item.id === id);
         if (!problem) throw notFound("Problem", id);
         const statement = authoringStatements.get(id);
@@ -146,6 +150,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         return { problem, statement, testcaseSet, latestCheck, publishable: blockers.length === 0 && Boolean(latestCheck?.summary.valid), blockers };
       },
       runCheck: async (id) => {
+        requirePermission(currentUser, "problem.create");
         const testcaseSet = authoringTestcaseSets.get(id);
         if (!testcaseSet) throw notFound("Testcase set", id);
         const check: ProblemCheckRun = {
@@ -159,11 +164,16 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         authoringChecks.set(id, check);
         return check;
       },
-      publish: async (id) => {
+      submitReview: async (id) => {
+        requireAuthoringAccess(currentUser);
         const state = await createMockAdapter(options).problems.getAuthoringState(id);
-        if (!state.publishable) throw new Error(state.blockers[0]?.message ?? "Problem is not publishable.");
+        if (!state.publishable) throw new Error(state.blockers[0]?.message ?? "Problem is not ready for review.");
         const index = authoredProblems.findIndex((problem) => problem.id === id);
-        authoredProblems[index] = { ...authoredProblems[index], publicationStatus: "published" };
+        if (index < 0) throw notFound("Problem", id);
+        if (authoredProblems[index].publicationStatus !== "draft" && authoredProblems[index].publicationStatus !== "changes_requested") {
+          throw new ApiError("Problem cannot be submitted for review in its current state.", "problem.review_invalid_state", 409);
+        }
+        authoredProblems[index] = { ...authoredProblems[index], publicationStatus: "in_review" };
         return authoredProblems[index];
       },
     },
@@ -257,6 +267,22 @@ function requireMockUser(user: CurrentUser | null): CurrentUser {
     throw new ApiError("Login is required.", "auth.required", 401);
   }
   return user;
+}
+
+function requireAuthoringAccess(user: CurrentUser | null) {
+  const currentUser = requireMockUser(user);
+  if (!currentUser.permissions.includes("problem.create") && !currentUser.permissions.includes("problem.review")) {
+    throw new ApiError("Problem authoring access is required.", "auth.forbidden", 403);
+  }
+  return currentUser;
+}
+
+function requirePermission(user: CurrentUser | null, permission: "problem.create") {
+  const currentUser = requireMockUser(user);
+  if (!currentUser.permissions.includes(permission)) {
+    throw new ApiError("Problem authoring access is required.", "auth.forbidden", 403);
+  }
+  return currentUser;
 }
 
 function demoteAuthoredProblem(id: number) {

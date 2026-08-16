@@ -1,3 +1,5 @@
+import type { Permission, Role } from "@/lib/auth/permissions";
+
 export type Envelope<T> = {
   data?: T;
   error?: BackendError | null;
@@ -16,7 +18,7 @@ export type PageResponse<T> = {
   page_size: number;
 };
 
-export type UserRole = "user" | "admin" | "root";
+export type UserRole = Role;
 export type UserStatus = "active" | "disabled" | "deleted";
 
 export type UserResponse = {
@@ -25,7 +27,8 @@ export type UserResponse = {
   username: string;
   avatar_url?: string | null;
   bio?: string | null;
-  role: UserRole;
+  roles: UserRole[];
+  permissions: Permission[];
   status: UserStatus;
   created_at: string;
   updated_at: string;
@@ -40,7 +43,7 @@ export type AuthResponse = {
 
 export type ProblemDifficulty = "easy" | "medium" | "hard";
 export type ProblemVisibility = "private" | "public" | "contest_only";
-export type ProblemPublicationStatus = "draft" | "published" | "archived";
+export type ProblemPublicationStatus = "draft" | "in_review" | "changes_requested" | "published" | "archived";
 
 export type ProblemResponse = {
   id: number;

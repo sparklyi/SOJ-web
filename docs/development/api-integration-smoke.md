@@ -68,7 +68,7 @@ Open `http://localhost:3000` and use these flows:
 5. Follow the success link to `/submissions/{id}`.
 6. Open `/contests`, register for a contest, then enter its workspace.
 7. Submit from the contest workspace and open the contest scoreboard.
-8. Open `/manage/problems`, create a draft, save its statement, upload a testcase zip, run validation, and publish it.
+8. Open `/manage/problems`, create a draft, save its statement, upload a testcase zip, run validation, and submit it for review.
 
 ## Expected Behavior
 
@@ -80,7 +80,7 @@ Open `http://localhost:3000` and use these flows:
 - Contest registration posts display name, email, and optional invite code.
 - ACM scoreboard renders backend rows in HTTP mode.
 - Direct publication before a valid current-testcase check returns `422 problem.check_required`.
-- The authoring browser smoke publishes only after validation and then confirms an accepted submission for the new problem.
+- The authoring browser smoke submits only after validation; publication remains a separate reviewer decision.
 
 ## Known Backend Contract Gaps
 

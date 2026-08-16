@@ -5,7 +5,7 @@ import { AppProviders } from "@/components/providers/app-providers";
 import { PageShell } from "@/components/layout/page-shell";
 import { SplitWorkspace } from "@/components/layout/split-workspace";
 import { createMockSession, saveSession } from "@/lib/auth/session";
-import { mockUser } from "@/lib/mock/fixtures";
+import { mockAuthorUser, mockUser } from "@/lib/mock/fixtures";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/en",
@@ -41,8 +41,23 @@ describe("app shell", () => {
     expect(screen.queryByRole("link", { name: "Author" })).not.toBeInTheDocument();
   });
 
-  it("exposes account and author navigation only after a saved session is validated", async () => {
+  it("keeps author navigation hidden for a saved user session without the capability", async () => {
     saveSession(window.localStorage, createMockSession(mockUser));
+
+    render(
+      <AppProviders>
+        <PageShell>
+          <section>Problem content</section>
+        </PageShell>
+      </AppProviders>,
+    );
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Open account menu for Lin Chen" })).toBeVisible());
+    expect(screen.queryByRole("link", { name: "Author" })).not.toBeInTheDocument();
+  });
+
+  it("exposes author navigation for a validated session with problem.create", async () => {
+    saveSession(window.localStorage, createMockSession(mockAuthorUser));
 
     render(
       <AppProviders>

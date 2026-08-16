@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
+import { createMockAdapter } from "@/lib/api/mock-adapter";
+import { mockAuthorUser, mockUser } from "@/lib/mock/fixtures";
 import { getApiMode } from "@/lib/api/mode";
 
 describe("api mode", () => {
@@ -36,5 +38,13 @@ describe("api mode", () => {
   it("raises typed not found errors", async () => {
     const client = createApiClient({ mode: "mock" });
     await expect(client.problems.get(404)).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it("denies problem authoring to a user without the authoring capability", async () => {
+    await expect(createMockAdapter({ currentUser: mockUser }).problems.listMine()).rejects.toMatchObject({
+      code: "auth.forbidden",
+      status: 403,
+    });
+    await expect(createMockAdapter({ currentUser: mockAuthorUser }).problems.listMine()).resolves.toMatchObject({ total: expect.any(Number) });
   });
 });

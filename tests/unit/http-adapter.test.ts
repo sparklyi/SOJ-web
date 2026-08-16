@@ -274,7 +274,7 @@ describe("http adapter", () => {
     }
   });
 
-  it("sends problem create, edit, statement, and publish commands", async () => {
+  it("sends problem create, edit, statement, and review submission commands", async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
       const path = String(url).replace("http://localhost:8080", "");
       const body = typeof init?.body === "string" ? JSON.parse(init.body) : null;
@@ -289,6 +289,9 @@ describe("http adapter", () => {
       if (path === "/api/v1/problems/301" && init?.method === "PATCH") {
         return Response.json({ data: problemResponse({ id: 301, slug: "new-problem", title: "New Problem", difficulty: "easy", status: body.status ?? "draft" }), error: null });
       }
+      if (path === "/api/v1/problems/301/review" && init?.method === "POST") {
+        return Response.json({ data: problemResponse({ id: 301, slug: "new-problem", title: "New Problem", difficulty: "easy", status: "in_review" }), error: null });
+      }
       return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -297,10 +300,15 @@ describe("http adapter", () => {
     const created = await client.problems.create({ title: "New Problem", slug: "new-problem", difficulty: "easy", visibility: "private", timeLimitMs: 1000, memoryLimitKb: 262144, tags: ["math"] });
     await client.problems.saveStatement(301, { title: "New Problem", description: "Solve it", inputDescription: "Input", outputDescription: "Output", samples: [{ input: "1", output: "1" }], hint: "", source: "" });
     await client.problems.update(301, { tags: ["math", "implementation"] });
-    const published = await client.problems.publish(301);
+    const submitted = await client.problems.submitReview(301);
 
     expect(created.id).toBe(301);
-    expect(published.publicationStatus).toBe("published");
+    expect(submitted.publicationStatus).toBe("in_review");
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8080/api/v1/problems/301/review", {
+      cache: "no-store",
+      headers: { Authorization: "Bearer owner-token" },
+      method: "POST",
+    });
   });
 
   it("maps a backend submission page to submission summaries", async () => {
@@ -1009,7 +1017,13 @@ describe("http adapter", () => {
     expect(session).toMatchObject({
       accessToken: "access-token",
       refreshToken: "refresh-token",
-      user: { id: 7, handle: "ada", displayName: "ada", role: "user" },
+      user: {
+        id: 7,
+        handle: "ada",
+        displayName: "ada",
+        roles: ["user"],
+        permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
+      },
     });
     expect(Date.parse(session.expiresAt)).toBeGreaterThan(Date.now());
   });
@@ -1031,7 +1045,13 @@ describe("http adapter", () => {
       password: "secret",
     });
 
-    expect(session.user).toEqual({ id: 8, handle: "grace", displayName: "grace", role: "user" });
+    expect(session.user).toEqual({
+      id: 8,
+      handle: "grace",
+      displayName: "grace",
+      roles: ["user"],
+        permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
+    });
   });
 
   it("refreshes a session with the supplied refresh token", async () => {
@@ -1070,7 +1090,8 @@ describe("http adapter", () => {
       id: 10,
       handle: "lin",
       displayName: "lin",
-      role: "user",
+      roles: ["user"],
+        permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
     });
   });
 
@@ -1121,7 +1142,8 @@ function userResponse(overrides: { id: number; username: string }) {
     username: overrides.username,
     avatar_url: null,
     bio: null,
-    role: "user",
+    roles: ["user"],
+        permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
     status: "active",
     created_at: "2026-07-07T10:00:00Z",
     updated_at: "2026-07-07T10:00:00Z",
@@ -1133,7 +1155,7 @@ function problemResponse(overrides: {
   slug: string;
   title: string;
   difficulty: "easy" | "medium" | "hard";
-  status: "draft" | "published" | "archived";
+  status: "draft" | "in_review" | "changes_requested" | "published" | "archived";
   tags?: string[];
   timeLimitMs?: number;
   memoryLimitKb?: number;

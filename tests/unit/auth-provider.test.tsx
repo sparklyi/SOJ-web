@@ -2,11 +2,16 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "@/components/providers/auth-provider";
 import { clearSession, createMockSession, saveSession } from "@/lib/auth/session";
-import { mockUser } from "@/lib/mock/fixtures";
+import { mockAuthorUser, mockUser } from "@/lib/mock/fixtures";
 
 function AuthProbe() {
-  const { status, user } = useAuth();
-  return <output data-testid="auth-state">{`${status}:${user?.handle ?? "anonymous"}`}</output>;
+  const { status, user, can } = useAuth();
+  return (
+    <>
+      <output data-testid="auth-state">{`${status}:${user?.handle ?? "anonymous"}`}</output>
+      <output data-testid="problem-create-capability">{String(can("problem.create"))}</output>
+    </>
+  );
 }
 
 function renderAuth() {
@@ -47,7 +52,8 @@ describe("browser auth provider", () => {
           username: mockUser.handle,
           avatar_url: null,
           bio: null,
-          role: mockUser.role,
+          roles: mockUser.roles,
+          permissions: mockUser.permissions,
           status: "active",
           created_at: "2026-07-07T10:00:00Z",
           updated_at: "2026-07-07T10:00:00Z",
@@ -90,7 +96,8 @@ describe("browser auth provider", () => {
           username: mockUser.handle,
           avatar_url: null,
           bio: null,
-          role: mockUser.role,
+          roles: mockUser.roles,
+          permissions: mockUser.permissions,
           status: "active",
           created_at: "2026-07-07T10:00:00Z",
           updated_at: "2026-07-07T10:00:00Z",
@@ -119,5 +126,16 @@ describe("browser auth provider", () => {
 
     saveSession(window.localStorage, createMockSession(mockUser));
     await waitFor(() => expect(screen.getByTestId("auth-state")).toHaveTextContent("authenticated:lin-chen"));
+    expect(screen.getByTestId("problem-create-capability")).toHaveTextContent("false");
+  });
+
+  it("exposes permissions from the validated session through can", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SOJ_API_MODE", "mock");
+    saveSession(window.localStorage, createMockSession(mockAuthorUser));
+
+    renderAuth();
+
+    await waitFor(() => expect(screen.getByTestId("auth-state")).toHaveTextContent("authenticated:lin-chen"));
+    expect(screen.getByTestId("problem-create-capability")).toHaveTextContent("true");
   });
 });
