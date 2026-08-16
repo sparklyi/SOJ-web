@@ -30,7 +30,7 @@ export function AccountOverview() {
           <div className="grid grid-cols-2 gap-2">
             <div className="soj-submission-chip">
               <span>{t("auth.me.role")}</span>
-              <strong>{user?.role ?? t("auth.me.guestRole")}</strong>
+              <strong>{user?.roles.join(", ") ?? t("auth.me.guestRole")}</strong>
             </div>
             <div className="soj-submission-chip">
               <span>{t("auth.me.mode")}</span>
@@ -48,7 +48,7 @@ export function AccountOverview() {
               <h2 className="text-2xl font-semibold">{user?.displayName}</h2>
               <p className="font-mono text-sm text-soj-muted">@{user?.handle}</p>
             </div>
-            <p className="text-sm leading-6 text-soj-muted">{t("auth.me.role")}: {user?.role}</p>
+            <p className="text-sm leading-6 text-soj-muted">{t("auth.me.role")}: {user?.roles.join(", ")}</p>
           </section>
           <section className="soj-account-panel grid grid-cols-[minmax(0,1fr)] content-start gap-3 p-5">
             <h2 className="text-xl font-semibold">{t("auth.me.progress")}</h2>

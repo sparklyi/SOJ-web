@@ -1,5 +1,6 @@
 import type { AuthSession } from "@/lib/auth/session";
 import type { ScoreboardModel } from "@/lib/domain/scoreboard";
+import type { Permission, Role } from "@/lib/auth/permissions";
 
 export type ApiMode = "mock" | "http";
 
@@ -268,7 +269,8 @@ export type CurrentUser = {
   id: number;
   handle: string;
   displayName: string;
-  role: "user" | "admin" | "root";
+  roles: Role[];
+  permissions: Permission[];
 };
 
 export type PageResult<T> = {

@@ -54,7 +54,8 @@ function mapUser(input: UserResponse): CurrentUser {
     id: input.id,
     handle: input.username,
     displayName: input.username,
-    role: input.role,
+    roles: input.roles,
+    permissions: input.permissions,
   };
 }
 
