@@ -38,13 +38,19 @@ test("account pages render after a valid mock session is saved", async ({ page }
   }, {
     accessToken: "e2e-access-token",
     refreshToken: "e2e-refresh-token",
-    user: { id: 7, handle: "lin-chen", displayName: "Lin Chen", role: "user" },
+    user: {
+      id: 7,
+      handle: "lin-chen",
+      displayName: "Lin Chen",
+      roles: ["user"],
+      permissions: ["problem.solve", "submission.create", "contest.join"],
+    },
     expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   });
 
   await page.goto("/me");
   await expect(page.getByRole("heading", { name: "Lin Chen" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Author" })).toHaveAttribute("href", "/en/manage/problems");
+  await expect(page.getByRole("link", { name: "Author" })).toHaveCount(0);
 
   await page.goto("/settings");
   await expect(page.getByLabel("Handle")).toHaveValue("lin-chen");
@@ -57,7 +63,13 @@ test("expired sessions are cleared before account UI is shown", async ({ page })
       JSON.stringify({
         accessToken: "expired-access-token",
         refreshToken: "expired-refresh-token",
-        user: { id: 7, handle: "lin-chen", displayName: "Lin Chen", role: "user" },
+        user: {
+          id: 7,
+          handle: "lin-chen",
+          displayName: "Lin Chen",
+          roles: ["user"],
+          permissions: ["problem.solve", "submission.create", "contest.join"],
+        },
         expiresAt: "2020-01-01T00:00:00.000Z",
       }),
     );

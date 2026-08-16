@@ -21,11 +21,12 @@ export function TopNav() {
   const pathname = usePathname() ?? "/";
   const router = useRouter();
   const navRef = useRef<HTMLElement>(null);
-  const { status, user, logout } = useAuth();
+  const { status, user, can, logout } = useAuth();
   const { localize, t } = useI18n();
   const authenticatedUser = status === "authenticated" ? user : null;
   const isAuthenticated = authenticatedUser !== null;
-  const visibleItems = isAuthenticated ? [...navItems, { href: "/manage/problems", labelKey: "nav.author" as const }] : navItems;
+  const canOpenAuthoring = can("problem.create") || can("problem.review");
+  const visibleItems = canOpenAuthoring ? [...navItems, { href: "/manage/problems", labelKey: "nav.author" as const }] : navItems;
   const currentPathname = unlocalizePath(pathname);
   const activeHref = visibleItems.find((item) => currentPathname === item.href || (item.href !== "/" && currentPathname.startsWith(`${item.href}/`)))?.href ?? "/";
 
@@ -120,9 +121,11 @@ export function TopNav() {
                   <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/settings">
                     {t("nav.account.settings")}
                   </LocalizedLink>
-                  <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/problems">
-                    {t("nav.account.authorProblems")}
-                  </LocalizedLink>
+                  {canOpenAuthoring ? (
+                    <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/problems">
+                      {t("nav.account.authorProblems")}
+                    </LocalizedLink>
+                  ) : null}
                   <button
                     type="button"
                     className="rounded-soj-sm px-3 py-2 text-left text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"

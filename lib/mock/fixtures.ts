@@ -1,11 +1,19 @@
 import type { ContestSummary, CurrentUser, JudgeLanguage, ProblemDetail, SubmissionSummary } from "@/lib/api/types";
+import { permissionsForRoles } from "@/lib/auth/permissions";
 import { buildAcmScoreboardRow, buildContest, buildOiScoreboardRow, buildProblem, buildSubmission } from "./builders";
 
 export const mockUser: CurrentUser = {
   id: 7,
   handle: "lin-chen",
   displayName: "Lin Chen",
-  role: "user",
+  roles: ["user"],
+  permissions: permissionsForRoles("user"),
+};
+
+export const mockAuthorUser: CurrentUser = {
+  ...mockUser,
+  roles: ["user", "author"],
+  permissions: permissionsForRoles("user", "author"),
 };
 
 export const mockProblems: ProblemDetail[] = [

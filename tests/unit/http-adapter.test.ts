@@ -1009,7 +1009,13 @@ describe("http adapter", () => {
     expect(session).toMatchObject({
       accessToken: "access-token",
       refreshToken: "refresh-token",
-      user: { id: 7, handle: "ada", displayName: "ada", role: "user" },
+      user: {
+        id: 7,
+        handle: "ada",
+        displayName: "ada",
+        roles: ["user"],
+        permissions: ["problem.solve", "submission.create", "contest.join"],
+      },
     });
     expect(Date.parse(session.expiresAt)).toBeGreaterThan(Date.now());
   });
@@ -1031,7 +1037,13 @@ describe("http adapter", () => {
       password: "secret",
     });
 
-    expect(session.user).toEqual({ id: 8, handle: "grace", displayName: "grace", role: "user" });
+    expect(session.user).toEqual({
+      id: 8,
+      handle: "grace",
+      displayName: "grace",
+      roles: ["user"],
+      permissions: ["problem.solve", "submission.create", "contest.join"],
+    });
   });
 
   it("refreshes a session with the supplied refresh token", async () => {
@@ -1070,7 +1082,8 @@ describe("http adapter", () => {
       id: 10,
       handle: "lin",
       displayName: "lin",
-      role: "user",
+      roles: ["user"],
+      permissions: ["problem.solve", "submission.create", "contest.join"],
     });
   });
 
@@ -1121,7 +1134,8 @@ function userResponse(overrides: { id: number; username: string }) {
     username: overrides.username,
     avatar_url: null,
     bio: null,
-    role: "user",
+    roles: ["user"],
+    permissions: ["problem.solve", "submission.create", "contest.join"],
     status: "active",
     created_at: "2026-07-07T10:00:00Z",
     updated_at: "2026-07-07T10:00:00Z",
