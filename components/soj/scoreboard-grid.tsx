@@ -1,3 +1,6 @@
+"use client";
+
+import { useI18n } from "@/components/providers/i18n-provider";
 import { Table, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
 import { RankMovement } from "./rank-movement";
 
@@ -12,14 +15,16 @@ export type ScoreboardGridRow = {
 };
 
 export function ScoreboardGrid({ rows, mode }: { rows: ScoreboardGridRow[]; mode: "acm" | "oi" }) {
+  const { t } = useI18n();
+
   return (
     <Table>
       <TableHead>
         <TableRow>
-          <TableHeaderCell>Rank</TableHeaderCell>
-          <TableHeaderCell>Handle</TableHeaderCell>
-          <TableHeaderCell>{mode === "acm" ? "Solved" : "Score"}</TableHeaderCell>
-          <TableHeaderCell>{mode === "acm" ? "Penalty" : "Movement"}</TableHeaderCell>
+          <TableHeaderCell>{t("scoreboard.rank")}</TableHeaderCell>
+          <TableHeaderCell>{t("scoreboard.handle")}</TableHeaderCell>
+          <TableHeaderCell>{t(mode === "acm" ? "scoreboard.solved" : "scoreboard.score")}</TableHeaderCell>
+          <TableHeaderCell>{t(mode === "acm" ? "scoreboard.penalty" : "scoreboard.movement")}</TableHeaderCell>
         </TableRow>
       </TableHead>
       <tbody>

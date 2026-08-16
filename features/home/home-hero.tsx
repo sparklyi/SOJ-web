@@ -1,13 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useRef } from "react";
+import { LocalizedLink } from "@/components/i18n/localized-link";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { AlgorithmSculpture } from "./algorithm-sculpture";
 import { useHomeHeroMotion } from "./use-home-hero-motion";
 import styles from "./home-hero.module.css";
 
 export function HomeHero() {
   const rootRef = useRef<HTMLElement>(null);
+  const { t } = useI18n();
   useHomeHeroMotion(rootRef);
 
   return (
@@ -25,23 +27,23 @@ export function HomeHero() {
       </div>
 
       <div className={styles.content} data-hero-copy>
-        <p className={styles.eyebrow}>SIGNAL ONLINE JUDGE</p>
+        <p className={styles.eyebrow}>{t("nav.signalOnlineJudge").toUpperCase()}</p>
         <h1 className={styles.title}>SOJ</h1>
-        <p className={styles.statement}>Think in algorithms. Prove every answer.</p>
+        <p className={styles.statement}>{t("home.statement")}</p>
         <div className={styles.actions}>
-          <Link className={styles.primaryAction} href="/problems">
-            Explore problems <span aria-hidden="true">↗</span>
-          </Link>
-          <Link className={styles.secondaryAction} href="/contests">
-            Enter contests <span aria-hidden="true">↗</span>
-          </Link>
+          <LocalizedLink className={styles.primaryAction} href="/problems">
+            {t("home.exploreProblems")} <span aria-hidden="true">↗</span>
+          </LocalizedLink>
+          <LocalizedLink className={styles.secondaryAction} href="/contests">
+            {t("home.enterContests")} <span aria-hidden="true">↗</span>
+          </LocalizedLink>
         </div>
       </div>
 
       <div className={styles.footerLine} aria-hidden="true">
         <span>01</span>
         <span className={styles.footerRule} />
-        <span>SCROLL TO EXPLORE</span>
+        <span>{t("home.scrollToExplore")}</span>
       </div>
     </section>
   );

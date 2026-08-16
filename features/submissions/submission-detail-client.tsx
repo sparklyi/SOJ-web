@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { LocalizedLink } from "@/components/i18n/localized-link";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { useEffect, useState } from "react";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { isNotFoundError } from "@/lib/api/errors";
@@ -14,6 +15,7 @@ type SubmissionDetailState =
   | { status: "error"; message: string };
 
 export function SubmissionDetailClient({ submissionId }: { submissionId: number }) {
+  const { t } = useI18n();
   const [state, setState] = useState<SubmissionDetailState>({ status: "loading" });
 
   useEffect(() => {
@@ -31,31 +33,33 @@ export function SubmissionDetailClient({ submissionId }: { submissionId: number 
         }
         setState({
           status: "error",
-          message: error instanceof Error ? error.message : "Unable to load submission.",
+          message: error instanceof Error ? error.message : t("submissions.loading.error"),
         });
       });
 
     return () => {
       active = false;
     };
-  }, [submissionId]);
+  }, [submissionId, t]);
 
   if (state.status === "ready") {
     return <SubmissionDetail submission={state.submission} />;
   }
 
   if (state.status === "not-found") {
-    return <SubmissionShell title="Submission not found" message="This submission no longer exists or is not visible to this session." />;
+    return <SubmissionShell title={t("submissions.loading.notFound")} message={t("submissions.loading.notFoundDescription")} />;
   }
 
   if (state.status === "error") {
-    return <SubmissionShell title="Unable to load submission" message={state.message} />;
+    return <SubmissionShell title={t("submissions.loading.unable")} message={state.message} />;
   }
 
-  return <SubmissionShell title="Loading submission" message="Reading judge details with your browser session." />;
+  return <SubmissionShell title={t("submissions.loading.submission")} message={t("submissions.loading.detailReading")} />;
 }
 
 function SubmissionShell({ title, message }: { title: string; message: string }) {
+  const { t } = useI18n();
+
   return (
     <section className="soj-submission-detail-panel grid min-h-72 content-center gap-4 p-6 text-center">
       <div>
@@ -63,12 +67,12 @@ function SubmissionShell({ title, message }: { title: string; message: string })
         <p className="mt-2 text-sm leading-6 text-soj-muted">{message}</p>
       </div>
       <div className="flex justify-center gap-3">
-        <Link className="rounded-soj-md border border-soj-line/70 px-4 py-2 text-sm text-soj-muted transition hover:border-soj-accent/60 hover:text-soj-accent" href="/submissions">
-          Back to submissions
-        </Link>
-        <Link className="rounded-soj-md border border-soj-accent/70 bg-soj-accent px-4 py-2 text-sm text-soj-bg transition hover:bg-soj-accent/90" href="/auth/login">
-          Sign in
-        </Link>
+        <LocalizedLink className="rounded-soj-md border border-soj-line/70 px-4 py-2 text-sm text-soj-muted transition hover:border-soj-accent/60 hover:text-soj-accent" href="/submissions">
+          {t("submissions.action.backToList")}
+        </LocalizedLink>
+        <LocalizedLink className="rounded-soj-md border border-soj-accent/70 bg-soj-accent px-4 py-2 text-sm text-soj-bg transition hover:bg-soj-accent/90" href="/auth/login">
+          {t("submissions.action.login")}
+        </LocalizedLink>
       </div>
     </section>
   );

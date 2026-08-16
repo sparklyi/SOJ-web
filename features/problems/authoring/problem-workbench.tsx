@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import { PageShell } from "@/components/layout/page-shell";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { StatusPill } from "@/components/soj/status-pill";
 import { createBrowserApiClient } from "@/lib/api/client";
 import type { ProblemAuthoringState, ProblemStatementInput, ProblemUpdateInput } from "@/lib/api/types";
@@ -18,6 +19,7 @@ type WorkbenchState =
 
 export function ProblemWorkbench({ problemId }: { problemId: number }) {
   const { status: authStatus } = useAuth();
+  const { t } = useI18n();
   const [state, setState] = useState<WorkbenchState>({ status: "loading" });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
@@ -36,7 +38,7 @@ export function ProblemWorkbench({ problemId }: { problemId: number }) {
       try {
         await load();
       } catch (cause) {
-        if (active) setState({ status: "error", message: cause instanceof Error ? cause.message : "Unable to load authoring state." });
+        if (active) setState({ status: "error", message: cause instanceof Error ? cause.message : t("authoring.unableLoadState") });
       }
     }
     void start();
@@ -44,7 +46,7 @@ export function ProblemWorkbench({ problemId }: { problemId: number }) {
     return () => {
       active = false;
     };
-  }, [authStatus, load]);
+  }, [authStatus, load, t]);
 
   async function command(action: () => Promise<unknown>, success: string) {
     setBusy(true);
@@ -54,7 +56,7 @@ export function ProblemWorkbench({ problemId }: { problemId: number }) {
       await load();
       setMessage({ tone: "success", text: success });
     } catch (cause) {
-      setMessage({ tone: "danger", text: cause instanceof Error ? cause.message : "Command failed." });
+      setMessage({ tone: "danger", text: cause instanceof Error ? cause.message : t("authoring.commandFailed") });
     } finally {
       setBusy(false);
     }
@@ -64,8 +66,8 @@ export function ProblemWorkbench({ problemId }: { problemId: number }) {
     return (
       <PageShell>
         <section className="soj-account-panel grid gap-4 p-6">
-          <h1 className="text-2xl font-semibold text-soj-text">{viewState.status === "auth" ? "Login required" : viewState.status === "error" ? "Unable to open problem" : "Loading problem"}</h1>
-          {viewState.status === "auth" ? <Link className="text-sm text-soj-accent" href="/auth/login">Open login</Link> : null}
+          <h1 className="text-2xl font-semibold text-soj-text">{viewState.status === "auth" ? t("authoring.authRequired") : viewState.status === "error" ? t("authoring.unableOpenProblem") : t("authoring.loadingWorkspace")}</h1>
+          {viewState.status === "auth" ? <LocalizedLink className="text-sm text-soj-accent" href="/auth/login">{t("authoring.openLogin")}</LocalizedLink> : null}
           {viewState.status === "error" ? <p className="text-sm text-soj-danger">{viewState.message}</p> : null}
         </section>
       </PageShell>
@@ -81,37 +83,37 @@ export function ProblemWorkbench({ problemId }: { problemId: number }) {
         <header className="grid gap-4 border-b border-soj-line/70 pb-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
-              <Link className="font-mono text-xs text-soj-accent" href="/manage/problems">Author console</Link>
-              <StatusPill tone={data.problem.publicationStatus === "published" ? "success" : "warning"}>{data.problem.publicationStatus}</StatusPill>
+              <LocalizedLink className="font-mono text-xs text-soj-accent" href="/manage/problems">{t("authoring.console")}</LocalizedLink>
+              <StatusPill tone={data.problem.publicationStatus === "published" ? "success" : "warning"}>{publicationStatusLabel(t, data.problem.publicationStatus)}</StatusPill>
             </div>
             <h1 className="mt-3 break-words text-4xl font-semibold text-soj-text md:text-5xl">{data.problem.title}</h1>
             <p className="mt-2 font-mono text-xs text-soj-muted">{data.problem.slug} / P{data.problem.id}</p>
           </div>
-          {data.problem.publicationStatus === "published" ? <Link className="text-sm text-soj-accent" href={`/problems/${data.problem.id}`}>Open problem</Link> : null}
+          {data.problem.publicationStatus === "published" ? <LocalizedLink className="text-sm text-soj-accent" href={`/problems/${data.problem.id}`}>{t("authoring.openProblem")}</LocalizedLink> : null}
         </header>
 
         {message ? <p className={message.tone === "success" ? "text-sm text-soj-success" : "text-sm text-soj-danger"} role="status">{message.text}</p> : null}
 
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="grid gap-6">
-            <ProblemMetadataForm key={`${data.problem.id}-${data.problem.title}-${data.problem.tags.join(",")}`} state={data} busy={busy} onSave={(input: ProblemUpdateInput) => command(() => client().update(problemId, input), "Problem settings saved.")} />
-            <ProblemStatementForm key={`${data.problem.id}-${data.statement?.version ?? 0}`} state={data} busy={busy} onSave={(input: ProblemStatementInput) => command(() => client().saveStatement(problemId, input), "Statement version saved.")} />
+            <ProblemMetadataForm key={`${data.problem.id}-${data.problem.title}-${data.problem.tags.join(",")}`} state={data} busy={busy} onSave={(input: ProblemUpdateInput) => command(() => client().update(problemId, input), t("authoring.problemSettingsSaved"))} />
+            <ProblemStatementForm key={`${data.problem.id}-${data.statement?.version ?? 0}`} state={data} busy={busy} onSave={(input: ProblemStatementInput) => command(() => client().saveStatement(problemId, input), t("authoring.statementVersionSaved"))} />
           </div>
           <aside className="grid gap-6 xl:sticky xl:top-24">
-            <TestcaseUploadForm busy={busy} onUpload={(input) => command(() => client().uploadTestcases(problemId, input), "Testcase archive uploaded.")} />
+            <TestcaseUploadForm busy={busy} onUpload={(input) => command(() => client().uploadTestcases(problemId, input), t("authoring.testcaseArchiveUploaded"))} />
             {data.testcaseSet ? (
               <section className="soj-account-panel grid grid-cols-2 gap-3 p-5">
-                <DataPoint label="Version" value={`v${data.testcaseSet.version}`} />
-                <DataPoint label="Cases" value={String(data.testcaseSet.caseCount)} />
-                <DataPoint label="Size" value={`${Math.max(1, Math.round(data.testcaseSet.sizeBytes / 1024))} KB`} />
-                <DataPoint label="Status" value={data.testcaseSet.status} />
+                <DataPoint label={t("authoring.version")} value={`v${data.testcaseSet.version}`} />
+                <DataPoint label={t("authoring.cases")} value={String(data.testcaseSet.caseCount)} />
+                <DataPoint label={t("authoring.size")} value={`${Math.max(1, Math.round(data.testcaseSet.sizeBytes / 1024))} KB`} />
+                <DataPoint label={t("authoring.status")} value={testcaseStatusLabel(t, data.testcaseSet.status)} />
               </section>
             ) : null}
             <ProblemCheckPanel
               state={data}
               busy={busy}
-              onRunCheck={() => command(() => client().runCheck(problemId), "Validation completed.")}
-              onPublish={() => command(() => client().publish(problemId), "Problem published.")}
+              onRunCheck={() => command(() => client().runCheck(problemId), t("authoring.validationCompleted"))}
+              onPublish={() => command(() => client().publish(problemId), t("authoring.problemPublished"))}
             />
           </aside>
         </div>
@@ -127,4 +129,16 @@ function DataPoint({ label, value }: { label: string; value: string }) {
       <p className="mt-1 truncate font-mono text-sm text-soj-text">{value}</p>
     </div>
   );
+}
+
+function publicationStatusLabel(t: ReturnType<typeof useI18n>["t"], status: ProblemAuthoringState["problem"]["publicationStatus"]) {
+  if (status === "published") return t("authoring.publicationStatus.published");
+  if (status === "archived") return t("authoring.publicationStatus.archived");
+  return t("authoring.publicationStatus.draft");
+}
+
+function testcaseStatusLabel(t: ReturnType<typeof useI18n>["t"], status: NonNullable<ProblemAuthoringState["testcaseSet"]>["status"]) {
+  if (status === "uploading") return t("authoring.testcaseStatus.uploading");
+  if (status === "disabled") return t("authoring.testcaseStatus.disabled");
+  return t("authoring.testcaseStatus.ready");
 }

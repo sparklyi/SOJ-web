@@ -1,29 +1,33 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { unlocalizePath } from "@/lib/i18n/routing";
 import { cn } from "@/lib/ui/cn";
 
 const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/problems", label: "Problems" },
-  { href: "/contests", label: "Contests" },
-  { href: "/submissions", label: "Submissions" },
-];
+  { href: "/", labelKey: "nav.home" },
+  { href: "/problems", labelKey: "nav.problems" },
+  { href: "/contests", labelKey: "nav.contests" },
+  { href: "/submissions", labelKey: "nav.submissions" },
+] as const;
 
 export function TopNav() {
   const pathname = usePathname() ?? "/";
   const router = useRouter();
   const navRef = useRef<HTMLElement>(null);
   const { status, user, logout } = useAuth();
+  const { localize, t } = useI18n();
   const authenticatedUser = status === "authenticated" ? user : null;
   const isAuthenticated = authenticatedUser !== null;
-  const canAuthor = isAuthenticated;
-  const visibleItems = canAuthor ? [...navItems, { href: "/manage/problems", label: "Author" }] : navItems;
-  const activeHref = visibleItems.find((item) => pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`)))?.href ?? "/";
+  const visibleItems = isAuthenticated ? [...navItems, { href: "/manage/problems", labelKey: "nav.author" as const }] : navItems;
+  const currentPathname = unlocalizePath(pathname);
+  const activeHref = visibleItems.find((item) => currentPathname === item.href || (item.href !== "/" && currentPathname.startsWith(`${item.href}/`)))?.href ?? "/";
 
   useEffect(() => {
     const activeLink = navRef.current?.querySelector<HTMLAnchorElement>(`a[data-href="${activeHref}"]`);
@@ -36,17 +40,19 @@ export function TopNav() {
     try {
       await logout();
     } finally {
-      router.push("/");
+      router.push(localize("/"));
     }
   }
 
-  const accountLabel = isAuthenticated ? `Open account menu for ${authenticatedUser.displayName}` : "Open guest menu";
+  const accountLabel = isAuthenticated
+    ? t("nav.account.openAuthenticated", { name: authenticatedUser.displayName })
+    : t("nav.account.openGuest");
   const accountInitials = isAuthenticated ? initialsFor(authenticatedUser.displayName || authenticatedUser.handle) : "G";
 
   return (
     <header className="sticky top-0 z-40 border-b border-soj-line/70 bg-soj-bg/82 backdrop-blur-xl">
       <div className="mx-auto flex h-[68px] max-w-[1440px] items-center gap-5 px-4 sm:px-6 lg:px-8">
-        <Link
+        <LocalizedLink
           href="/"
           className="group flex shrink-0 items-center gap-3 rounded-soj-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
         >
@@ -55,14 +61,14 @@ export function TopNav() {
           </span>
           <span className="grid leading-none">
             <span className="font-mono text-sm font-semibold uppercase tracking-[0.18em] text-soj-text">SOJ</span>
-            <span className="mt-1 hidden font-mono text-[10px] uppercase tracking-[0.18em] text-soj-muted sm:block">Signal Online Judge</span>
+            <span className="mt-1 hidden font-mono text-[10px] uppercase tracking-[0.18em] text-soj-muted sm:block">{t("nav.signalOnlineJudge")}</span>
           </span>
-        </Link>
-        <nav ref={navRef} aria-label="Primary" className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        </LocalizedLink>
+        <nav ref={navRef} aria-label={t("nav.primary")} className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ul className="flex min-w-max items-center gap-1">
             {visibleItems.map((item) => (
               <li key={item.href}>
-                <Link
+                <LocalizedLink
                   href={item.href}
                   data-href={item.href}
                   className={cn(
@@ -72,16 +78,17 @@ export function TopNav() {
                       : "text-soj-muted hover:bg-soj-surface/70 hover:text-soj-text",
                   )}
                 >
-                  {item.label}
-                </Link>
+                  {t(item.labelKey)}
+                </LocalizedLink>
               </li>
             ))}
           </ul>
         </nav>
         <div className="hidden min-w-48 items-center rounded-soj-md border border-soj-line/70 bg-soj-bg-raised/70 px-3 py-2 text-sm text-soj-muted shadow-[inset_0_1px_0_rgb(255_255_255/0.04)] transition hover:border-soj-accent/40 hover:text-soj-text lg:flex">
           <span className="mr-2 h-1.5 w-1.5 rounded-full bg-soj-success" />
-          Search public problems
+          {t("nav.searchPublicProblems")}
         </div>
+        <LanguageSwitcher />
         <Popover>
           <PopoverTrigger asChild>
             <button
@@ -100,34 +107,34 @@ export function TopNav() {
               </div>
             ) : (
               <div className="border-b border-soj-line/70 px-3 py-2">
-                <p className="text-sm font-medium text-soj-text">Guest</p>
-                <p className="font-mono text-xs text-soj-muted">Not signed in</p>
+                <p className="text-sm font-medium text-soj-text">{t("nav.account.guest")}</p>
+                <p className="font-mono text-xs text-soj-muted">{t("nav.account.notSignedIn")}</p>
               </div>
             )}
             <div className="grid gap-1 py-2">
               {isAuthenticated ? (
                 <>
-                  <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/me">
-                    Me
-                  </Link>
-                  <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/settings">
-                    Settings
-                  </Link>
-                  <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/problems">
-                    Author problems
-                  </Link>
+                  <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/me">
+                    {t("nav.account.me")}
+                  </LocalizedLink>
+                  <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/settings">
+                    {t("nav.account.settings")}
+                  </LocalizedLink>
+                  <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/problems">
+                    {t("nav.account.authorProblems")}
+                  </LocalizedLink>
                   <button
                     type="button"
                     className="rounded-soj-sm px-3 py-2 text-left text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
                     onClick={() => void handleLogout()}
                   >
-                    Logout
+                    {t("nav.account.logout")}
                   </button>
                 </>
               ) : (
-                <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/auth/login">
-                  Login
-                </Link>
+                <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/auth/login">
+                  {t("nav.account.login")}
+                </LocalizedLink>
               )}
             </div>
           </PopoverContent>

@@ -2,22 +2,25 @@ import { RankMovement } from "@/components/soj/rank-movement";
 import { StatusPill } from "@/components/soj/status-pill";
 import type { ContestSummary } from "@/lib/api/types";
 import type { ScoreboardModel, ScoreboardProblemCell } from "@/lib/domain/scoreboard";
+import { getServerTranslator } from "@/lib/i18n/server";
+import type { MessageKey } from "@/lib/i18n/messages";
 
 type ContestScoreboardPageProps = {
   contest: ContestSummary;
   scoreboard: ScoreboardModel;
 };
 
-const statusLabel: Record<ScoreboardProblemCell["status"], string> = {
-  none: "No run",
-  pending: "Pending",
-  accepted: "AC",
-  wrong_answer: "WA",
-  partial: "Partial",
-  first_blood: "First blood",
+const statusLabel: Record<ScoreboardProblemCell["status"], MessageKey> = {
+  none: "contests.scoreboard.noRun",
+  pending: "status.pending",
+  accepted: "status.accepted",
+  wrong_answer: "status.wrongAnswer",
+  partial: "contests.scoreboard.partial",
+  first_blood: "contests.scoreboard.firstBlood",
 };
 
-export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboardPageProps) {
+export async function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboardPageProps) {
+  const t = await getServerTranslator();
   const problemColumns = scoreboard.rows[0]?.problems ?? [];
   const leader = scoreboard.rows[0];
   const movementTotal = scoreboard.rows.reduce((sum, row) => sum + Math.abs(row.movement ?? 0), 0);
@@ -28,35 +31,35 @@ export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboard
       <section className="soj-scoreboard-stage soj-enter grid gap-6 p-5 md:p-7 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="relative z-[1] min-w-0">
           <div className="flex flex-wrap items-center gap-3">
-            <StatusPill tone={frozen ? "warning" : "accent"}>{frozen ? "Frozen" : "Live"}</StatusPill>
-            <StatusPill tone="neutral">{scoreboard.type.toUpperCase()}</StatusPill>
+            <StatusPill tone={frozen ? "warning" : "accent"}>{frozen ? t("contests.scoreboard.frozen") : t("contests.scoreboard.live")}</StatusPill>
+            <StatusPill tone="neutral">{t(scoreboard.type === "acm" ? "status.acm" : "status.oi")}</StatusPill>
           </div>
-          <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-none tracking-tight md:text-7xl">Scoreboard</h1>
+          <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-none tracking-tight md:text-7xl">{t("contests.scoreboard.title")}</h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-soj-muted">
-            {contest.title} ranking, per-problem results, movement, and freeze state in one dense board.
+            {t("contests.scoreboard.description", { contest: contest.title })}
           </p>
           <div className="mt-7 grid max-w-4xl grid-cols-2 gap-3 md:grid-cols-4">
-            <ScoreMetric label="Freeze status" value={frozen ? "Active" : "Open"} tone={frozen ? "warning" : "accent"} />
-            <ScoreMetric label="Rank movement" value={`${movementTotal}`} tone={movementTotal > 0 ? "accent" : "muted"} />
-            <ScoreMetric label="Problems" value={String(problemColumns.length)} />
-            <ScoreMetric label="Teams" value={String(scoreboard.rows.length)} />
+            <ScoreMetric label={t("contests.scoreboard.freezeStatus")} value={frozen ? t("contests.state.active") : t("status.open")} tone={frozen ? "warning" : "accent"} />
+            <ScoreMetric label={t("contests.scoreboard.rankMovement")} value={`${movementTotal}`} tone={movementTotal > 0 ? "accent" : "muted"} />
+            <ScoreMetric label={t("contests.metric.problems")} value={String(problemColumns.length)} />
+            <ScoreMetric label={t("contests.scoreboard.teams")} value={String(scoreboard.rows.length)} />
           </div>
         </div>
 
         <aside className="relative z-[1] grid content-between gap-4">
           <div className="soj-scoreboard-leader p-4">
-            <span className="text-sm text-soj-muted">Current leader</span>
+            <span className="text-sm text-soj-muted">{t("contests.scoreboard.currentLeader")}</span>
             <div className="mt-3 flex items-end justify-between gap-4">
               <div>
                 <div className="font-mono text-5xl font-semibold leading-none text-soj-accent">{leader?.rank ?? "-"}</div>
-                <div className="mt-2 text-xl font-semibold text-soj-text">{leader?.handle ?? "No rank"}</div>
+                <div className="mt-2 text-xl font-semibold text-soj-text">{leader?.handle ?? t("contests.scoreboard.noRank")}</div>
               </div>
               {leader ? <RankMovement delta={leader.movement ?? 0} /> : null}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <ScoreMetric label={scoreboard.type === "acm" ? "Solved" : "Score"} value={leader ? topValue(leader) : "-"} tone="accent" />
-            <ScoreMetric label={scoreboard.type === "acm" ? "Penalty" : "Last delta"} value={leader ? sideValue(leader) : "-"} />
+            <ScoreMetric label={t(scoreboard.type === "acm" ? "scoreboard.solved" : "scoreboard.score")} value={leader ? topValue(leader) : "-"} tone="accent" />
+            <ScoreMetric label={t(scoreboard.type === "acm" ? "scoreboard.penalty" : "contests.scoreboard.lastDelta")} value={leader ? sideValue(leader) : "-"} />
           </div>
         </aside>
       </section>
@@ -64,21 +67,21 @@ export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboard
       <section className="soj-scoreboard-board overflow-hidden">
         <div className="grid gap-3 border-b border-soj-line/55 p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">{scoreboard.type.toUpperCase()} rank matrix</h2>
-            <p className="mt-2 text-sm leading-6 text-soj-muted">Problem columns track accepted, pending, penalty, movement, and score states.</p>
+            <h2 className="text-2xl font-semibold tracking-tight">{t("contests.scoreboard.matrixTitle", { mode: t(scoreboard.type === "acm" ? "status.acm" : "status.oi") })}</h2>
+            <p className="mt-2 text-sm leading-6 text-soj-muted">{t("contests.scoreboard.matrixDescription")}</p>
           </div>
           <StatusPill tone={frozen ? "warning" : "accent"} className="justify-self-start">
-            {frozen ? "Freeze active" : "Public ranks"}
+            {frozen ? t("contest.freezeActive") : t("contests.scoreboard.publicRanks")}
           </StatusPill>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-[900px] w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-soj-line/65 text-xs uppercase tracking-[0.16em] text-soj-muted">
-                <th className="sticky left-0 z-[2] bg-soj-bg-raised/95 px-4 py-3 font-medium">Rank</th>
-                <th className="px-4 py-3 font-medium">Handle</th>
-                <th className="px-4 py-3 font-medium">{scoreboard.type === "acm" ? "Solved" : "Score"}</th>
-                <th className="px-4 py-3 font-medium">{scoreboard.type === "acm" ? "Penalty" : "Movement"}</th>
+                <th className="sticky left-0 z-[2] bg-soj-bg-raised/95 px-4 py-3 font-medium">{t("scoreboard.rank")}</th>
+                <th className="px-4 py-3 font-medium">{t("scoreboard.handle")}</th>
+                <th className="px-4 py-3 font-medium">{t(scoreboard.type === "acm" ? "scoreboard.solved" : "scoreboard.score")}</th>
+                <th className="px-4 py-3 font-medium">{t(scoreboard.type === "acm" ? "scoreboard.penalty" : "scoreboard.movement")}</th>
                 {problemColumns.map((problem) => (
                   <th key={problem.alias} className="px-3 py-3 text-center font-medium">
                     {problem.alias}
@@ -102,7 +105,7 @@ export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboard
                   <td className="px-4 py-4 font-mono">{"penalty" in row ? row.penalty : <RankMovement delta={row.movement ?? 0} />}</td>
                   {row.problems.map((problem) => (
                     <td key={`${row.id}-${problem.alias}`} className="px-3 py-4 text-center">
-                      <ProblemCell mode={scoreboard.type} problem={problem} />
+                      <ProblemCell mode={scoreboard.type} problem={problem} t={t} />
                     </td>
                   ))}
                 </tr>
@@ -131,10 +134,10 @@ function ScoreMetric({ label, value, tone = "text" }: { label: string; value: st
   );
 }
 
-function ProblemCell({ mode, problem }: { mode: ScoreboardModel["type"]; problem: ScoreboardProblemCell }) {
+function ProblemCell({ mode, problem, t }: { mode: ScoreboardModel["type"]; problem: ScoreboardProblemCell; t: (key: MessageKey) => string }) {
   return (
     <div className={`soj-score-cell soj-score-cell-${problem.status}`}>
-      <span>{mode === "acm" ? acmCellLabel(problem) : oiCellLabel(problem)}</span>
+      <span>{mode === "acm" ? acmCellLabel(problem, t) : oiCellLabel(problem, t)}</span>
     </div>
   );
 }
@@ -147,15 +150,15 @@ function sideValue(row: ScoreboardModel["rows"][number]) {
   return "penalty" in row ? String(row.penalty) : `${row.movement && row.movement > 0 ? "+" : ""}${row.movement ?? 0}`;
 }
 
-function acmCellLabel(problem: ScoreboardProblemCell) {
+function acmCellLabel(problem: ScoreboardProblemCell, t: (key: MessageKey) => string) {
   if (problem.status === "accepted" || problem.status === "first_blood") {
-    return `${statusLabel[problem.status]} ${problem.penalty ?? 0}`;
+    return `${t(statusLabel[problem.status])} ${problem.penalty ?? 0}`;
   }
-  if (problem.attempts) return `${statusLabel[problem.status]} ${problem.attempts}`;
-  return statusLabel[problem.status];
+  if (problem.attempts) return `${t(statusLabel[problem.status])} ${problem.attempts}`;
+  return t(statusLabel[problem.status]);
 }
 
-function oiCellLabel(problem: ScoreboardProblemCell) {
+function oiCellLabel(problem: ScoreboardProblemCell, t: (key: MessageKey) => string) {
   if (typeof problem.score === "number") return `${problem.score}`;
-  return statusLabel[problem.status];
+  return t(statusLabel[problem.status]);
 }

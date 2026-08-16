@@ -6,6 +6,7 @@ import { listProblems } from "@/features/problems/api";
 import { ProblemFilterBar } from "@/features/problems/problem-filter-bar";
 import { ProblemList } from "@/features/problems/problem-list";
 import { getApiMode } from "@/lib/api/mode";
+import { getServerTranslator } from "@/lib/i18n/server";
 
 type ProblemsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -34,6 +35,7 @@ function parseFilter(params: Record<string, string | string[] | undefined>): Pro
 
 export default async function ProblemsPage({ searchParams }: ProblemsPageProps) {
   const params = (await searchParams) ?? {};
+  const t = await getServerTranslator();
   const filter = parseFilter(params);
   const [allProblems, filteredProblems] = await Promise.all([listProblems(), listProblems(filter)]);
   const tags = Array.from(new Set(allProblems.items.flatMap((problem) => problem.tags))).sort();
@@ -50,30 +52,32 @@ export default async function ProblemsPage({ searchParams }: ProblemsPageProps) 
             <div className="grid gap-4">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="rounded-full border border-soj-accent/50 bg-soj-accent/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-soj-accent">
-                  Practice Control
+                  {t("problems.practiceControl")}
                 </span>
-                <span className="font-mono text-xs text-soj-muted">{filteredProblems.total} visible / {allProblems.total} total</span>
+                <span className="font-mono text-xs text-soj-muted">
+                  {t("problems.visibleTotal", { visible: filteredProblems.total, total: allProblems.total })}
+                </span>
               </div>
               <div className="grid gap-3">
-                <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-soj-text md:text-6xl">Problem set</h1>
+                <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-soj-text md:text-6xl">{t("problems.pageTitle")}</h1>
                 <p className="max-w-2xl text-base leading-7 text-soj-muted">
-                  Search, filter, and enter practice problems from one focused Web workspace.
+                  {t("problems.pageDescription")}
                 </p>
               </div>
             </div>
             <div className="soj-runway lg:-mb-2">
               <span className="soj-runway-crop" aria-hidden />
               <div className="absolute left-4 top-4 z-[1]">
-                <p className="text-sm text-soj-muted">Session runway</p>
+                <p className="text-sm text-soj-muted">{t("problems.sessionRunway")}</p>
                 <p className="mt-1 font-mono text-3xl text-soj-text">{completion}%</p>
               </div>
               <div className="absolute bottom-4 left-4 right-4 z-[1] grid grid-cols-3 gap-2 font-mono text-[11px] text-soj-muted">
-                <span>{acceptedCount} AC</span>
-                <span>{attemptedCount} retry</span>
-                <span>{hardCount} hard</span>
+                <span>{t("problems.acceptedCount", { count: acceptedCount })}</span>
+                <span>{t("problems.retryCount", { count: attemptedCount })}</span>
+                <span>{t("problems.hardCount", { count: hardCount })}</span>
               </div>
-              <span className="soj-packet">JUDGE</span>
-              <span className="soj-packet soj-packet-secondary">RETRY</span>
+              <span className="soj-packet">{t("problems.judge")}</span>
+              <span className="soj-packet soj-packet-secondary">{t("problems.retry")}</span>
             </div>
           </div>
         </section>
@@ -94,14 +98,14 @@ export default async function ProblemsPage({ searchParams }: ProblemsPageProps) 
           <aside className="soj-rail-panel grid content-start">
             <section className="soj-rail-section p-5">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold text-soj-text">Practice queue</h2>
-                <span className="font-mono text-xs text-soj-muted">{getApiMode() === "http" ? "Live" : "Local"}</span>
+                <h2 className="text-lg font-semibold text-soj-text">{t("problems.practiceQueue")}</h2>
+                <span className="font-mono text-xs text-soj-muted">{getApiMode() === "http" ? t("status.live") : t("problems.localMode")}</span>
               </div>
               <div className="mt-5 grid gap-3">
                 {[
-                  ["Warm up", `${acceptedCount} solved`, "bg-soj-success"],
-                  ["Pressure", `${hardCount} hard`, "bg-soj-danger"],
-                  ["Review", `${attemptedCount} pending`, "bg-soj-warning"],
+                  [t("problems.warmUp"), t("problems.solvedCount", { count: acceptedCount }), "bg-soj-success"],
+                  [t("problems.pressure"), t("problems.hard", { count: hardCount }), "bg-soj-danger"],
+                  [t("problems.review"), t("problems.pendingCount", { count: attemptedCount }), "bg-soj-warning"],
                 ].map(([label, value, tone]) => (
                   <div key={label} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-soj-md border border-soj-line/45 bg-soj-bg/22 px-3 py-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.035)] transition hover:border-soj-accent/35 hover:bg-soj-surface/30">
                     <span className={`h-2 w-2 rounded-full ${tone}`} />
@@ -112,7 +116,7 @@ export default async function ProblemsPage({ searchParams }: ProblemsPageProps) 
               </div>
             </section>
             <section className="soj-rail-section p-5">
-              <h2 className="text-lg font-semibold text-soj-text">Tag lanes</h2>
+              <h2 className="text-lg font-semibold text-soj-text">{t("problems.tagLanes")}</h2>
               <div className="mt-4 flex flex-wrap gap-2">
                 {tags.slice(0, 8).map((item) => (
                   <span key={item} className="rounded-full border border-soj-line bg-soj-surface/60 px-3 py-1.5 text-xs text-soj-muted">

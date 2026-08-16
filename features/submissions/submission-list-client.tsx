@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import { TopNav } from "@/components/layout/top-nav";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { VerdictBadge } from "@/components/soj/verdict-badge";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { listSubmissions } from "./api";
@@ -17,20 +18,21 @@ type SubmissionListState =
   | { status: "error"; message: string };
 
 export function SubmissionListClient() {
+  const { t } = useI18n();
   const [state, setState] = useState<SubmissionListState>({ status: "loading" });
 
   useEffect(() => {
     listSubmissions(createBrowserApiClient())
       .then((submissions) => setState({ status: "ready", submissions }))
       .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : "Unable to load submissions.";
+        const message = error instanceof Error ? error.message : t("submissions.loading.error");
         if (message.toLowerCase().includes("auth")) {
           setState({ status: "auth" });
           return;
         }
         setState({ status: "error", message });
       });
-  }, []);
+  }, [t]);
 
   const submissions = state.status === "ready" ? state.submissions : { items: [], total: 0 };
   const latest = submissions.items[0];
@@ -38,16 +40,16 @@ export function SubmissionListClient() {
   const inFlightCount = submissions.items.filter((item) => !item.displayState.terminal).length;
   const terminalCount = submissions.items.filter((item) => item.displayState.terminal).length;
   const metrics = [
-    { label: "Total runs", value: submissions.total, tone: "text-soj-text" },
-    { label: "Accepted", value: acceptedCount, tone: "text-soj-success" },
-    { label: "In flight", value: inFlightCount, tone: "text-soj-accent" },
-    { label: "Terminal", value: terminalCount, tone: "text-soj-muted" },
+    { label: t("submissions.metric.totalRuns"), value: submissions.total, tone: "text-soj-text" },
+    { label: t("submissions.metric.accepted"), value: acceptedCount, tone: "text-soj-success" },
+    { label: t("submissions.metric.inFlight"), value: inFlightCount, tone: "text-soj-accent" },
+    { label: t("submissions.metric.terminal"), value: terminalCount, tone: "text-soj-muted" },
   ];
   const judgeTrack = [
-    { label: "Queue", caption: "intake", value: submissions.items.filter((item) => item.status === "queued").length },
-    { label: "Compile", caption: "build", value: submissions.items.filter((item) => item.status === "compiling").length },
-    { label: "Run", caption: "sandbox", value: submissions.items.filter((item) => item.status === "running").length },
-    { label: "Verdict", caption: "sealed", value: terminalCount },
+    { label: t("submissions.track.queue"), caption: t("submissions.track.intake"), value: submissions.items.filter((item) => item.status === "queued").length },
+    { label: t("submissions.track.compile"), caption: t("submissions.track.build"), value: submissions.items.filter((item) => item.status === "compiling").length },
+    { label: t("submissions.track.run"), caption: t("submissions.track.sandbox"), value: submissions.items.filter((item) => item.status === "running").length },
+    { label: t("submissions.track.verdict"), caption: t("submissions.track.sealed"), value: terminalCount },
   ];
 
   return (
@@ -60,14 +62,14 @@ export function SubmissionListClient() {
               <div className="grid gap-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="rounded-full border border-soj-accent/50 bg-soj-accent/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-soj-accent">
-                    Judge Signal
+                    {t("submissions.page.badge")}
                   </span>
-                  <span className="font-mono text-xs text-soj-muted">{submissions.total} runs routed through SOJ</span>
+                  <span className="font-mono text-xs text-soj-muted">{t("submissions.page.runsThrough", { count: submissions.total })}</span>
                 </div>
                 <div className="grid gap-3">
-                  <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-soj-text md:text-6xl">Submissions</h1>
+                  <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-soj-text md:text-6xl">{t("submissions.page.title")}</h1>
                   <p className="max-w-2xl text-base leading-7 text-soj-muted">
-                    Track judge intake, resource usage, and final verdicts without leaving the Web workspace.
+                    {t("submissions.page.description")}
                   </p>
                 </div>
               </div>
@@ -86,7 +88,7 @@ export function SubmissionListClient() {
           </div>
         </section>
 
-        <section className="soj-judge-track" aria-label="Judge pipeline">
+        <section className="soj-judge-track" aria-label={t("submissions.track.verdict")}>
           {judgeTrack.map(({ label, caption, value }, index) => (
             <div key={label} className="soj-judge-segment">
               <span className="font-mono text-[11px] text-soj-muted">0{index + 1}</span>
@@ -106,11 +108,13 @@ export function SubmissionListClient() {
 }
 
 function LatestSubmissionCard({ latest }: { latest: SubmissionListResult["items"][number] }) {
+  const { t } = useI18n();
+
   return (
     <aside className="soj-submission-latest grid content-start gap-5 p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.16em] text-soj-muted">Latest run</p>
+          <p className="font-mono text-xs uppercase tracking-[0.16em] text-soj-muted">{t("submissions.page.latestRun")}</p>
           <p className="mt-2 font-mono text-4xl text-soj-text">#{latest.id}</p>
         </div>
         <VerdictBadge status={latest.status} />
@@ -119,17 +123,17 @@ function LatestSubmissionCard({ latest }: { latest: SubmissionListResult["items"
         <p className="text-lg font-semibold text-soj-text">{latest.problemTitle}</p>
         <div className="flex items-center justify-between border-t border-soj-line/60 pt-3 font-mono text-xs text-soj-muted">
           <span>P{latest.problemId}</span>
-          <span>{latest.score} pts</span>
+          <span>{t("submissions.page.points", { score: latest.score })}</span>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="soj-submission-chip">
-          <span>Route</span>
-          <strong>{latest.contestId ? "Contest" : "Practice"}</strong>
+          <span>{t("submissions.page.route")}</span>
+          <strong>{latest.contestId ? t("submissions.page.contest") : t("submissions.page.practice")}</strong>
         </div>
         <div className="soj-submission-chip">
-          <span>State</span>
-          <strong>{latest.displayState.terminal ? "sealed" : "live"}</strong>
+          <span>{t("submissions.page.state")}</span>
+          <strong>{latest.displayState.terminal ? t("submissions.page.sealed") : t("submissions.page.live")}</strong>
         </div>
       </div>
     </aside>
@@ -137,14 +141,15 @@ function LatestSubmissionCard({ latest }: { latest: SubmissionListResult["items"
 }
 
 function SubmissionEmptyCard({ state }: { state: SubmissionListState }) {
-  const label = state.status === "loading" ? "Loading runs" : state.status === "auth" ? "Sign in required" : "No visible runs";
+  const { t } = useI18n();
+  const label = state.status === "loading" ? t("submissions.empty.loadingRuns") : state.status === "auth" ? t("submissions.empty.signInRequired") : t("submissions.empty.noVisibleRuns");
   return (
     <aside className="soj-submission-latest grid content-start gap-5 p-5">
       <div>
-        <p className="font-mono text-xs uppercase tracking-[0.16em] text-soj-muted">Latest run</p>
+        <p className="font-mono text-xs uppercase tracking-[0.16em] text-soj-muted">{t("submissions.page.latestRun")}</p>
         <p className="mt-2 text-2xl font-semibold text-soj-text">{label}</p>
       </div>
-      <p className="text-sm leading-6 text-soj-muted">Submission history is loaded with your browser session so backend visibility rules stay intact.</p>
+      <p className="text-sm leading-6 text-soj-muted">{t("submissions.empty.description")}</p>
       {state.status === "auth" ? (
         <LoginLink />
       ) : null}
@@ -153,15 +158,16 @@ function SubmissionEmptyCard({ state }: { state: SubmissionListState }) {
 }
 
 function SubmissionLoadState({ state }: { state: SubmissionListState }) {
-  const title = state.status === "loading" ? "Loading judge queue" : state.status === "auth" ? "Login required" : "Unable to load submissions";
+  const { t } = useI18n();
+  const title = state.status === "loading" ? t("submissions.loading.queue") : state.status === "auth" ? t("submissions.loading.loginRequired") : t("submissions.loading.unable");
   const message =
     state.status === "loading"
-      ? "Reading visible submissions with your browser session."
+      ? t("submissions.loading.reading")
       : state.status === "auth"
-        ? "The backend submission list is protected. Login first, then return here."
+        ? t("submissions.loading.protected")
         : state.status === "error"
           ? state.message
-          : "Submission list is ready.";
+          : t("submissions.loading.ready");
 
   return (
     <section className="soj-submission-board p-6">
@@ -179,12 +185,14 @@ function SubmissionLoadState({ state }: { state: SubmissionListState }) {
 }
 
 function LoginLink() {
+  const { t } = useI18n();
+
   return (
-    <Link
+    <LocalizedLink
       className="inline-flex h-8 shrink-0 items-center justify-center rounded-soj-md border border-soj-accent/80 bg-soj-accent px-3 text-xs font-medium text-soj-bg shadow-[0_10px_30px_rgb(var(--soj-accent)/0.18),inset_0_1px_0_rgb(255_255_255/0.26)] transition duration-200 ease-out hover:bg-soj-accent/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent active:translate-y-px"
       href="/auth/login"
     >
-      Login
-    </Link>
+      {t("submissions.action.login")}
+    </LocalizedLink>
   );
 }

@@ -44,7 +44,7 @@ test("account pages render after a valid mock session is saved", async ({ page }
 
   await page.goto("/me");
   await expect(page.getByRole("heading", { name: "Lin Chen" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Author" })).toHaveAttribute("href", "/manage/problems");
+  await expect(page.getByRole("link", { name: "Author" })).toHaveAttribute("href", "/en/manage/problems");
 
   await page.goto("/settings");
   await expect(page.getByLabel("Handle")).toHaveValue("lin-chen");

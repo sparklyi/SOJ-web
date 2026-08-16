@@ -37,5 +37,7 @@ test("author creates, validates, and publishes a problem", async ({ page }) => {
   await expect(page.getByText("Ready to publish")).toBeVisible();
   await page.getByRole("button", { name: "Publish problem" }).click();
   await expect(page.getByText("Problem published.")).toBeVisible();
-  await expect(page.getByText("published", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("Validation and publication").getByText("Published", { exact: true }),
+  ).toBeVisible();
 });

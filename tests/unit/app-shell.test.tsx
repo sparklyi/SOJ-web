@@ -8,7 +8,8 @@ import { createMockSession, saveSession } from "@/lib/auth/session";
 import { mockUser } from "@/lib/mock/fixtures";
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/",
+  usePathname: () => "/en",
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn() }),
 }));
 
@@ -30,11 +31,11 @@ describe("app shell", () => {
       </AppProviders>,
     );
 
-    expect(screen.getByRole("navigation", { name: "Primary" })).toBeVisible();
+    expect(screen.getByRole("navigation", { name: "Primary navigation" })).toBeVisible();
     expect(screen.getByRole("main")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Problems" })).toHaveAttribute("href", "/problems");
-    expect(screen.getByRole("link", { name: "Contests" })).toHaveAttribute("href", "/contests");
-    expect(screen.getByRole("link", { name: "Submissions" })).toHaveAttribute("href", "/submissions");
+    expect(screen.getByRole("link", { name: "Problems" })).toHaveAttribute("href", "/en/problems");
+    expect(screen.getByRole("link", { name: "Contests" })).toHaveAttribute("href", "/en/contests");
+    expect(screen.getByRole("link", { name: "Submissions" })).toHaveAttribute("href", "/en/submissions");
     expect(screen.getByRole("button", { name: "Open guest menu" })).toBeVisible();
     expect(screen.queryByText("Lin Chen")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Author" })).not.toBeInTheDocument();
@@ -52,7 +53,7 @@ describe("app shell", () => {
     );
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Open account menu for Lin Chen" })).toBeVisible());
-    expect(screen.getByRole("link", { name: "Author" })).toHaveAttribute("href", "/manage/problems");
+    expect(screen.getByRole("link", { name: "Author" })).toHaveAttribute("href", "/en/manage/problems");
   });
 
   it("renders split workspace regions", () => {
