@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
+import { I18nProvider } from "@/components/providers/i18n-provider";
 import { CodeWorkspace } from "@/components/soj/code-workspace";
 import { ScoreboardGrid } from "@/components/soj/scoreboard-grid";
 import { SubmissionTimeline } from "@/components/soj/submission-timeline";
@@ -15,6 +17,10 @@ import { mockLanguages, mockUser } from "@/lib/mock/fixtures";
 const submissionsCreate = vi.fn();
 const contestsRegister = vi.fn();
 const previousApiMode = process.env.NEXT_PUBLIC_SOJ_API_MODE;
+
+function renderWithLocale(ui: ReactNode) {
+  return render(<I18nProvider locale="en">{ui}</I18nProvider>);
+}
 
 vi.mock("@/lib/api/client", () => ({
   createBrowserApiClient: () => ({
@@ -36,12 +42,12 @@ describe("soj product components", () => {
   });
 
   it("renders verdict states", () => {
-    render(<VerdictBadge status="accepted" />);
+    renderWithLocale(<VerdictBadge status="accepted" />);
     expect(screen.getByText("Accepted")).toBeVisible();
   });
 
   it("renders ordered submission lifecycle events", () => {
-    render(
+    renderWithLocale(
       <SubmissionTimeline
         items={[
           { id: "1", status: "queued", label: "Queued" },
@@ -54,15 +60,15 @@ describe("soj product components", () => {
   });
 
   it("renders ACM and OI scoreboard rows", () => {
-    const { rerender } = render(<ScoreboardGrid mode="acm" rows={[{ id: "1", rank: 1, handle: "lin", solved: 4, penalty: 312 }]} />);
+    const { rerender } = renderWithLocale(<ScoreboardGrid mode="acm" rows={[{ id: "1", rank: 1, handle: "lin", solved: 4, penalty: 312 }]} />);
     expect(screen.getByText("Solved")).toBeVisible();
 
-    rerender(<ScoreboardGrid mode="oi" rows={[{ id: "1", rank: 1, handle: "lin", score: 460, movement: 2 }]} />);
+    rerender(<I18nProvider locale="en"><ScoreboardGrid mode="oi" rows={[{ id: "1", rank: 1, handle: "lin", score: 460, movement: 2 }]} /></I18nProvider>);
     expect(screen.getByText("Score")).toBeVisible();
   });
 
   it("keeps edited source when switching languages", () => {
-    render(<CodeWorkspace languages={mockLanguages} />);
+    renderWithLocale(<CodeWorkspace languages={mockLanguages} />);
 
     const editor = screen.getByLabelText("Source code");
     fireEvent.change(editor, { target: { value: "custom source" } });
@@ -75,14 +81,14 @@ describe("soj product components", () => {
     process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
     submissionsCreate.mockResolvedValue({ id: 321 });
     const problem = buildProblem({ id: 44 });
-    const { unmount } = render(<ProblemSubmitPanel problem={problem} languages={mockLanguages} />);
+    const { unmount } = renderWithLocale(<ProblemSubmitPanel problem={problem} languages={mockLanguages} />);
 
     expect(screen.getByRole("button", { name: "Sign in to submit" })).toBeDisabled();
-    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/auth/login");
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/en/auth/login");
 
     saveSession(window.localStorage, createMockSession(mockUser));
     unmount();
-    render(<ProblemSubmitPanel problem={problem} languages={mockLanguages} />);
+    renderWithLocale(<ProblemSubmitPanel problem={problem} languages={mockLanguages} />);
 
     fireEvent.change(screen.getByLabelText("Source code"), { target: { value: "edited source" } });
     fireEvent.click(screen.getByRole("button", { name: "Submit solution" }));
@@ -98,15 +104,15 @@ describe("soj product components", () => {
 
   it("disables HTTP contest submit without a browser session", () => {
     process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
-    render(<ContestWorkspacePage contest={{ ...buildContest({ id: 88 }), phase: "live", canSubmit: true }} problem={buildProblem({ id: 1 })} languages={mockLanguages} />);
+    renderWithLocale(<ContestWorkspacePage contest={{ ...buildContest({ id: 88 }), phase: "live", canSubmit: true }} problem={buildProblem({ id: 1 })} languages={mockLanguages} />);
 
     expect(screen.getByRole("button", { name: "Sign in to submit" })).toBeDisabled();
-    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/auth/login");
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/en/auth/login");
   });
 
   it("prompts sign-in instead of posting contest registration without a browser session", () => {
     process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
-    render(
+    renderWithLocale(
       <ContestRegistration
         contest={{
           ...buildContest({ id: 88, status: "scheduled", registered: false }),
@@ -117,7 +123,7 @@ describe("soj product components", () => {
     );
 
     expect(screen.getByRole("button", { name: "Sign in to register" })).toBeDisabled();
-    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/auth/login");
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/en/auth/login");
     expect(contestsRegister).not.toHaveBeenCalled();
   });
 
@@ -125,7 +131,7 @@ describe("soj product components", () => {
     process.env.NEXT_PUBLIC_SOJ_API_MODE = "http";
     contestsRegister.mockResolvedValue({ id: 9 });
     saveSession(window.localStorage, createMockSession(mockUser));
-    render(
+    renderWithLocale(
       <ContestRegistration
         contest={{
           ...buildContest({ id: 88, status: "scheduled", registered: false }),
@@ -147,7 +153,7 @@ describe("soj product components", () => {
         inviteCode: "INVITE-7",
       });
     });
-    expect(await screen.findByRole("link", { name: "Enter contest" })).toHaveAttribute("href", "/contests/88/problems/1");
+    expect(await screen.findByRole("link", { name: "Enter contest" })).toHaveAttribute("href", "/en/contests/88/problems/1");
   });
 
   it("posts edited contest source with contest context when signed in", async () => {
@@ -156,7 +162,7 @@ describe("soj product components", () => {
     saveSession(window.localStorage, createMockSession(mockUser));
     const contest = buildContest({ id: 88 });
     const problem = buildProblem({ id: 1 });
-    render(<ContestWorkspacePage contest={{ ...contest, phase: "live", canSubmit: true }} problem={problem} languages={mockLanguages} />);
+    renderWithLocale(<ContestWorkspacePage contest={{ ...contest, phase: "live", canSubmit: true }} problem={problem} languages={mockLanguages} />);
 
     fireEvent.change(screen.getByLabelText("Source code"), { target: { value: "contest edited source" } });
     fireEvent.click(screen.getByRole("button", { name: "Submit solution" }));
@@ -177,7 +183,7 @@ describe("soj product components", () => {
     markContestRegistered(window.localStorage, mockUser.id, 88);
     const contest = buildContest({ id: 88, registered: false, status: "running" });
     const problem = buildProblem({ id: 1 });
-    render(<ContestWorkspacePage contest={{ ...contest, phase: "live", canSubmit: false }} problem={problem} languages={mockLanguages} />);
+    renderWithLocale(<ContestWorkspacePage contest={{ ...contest, phase: "live", canSubmit: false }} problem={problem} languages={mockLanguages} />);
 
     fireEvent.change(screen.getByLabelText("Source code"), { target: { value: "contest local registration source" } });
     fireEvent.click(screen.getByRole("button", { name: "Submit solution" }));
@@ -193,7 +199,7 @@ describe("soj product components", () => {
     saveSession(window.localStorage, createMockSession({ ...mockUser, id: 8, handle: "mira" }));
 
     const contest = buildContest({ id: 88, registered: false, status: "running" });
-    render(<ContestWorkspacePage contest={{ ...contest, phase: "live", canSubmit: false }} problem={buildProblem({ id: 1 })} languages={mockLanguages} />);
+    renderWithLocale(<ContestWorkspacePage contest={{ ...contest, phase: "live", canSubmit: false }} problem={buildProblem({ id: 1 })} languages={mockLanguages} />);
 
     fireEvent.change(screen.getByLabelText("Source code"), { target: { value: "other user source" } });
 

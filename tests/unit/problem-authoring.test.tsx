@@ -1,17 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "@/components/providers/i18n-provider";
 import { ProblemCheckPanel } from "@/features/problems/authoring/problem-check-panel";
 import type { ProblemAuthoringState } from "@/lib/api/types";
 
 describe("problem authoring", () => {
   it("shows backend publish blockers and validation findings", () => {
     render(
-      <ProblemCheckPanel
-        state={authoringState(false)}
-        busy={false}
-        onRunCheck={vi.fn()}
-        onPublish={vi.fn()}
-      />,
+      <I18nProvider locale="en">
+        <ProblemCheckPanel
+          state={authoringState(false)}
+          busy={false}
+          onRunCheck={vi.fn()}
+          onPublish={vi.fn()}
+        />
+      </I18nProvider>,
     );
 
     expect(screen.getByText("Publish blocked")).toBeInTheDocument();
@@ -22,12 +25,14 @@ describe("problem authoring", () => {
 
   it("enables publication only when the backend state is publishable", () => {
     render(
-      <ProblemCheckPanel
-        state={authoringState(true)}
-        busy={false}
-        onRunCheck={vi.fn()}
-        onPublish={vi.fn()}
-      />,
+      <I18nProvider locale="en">
+        <ProblemCheckPanel
+          state={authoringState(true)}
+          busy={false}
+          onRunCheck={vi.fn()}
+          onPublish={vi.fn()}
+        />
+      </I18nProvider>,
     );
 
     expect(screen.getByText("Ready to publish")).toBeInTheDocument();

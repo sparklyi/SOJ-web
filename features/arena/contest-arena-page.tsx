@@ -3,6 +3,8 @@ import { StatusPill } from "@/components/soj/status-pill";
 import type { ContestSummary } from "@/lib/api/types";
 import type { ArenaEvent } from "@/lib/domain/arena";
 import type { ScoreboardModel } from "@/lib/domain/scoreboard";
+import { getServerTranslator } from "@/lib/i18n/server";
+import type { Translator } from "@/lib/i18n/translate";
 
 type ContestArenaPageProps = {
   contest: ContestSummary;
@@ -10,7 +12,8 @@ type ContestArenaPageProps = {
   scoreboard: ScoreboardModel;
 };
 
-export function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPageProps) {
+export async function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPageProps) {
+  const t = await getServerTranslator();
   const acceptedEvents = events.filter((event) => event.tone === "success");
   const keyEvents = events.slice(0, 5);
   const leader = scoreboard.rows[0];
@@ -25,26 +28,26 @@ export function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPa
           <div className="flex min-w-0 flex-col justify-between gap-8">
             <div>
               <div className="flex flex-wrap gap-2">
-                <StatusPill tone="accent">Arena</StatusPill>
-                <StatusPill tone={frozen ? "warning" : "accent"}>{frozen ? "Frozen" : "Live"}</StatusPill>
+                <StatusPill tone="accent">{t("arena.label")}</StatusPill>
+                <StatusPill tone={frozen ? "warning" : "accent"}>{frozen ? t("status.frozen") : t("status.live")}</StatusPill>
                 <StatusPill tone={scoreboard.type === "acm" ? "info" : "warning"}>{scoreboard.type.toUpperCase()}</StatusPill>
               </div>
-              <h1 className="mt-5 text-6xl font-semibold leading-none tracking-tight md:text-8xl">Live board</h1>
-              <p className="mt-5 max-w-2xl text-lg leading-8 text-soj-muted">{contest.title} broadcast view for rank movement, accepted events, and score deltas.</p>
+              <h1 className="mt-5 text-6xl font-semibold leading-none tracking-tight md:text-8xl">{t("arena.liveBoard")}</h1>
+              <p className="mt-5 max-w-2xl text-lg leading-8 text-soj-muted">{t("arena.broadcastDescription", { title: contest.title })}</p>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-end">
               <div className="soj-arena-leader p-5">
-                <span className="text-sm text-soj-muted">Leader signal</span>
+                <span className="text-sm text-soj-muted">{t("arena.leaderSignal")}</span>
                 <div className="mt-4 font-mono text-8xl font-semibold leading-none text-soj-accent">{leader?.rank ?? "-"}</div>
                 <div className="mt-3 flex items-end justify-between gap-4">
-                  <div className="text-3xl font-semibold text-soj-text">{leader?.handle ?? "No rank"}</div>
+                  <div className="text-3xl font-semibold text-soj-text">{leader?.handle ?? t("arena.noRank")}</div>
                   {leader ? <RankMovement delta={leader.movement ?? 0} /> : null}
                 </div>
               </div>
               <div className="soj-arena-track">
                 {topRows.map((row) => (
-                  <TopRankLane key={row.id} row={row} mode={scoreboard.type} />
+                  <TopRankLane key={row.id} row={row} mode={scoreboard.type} t={t} />
                 ))}
               </div>
             </div>
@@ -53,31 +56,31 @@ export function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPa
           <aside className="grid content-between gap-4">
             <div className="soj-arena-clock p-5">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-soj-muted">Freeze countdown</span>
-                <StatusPill tone={frozen ? "warning" : "accent"}>{frozen ? "Active" : "Open"}</StatusPill>
+                <span className="text-sm text-soj-muted">{t("arena.freezeCountdown")}</span>
+                <StatusPill tone={frozen ? "warning" : "accent"}>{frozen ? t("arena.active") : t("arena.open")}</StatusPill>
               </div>
               <div className="mt-5 font-mono text-6xl font-semibold leading-none tracking-tight text-soj-text">{frozen ? "00:00:00" : "00:47:18"}</div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <ArenaMetric label="Movement" value={String(movementTotal)} tone={movementTotal > 0 ? "accent" : "muted"} />
-              <ArenaMetric label="Accepted" value={String(acceptedEvents.length)} tone="success" />
-              <ArenaMetric label="Teams" value={String(scoreboard.rows.length)} />
-              <ArenaMetric label="Mode" value={scoreboard.type.toUpperCase()} tone={scoreboard.type === "acm" ? "text" : "warning"} />
+              <ArenaMetric label={t("arena.movement")} value={String(movementTotal)} tone={movementTotal > 0 ? "accent" : "muted"} />
+              <ArenaMetric label={t("arena.accepted")} value={String(acceptedEvents.length)} tone="success" />
+              <ArenaMetric label={t("arena.teams")} value={String(scoreboard.rows.length)} />
+              <ArenaMetric label={t("arena.mode")} value={scoreboard.type.toUpperCase()} tone={scoreboard.type === "acm" ? "text" : "warning"} />
             </div>
-            <ArenaTicker events={keyEvents} />
+            <ArenaTicker events={keyEvents} t={t} />
           </aside>
         </div>
       </section>
 
       <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <ArenaEventPanel title="Key submissions" events={keyEvents} emptyLabel="No submissions yet" />
-        <ArenaEventPanel title="Accepted events" events={acceptedEvents} emptyLabel="No accepted submissions yet" />
+        <ArenaEventPanel title={t("arena.keySubmissions")} events={keyEvents} emptyLabel={t("arena.noSubmissions")} />
+        <ArenaEventPanel title={t("arena.acceptedEvents")} events={acceptedEvents} emptyLabel={t("arena.noSubmissions")} />
       </section>
     </div>
   );
 }
 
-function TopRankLane({ row, mode }: { row: ScoreboardModel["rows"][number]; mode: ScoreboardModel["type"] }) {
+function TopRankLane({ row, mode, t }: { row: ScoreboardModel["rows"][number]; mode: ScoreboardModel["type"]; t: Translator }) {
   return (
     <div className="soj-arena-rank-lane">
       <div className="grid h-12 w-12 place-items-center rounded-[16px_4px_12px_4px] border border-soj-accent/45 bg-soj-accent/12 font-mono text-2xl text-soj-accent">
@@ -89,7 +92,7 @@ function TopRankLane({ row, mode }: { row: ScoreboardModel["rows"][number]; mode
       </div>
       <div className="justify-self-end text-right">
         <div className="font-mono text-2xl text-soj-accent">{"solved" in row ? row.solved : row.score}</div>
-        <div className="text-xs text-soj-muted">{mode === "acm" ? "solved" : "score"}</div>
+        <div className="text-xs text-soj-muted">{t(mode === "acm" ? "arena.solved" : "arena.score")}</div>
       </div>
       <RankMovement delta={row.movement ?? 0} />
     </div>
@@ -113,12 +116,12 @@ function ArenaMetric({ label, value, tone = "text" }: { label: string; value: st
   );
 }
 
-function ArenaTicker({ events }: { events: ArenaEvent[] }) {
+function ArenaTicker({ events, t }: { events: ArenaEvent[]; t: Translator }) {
   const latest = events[0];
   return (
     <div className="soj-arena-ticker p-4">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-soj-muted">Latest signal</span>
+        <span className="text-sm text-soj-muted">{t("arena.latestSignal")}</span>
         <span className="h-px w-20 soj-hairline" />
       </div>
       {latest ? (
@@ -127,7 +130,7 @@ function ArenaTicker({ events }: { events: ArenaEvent[] }) {
           <div className="mt-1 font-mono text-sm text-soj-accent">{latest.label}</div>
         </div>
       ) : (
-        <div className="mt-4 text-sm text-soj-muted">No signal yet</div>
+        <div className="mt-4 text-sm text-soj-muted">{t("arena.noSignal")}</div>
       )}
     </div>
   );
