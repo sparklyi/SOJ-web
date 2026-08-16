@@ -1,14 +1,33 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AppProviders } from "@/components/providers/app-providers";
 import { PageShell } from "@/components/layout/page-shell";
 import { SplitWorkspace } from "@/components/layout/split-workspace";
+import { createMockSession, saveSession } from "@/lib/auth/session";
+import { mockUser } from "@/lib/mock/fixtures";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+  useRouter: () => ({ push: vi.fn() }),
+}));
 
 describe("app shell", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
   it("renders one primary navigation, user menu, and main landmark", () => {
     render(
-      <PageShell title="Problems" description="Browse training problems.">
-        <section>Problem content</section>
-      </PageShell>,
+      <AppProviders>
+        <PageShell title="Problems" description="Browse training problems.">
+          <section>Problem content</section>
+        </PageShell>
+      </AppProviders>,
     );
 
     expect(screen.getByRole("navigation", { name: "Primary" })).toBeVisible();
@@ -16,7 +35,24 @@ describe("app shell", () => {
     expect(screen.getByRole("link", { name: "Problems" })).toHaveAttribute("href", "/problems");
     expect(screen.getByRole("link", { name: "Contests" })).toHaveAttribute("href", "/contests");
     expect(screen.getByRole("link", { name: "Submissions" })).toHaveAttribute("href", "/submissions");
-    expect(screen.getByRole("button", { name: "Open user menu" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Open guest menu" })).toBeVisible();
+    expect(screen.queryByText("Lin Chen")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Author" })).not.toBeInTheDocument();
+  });
+
+  it("exposes account and author navigation only after a saved session is validated", async () => {
+    saveSession(window.localStorage, createMockSession(mockUser));
+
+    render(
+      <AppProviders>
+        <PageShell>
+          <section>Problem content</section>
+        </PageShell>
+      </AppProviders>,
+    );
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Open account menu for Lin Chen" })).toBeVisible());
+    expect(screen.getByRole("link", { name: "Author" })).toHaveAttribute("href", "/manage/problems");
   });
 
   it("renders split workspace regions", () => {

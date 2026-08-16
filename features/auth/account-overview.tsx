@@ -1,53 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useAuth } from "@/components/providers/auth-provider";
 import { AuthGate } from "@/components/soj/auth-gate";
 import { ProblemStatus } from "@/components/soj/problem-status";
 import { StatusPill } from "@/components/soj/status-pill";
 import { AccountSurface } from "@/features/auth/account-surface";
-import { createBrowserApiClient } from "@/lib/api/client";
-import { getApiMode } from "@/lib/api/mode";
-import { clearSession, restoreSession } from "@/lib/auth/session";
-import type { CurrentUser } from "@/lib/api/types";
-
-type AccountState = {
-  loading: boolean;
-  user: CurrentUser | null;
-};
 
 export function AccountOverview() {
-  const [state, setState] = useState<AccountState>({ loading: true, user: null });
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadUser() {
-      const session = restoreSession(window.localStorage);
-      const mode = getApiMode();
-
-      if (!session && mode === "http") {
-        setState({ loading: false, user: null });
-        return;
-      }
-
-      const user = await createBrowserApiClient().auth.me();
-      if (!active) return;
-
-      if (!user && session) clearSession(window.localStorage);
-      setState({ loading: false, user });
-    }
-
-    loadUser().catch(() => {
-      if (active) setState({ loading: false, user: null });
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const user = state.user;
-  const title = state.loading ? "Loading" : (user?.displayName ?? "Guest");
+  const { status, user } = useAuth();
+  const loading = status === "loading";
+  const title = loading ? "Loading" : (user?.displayName ?? "Guest");
 
   return (
     <AccountSurface
@@ -62,7 +24,7 @@ export function AccountOverview() {
               <p className="font-mono text-xs uppercase tracking-[0.16em] text-soj-muted">Current user</p>
               <p className="mt-2 text-2xl font-semibold text-soj-text">{title}</p>
             </div>
-            <StatusPill tone={user ? "accent" : state.loading ? "warning" : "warning"}>{user ? "Signed in" : state.loading ? "Loading" : "Locked"}</StatusPill>
+            <StatusPill tone={user ? "accent" : "warning"}>{user ? "Signed in" : loading ? "Loading" : "Locked"}</StatusPill>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="soj-submission-chip">
@@ -77,7 +39,7 @@ export function AccountOverview() {
         </>
       }
     >
-      <AuthGate user={user} fallback={<p className="text-sm text-soj-muted">{state.loading ? "Loading account session." : "Login is required."}</p>}>
+      <AuthGate user={user} fallback={<p className="text-sm text-soj-muted">{loading ? "Loading account session." : "Login is required."}</p>}>
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
           <section className="soj-account-panel grid grid-cols-[minmax(0,1fr)] gap-4 p-5">
             <StatusPill tone="accent">Signed in</StatusPill>
