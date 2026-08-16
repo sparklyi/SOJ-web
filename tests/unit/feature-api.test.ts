@@ -17,8 +17,8 @@ describe("feature api modules", () => {
     window.localStorage.clear();
   });
 
-  it("returns current user from auth boundary", async () => {
-    await expect(getCurrentUser(client)).resolves.toMatchObject({ handle: "lin-chen" });
+  it("returns anonymous state without a saved mock session", async () => {
+    await expect(getCurrentUser(client)).resolves.toBeNull();
   });
 
   it("creates an HTTP browser client with the saved access token", async () => {

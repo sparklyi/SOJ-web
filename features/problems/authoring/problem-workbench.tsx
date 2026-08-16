@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PageShell } from "@/components/layout/page-shell";
+import { useAuth } from "@/components/providers/auth-provider";
 import { StatusPill } from "@/components/soj/status-pill";
 import { createBrowserApiClient } from "@/lib/api/client";
-import { getApiMode } from "@/lib/api/mode";
-import { restoreSession } from "@/lib/auth/session";
 import type { ProblemAuthoringState, ProblemStatementInput, ProblemUpdateInput } from "@/lib/api/types";
 import { ProblemMetadataForm, ProblemStatementForm, TestcaseUploadForm } from "./problem-authoring-form";
 import { ProblemCheckPanel } from "./problem-check-panel";
@@ -18,9 +17,11 @@ type WorkbenchState =
   | { status: "ready"; data: ProblemAuthoringState };
 
 export function ProblemWorkbench({ problemId }: { problemId: number }) {
+  const { status: authStatus } = useAuth();
   const [state, setState] = useState<WorkbenchState>({ status: "loading" });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
+  const viewState: WorkbenchState = authStatus === "loading" ? { status: "loading" } : authStatus === "anonymous" ? { status: "auth" } : state;
 
   const load = useCallback(async () => {
     const data = await createBrowserApiClient().problems.getAuthoringState(problemId);
@@ -28,19 +29,22 @@ export function ProblemWorkbench({ problemId }: { problemId: number }) {
   }, [problemId]);
 
   useEffect(() => {
+    if (authStatus !== "authenticated") return;
+    let active = true;
+
     async function start() {
-      if (getApiMode() === "http" && !restoreSession(window.localStorage)) {
-        setState({ status: "auth" });
-        return;
-      }
       try {
         await load();
       } catch (cause) {
-        setState({ status: "error", message: cause instanceof Error ? cause.message : "Unable to load authoring state." });
+        if (active) setState({ status: "error", message: cause instanceof Error ? cause.message : "Unable to load authoring state." });
       }
     }
     void start();
-  }, [load]);
+
+    return () => {
+      active = false;
+    };
+  }, [authStatus, load]);
 
   async function command(action: () => Promise<unknown>, success: string) {
     setBusy(true);
@@ -56,19 +60,19 @@ export function ProblemWorkbench({ problemId }: { problemId: number }) {
     }
   }
 
-  if (state.status !== "ready") {
+  if (viewState.status !== "ready") {
     return (
       <PageShell>
         <section className="soj-account-panel grid gap-4 p-6">
-          <h1 className="text-2xl font-semibold text-soj-text">{state.status === "auth" ? "Login required" : state.status === "error" ? "Unable to open problem" : "Loading problem"}</h1>
-          {state.status === "auth" ? <Link className="text-sm text-soj-accent" href="/auth/login">Open login</Link> : null}
-          {state.status === "error" ? <p className="text-sm text-soj-danger">{state.message}</p> : null}
+          <h1 className="text-2xl font-semibold text-soj-text">{viewState.status === "auth" ? "Login required" : viewState.status === "error" ? "Unable to open problem" : "Loading problem"}</h1>
+          {viewState.status === "auth" ? <Link className="text-sm text-soj-accent" href="/auth/login">Open login</Link> : null}
+          {viewState.status === "error" ? <p className="text-sm text-soj-danger">{viewState.message}</p> : null}
         </section>
       </PageShell>
     );
   }
 
-  const data = state.data;
+  const data = viewState.data;
   const client = () => createBrowserApiClient().problems;
 
   return (
