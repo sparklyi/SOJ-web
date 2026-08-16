@@ -43,7 +43,7 @@ export type AuthResponse = {
 
 export type ProblemDifficulty = "easy" | "medium" | "hard";
 export type ProblemVisibility = "private" | "public" | "contest_only";
-export type ProblemPublicationStatus = "draft" | "published" | "archived";
+export type ProblemPublicationStatus = "draft" | "in_review" | "changes_requested" | "published" | "archived";
 
 export type ProblemResponse = {
   id: number;

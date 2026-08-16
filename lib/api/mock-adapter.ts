@@ -164,12 +164,16 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         authoringChecks.set(id, check);
         return check;
       },
-      publish: async (id) => {
+      submitReview: async (id) => {
         requireAuthoringAccess(currentUser);
         const state = await createMockAdapter(options).problems.getAuthoringState(id);
-        if (!state.publishable) throw new Error(state.blockers[0]?.message ?? "Problem is not publishable.");
+        if (!state.publishable) throw new Error(state.blockers[0]?.message ?? "Problem is not ready for review.");
         const index = authoredProblems.findIndex((problem) => problem.id === id);
-        authoredProblems[index] = { ...authoredProblems[index], publicationStatus: "published" };
+        if (index < 0) throw notFound("Problem", id);
+        if (authoredProblems[index].publicationStatus !== "draft" && authoredProblems[index].publicationStatus !== "changes_requested") {
+          throw new ApiError("Problem cannot be submitted for review in its current state.", "problem.review_invalid_state", 409);
+        }
+        authoredProblems[index] = { ...authoredProblems[index], publicationStatus: "in_review" };
         return authoredProblems[index];
       },
     },
