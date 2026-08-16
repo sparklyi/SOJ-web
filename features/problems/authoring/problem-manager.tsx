@@ -4,12 +4,11 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageShell } from "@/components/layout/page-shell";
+import { useAuth } from "@/components/providers/auth-provider";
 import { StatusPill } from "@/components/soj/status-pill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createBrowserApiClient } from "@/lib/api/client";
-import { getApiMode } from "@/lib/api/mode";
-import { restoreSession } from "@/lib/auth/session";
 import type { AuthoringProblem, ProblemDifficulty } from "@/lib/api/types";
 
 type ManagerState =
@@ -20,26 +19,31 @@ type ManagerState =
 
 export function ProblemManager() {
   const router = useRouter();
+  const { status: authStatus } = useAuth();
   const [state, setState] = useState<ManagerState>({ status: "loading" });
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ title: "", slug: "", difficulty: "medium" as ProblemDifficulty, tags: "", timeLimitMs: "1000", memoryLimitKb: "262144" });
+  const viewState: ManagerState = authStatus === "loading" ? { status: "loading" } : authStatus === "anonymous" ? { status: "auth" } : state;
 
   useEffect(() => {
+    if (authStatus !== "authenticated") return;
+    let active = true;
+
     async function start() {
-      if (getApiMode() === "http" && !restoreSession(window.localStorage)) {
-        setState({ status: "auth" });
-        return;
-      }
       try {
         const result = await createBrowserApiClient().problems.listMine();
-        setState({ status: "ready", problems: result.items });
+        if (active) setState({ status: "ready", problems: result.items });
       } catch (cause) {
-        setState({ status: "error", message: cause instanceof Error ? cause.message : "Unable to load authored problems." });
+        if (active) setState({ status: "error", message: cause instanceof Error ? cause.message : "Unable to load authored problems." });
       }
     }
     void start();
-  }, []);
+
+    return () => {
+      active = false;
+    };
+  }, [authStatus]);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -70,23 +74,23 @@ export function ProblemManager() {
             <p className="font-mono text-xs uppercase text-soj-accent">Author console</p>
             <h1 className="mt-2 text-4xl font-semibold text-soj-text md:text-5xl">Problem authoring</h1>
           </div>
-          <StatusPill tone={state.status === "ready" ? "accent" : "neutral"}>{state.status === "ready" ? `${state.problems.length} owned` : state.status}</StatusPill>
+          <StatusPill tone={viewState.status === "ready" ? "accent" : "neutral"}>{viewState.status === "ready" ? `${viewState.problems.length} owned` : viewState.status}</StatusPill>
         </header>
 
-        {state.status === "auth" ? <AccessRequired /> : null}
-        {state.status === "error" ? <Message tone="danger">{state.message}</Message> : null}
-        {state.status === "loading" ? <Message>Loading author workspace.</Message> : null}
+        {viewState.status === "auth" ? <AccessRequired /> : null}
+        {viewState.status === "error" ? <Message tone="danger">{viewState.message}</Message> : null}
+        {viewState.status === "loading" ? <Message>Loading author workspace.</Message> : null}
 
-        {state.status === "ready" ? (
+        {viewState.status === "ready" ? (
           <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
             <section className="soj-account-panel overflow-hidden">
               <div className="flex items-center justify-between border-b border-soj-line/60 px-5 py-4">
                 <h2 className="text-xl font-semibold text-soj-text">Owned problems</h2>
-                <span className="font-mono text-xs text-soj-muted">{state.problems.length}</span>
+                <span className="font-mono text-xs text-soj-muted">{viewState.problems.length}</span>
               </div>
-              {state.problems.length > 0 ? (
+              {viewState.problems.length > 0 ? (
                 <div className="divide-y divide-soj-line/50">
-                  {state.problems.map((problem) => (
+                  {viewState.problems.map((problem) => (
                     <Link key={problem.id} href={`/manage/problems/${problem.id}`} className="grid gap-3 px-5 py-4 transition hover:bg-soj-surface/35 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">

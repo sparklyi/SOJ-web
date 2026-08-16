@@ -46,6 +46,22 @@ describe("auth session boundary", () => {
     expect(store.getItem("soj.session")).toBeNull();
   });
 
+  it("clears sessions with malformed expiry values", () => {
+    const store = createMemorySessionStore();
+    store.setItem(
+      "soj.session",
+      JSON.stringify({
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
+        user: mockUser,
+        expiresAt: "not-a-date",
+      }),
+    );
+
+    expect(restoreSession(store, new Date("2026-07-07T10:00:00Z"))).toBeNull();
+    expect(store.getItem("soj.session")).toBeNull();
+  });
+
   it("clears session on logout", () => {
     const session = createMockSession(mockUser);
     const store = createMemorySessionStore(session);

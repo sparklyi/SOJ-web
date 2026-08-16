@@ -1,25 +1,28 @@
+"use client";
+
 import { StatusPill } from "@/components/soj/status-pill";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/components/providers/auth-provider";
 import { AccountSurface } from "@/features/auth/account-surface";
-import { getCurrentUser } from "@/features/auth/api";
 
-export default async function SettingsPage() {
-  const user = await getCurrentUser();
+export default function SettingsPage() {
+  const { status, user } = useAuth();
+  const loading = status === "loading";
 
   return (
     <AccountSurface
       eyebrow="Control console"
       title="Settings"
       description="Account preferences and local workspace defaults."
-      meta="Local defaults"
+      meta={user ? `@${user.handle}` : "Guest"}
       signal={
         <>
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.16em] text-soj-muted">Workspace</p>
-              <p className="mt-2 text-2xl font-semibold text-soj-text">Synced</p>
+              <p className="mt-2 text-2xl font-semibold text-soj-text">{loading ? "Loading" : user ? "Synced" : "Guest"}</p>
             </div>
-            <StatusPill tone="accent">Local</StatusPill>
+            <StatusPill tone={user ? "accent" : "warning"}>{user ? "Signed in" : loading ? "Loading" : "Locked"}</StatusPill>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="soj-submission-chip">
@@ -37,7 +40,7 @@ export default async function SettingsPage() {
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,480px)_minmax(0,1fr)]">
         <section className="soj-account-panel grid grid-cols-[minmax(0,1fr)] gap-4 p-5">
           <h2 className="text-xl font-semibold">Profile</h2>
-          <Input id="settings-handle" label="Handle" value={user?.handle ?? ""} readOnly helperText="Loaded from the current account boundary." />
+          <Input id="settings-handle" label="Handle" value={user?.handle ?? ""} readOnly helperText={user ? "Loaded from the current account boundary." : "Login is required to load account details."} />
           <Input id="settings-name" label="Display name" value={user?.displayName ?? ""} readOnly />
         </section>
         <section className="soj-account-panel grid grid-cols-[minmax(0,1fr)] content-start gap-4 p-5">

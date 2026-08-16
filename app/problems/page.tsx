@@ -5,6 +5,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { listProblems } from "@/features/problems/api";
 import { ProblemFilterBar } from "@/features/problems/problem-filter-bar";
 import { ProblemList } from "@/features/problems/problem-list";
+import { getApiMode } from "@/lib/api/mode";
 
 type ProblemsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -94,7 +95,7 @@ export default async function ProblemsPage({ searchParams }: ProblemsPageProps) 
             <section className="soj-rail-section p-5">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-soj-text">Practice queue</h2>
-                <span className="font-mono text-xs text-soj-muted">Mock</span>
+                <span className="font-mono text-xs text-soj-muted">{getApiMode() === "http" ? "Live" : "Local"}</span>
               </div>
               <div className="mt-5 grid gap-3">
                 {[

@@ -1,11 +1,11 @@
-import { notFound } from "./errors";
+import { ApiError, notFound } from "./errors";
 import { createMockSession } from "@/lib/auth/session";
 import { buildScoreboardModel } from "@/lib/domain/scoreboard";
 import { mockAcmScoreboardRows, mockContests, mockLanguages, mockOiScoreboardRows, mockProblems, mockSubmissions, mockUser } from "@/lib/mock/fixtures";
 import type { ApiClient, AuthoringProblem, AuthoringStatement, AuthoringTestcaseSet, CurrentUser, ProblemCheckRun, RunSummary, SubmissionSummary } from "./types";
 
 type MockAdapterOptions = {
-  currentUser?: CurrentUser;
+  currentUser?: CurrentUser | null;
 };
 
 const createdSubmissions: SubmissionSummary[] = [];
@@ -76,13 +76,13 @@ function mockAuthUser(input: { email: string; username?: string }): CurrentUser 
 }
 
 export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
-  const currentUser = options.currentUser ?? mockUser;
+  const currentUser = options.currentUser ?? null;
 
   return {
     auth: {
       login: async (input) => createMockSession(mockAuthUser(input)),
       register: async (input) => createMockSession(mockAuthUser(input)),
-      refresh: async () => createMockSession(currentUser),
+      refresh: async () => createMockSession(requireMockUser(currentUser)),
       logout: async () => undefined,
       me: async () => currentUser,
     },
@@ -93,9 +93,13 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         if (!problem) throw notFound("Problem", id);
         return problem;
       },
-      listMine: async () => ({ items: authoredProblems.filter((problem) => problem.ownerUserId === currentUser.id), total: authoredProblems.filter((problem) => problem.ownerUserId === currentUser.id).length }),
+      listMine: async () => {
+        if (!currentUser) return { items: [], total: 0 };
+        const items = authoredProblems.filter((problem) => problem.ownerUserId === currentUser.id);
+        return { items, total: items.length };
+      },
       create: async (input) => {
-        const problem: AuthoringProblem = { ...input, id: nextProblemId++, publicationStatus: "draft", ownerUserId: currentUser.id };
+        const problem: AuthoringProblem = { ...input, id: nextProblemId++, publicationStatus: "draft", ownerUserId: requireMockUser(currentUser).id };
         authoredProblems.unshift(problem);
         return problem;
       },
@@ -220,7 +224,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       register: async (id, input) => ({
         id,
         contestId: id,
-        userId: currentUser.id,
+        userId: requireMockUser(currentUser).id,
         displayName: input.displayName,
         email: input.email,
         status: "active",
@@ -246,6 +250,13 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       },
     },
   };
+}
+
+function requireMockUser(user: CurrentUser | null): CurrentUser {
+  if (!user) {
+    throw new ApiError("Login is required.", "auth.required", 401);
+  }
+  return user;
 }
 
 function demoteAuthoredProblem(id: number) {

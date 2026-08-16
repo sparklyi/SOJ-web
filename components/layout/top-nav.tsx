@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useAuth } from "@/components/providers/auth-provider";
 import { cn } from "@/lib/ui/cn";
-import { getApiMode } from "@/lib/api/mode";
-import { restoreSession } from "@/lib/auth/session";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -17,8 +16,12 @@ const navItems = [
 
 export function TopNav() {
   const pathname = usePathname() ?? "/";
+  const router = useRouter();
   const navRef = useRef<HTMLElement>(null);
-  const [canAuthor, setCanAuthor] = useState(() => getApiMode() === "mock");
+  const { status, user, logout } = useAuth();
+  const authenticatedUser = status === "authenticated" ? user : null;
+  const isAuthenticated = authenticatedUser !== null;
+  const canAuthor = isAuthenticated;
   const visibleItems = canAuthor ? [...navItems, { href: "/manage/problems", label: "Author" }] : navItems;
   const activeHref = visibleItems.find((item) => pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`)))?.href ?? "/";
 
@@ -29,14 +32,16 @@ export function TopNav() {
     }
   }, [activeHref]);
 
-  useEffect(() => {
-    function updateAuthorAccess() {
-      setCanAuthor(getApiMode() === "mock" || Boolean(restoreSession(window.localStorage)));
+  async function handleLogout() {
+    try {
+      await logout();
+    } finally {
+      router.push("/");
     }
-    updateAuthorAccess();
-    window.addEventListener("storage", updateAuthorAccess);
-    return () => window.removeEventListener("storage", updateAuthorAccess);
-  }, []);
+  }
+
+  const accountLabel = isAuthenticated ? `Open account menu for ${authenticatedUser.displayName}` : "Open guest menu";
+  const accountInitials = isAuthenticated ? initialsFor(authenticatedUser.displayName || authenticatedUser.handle) : "G";
 
   return (
     <header className="sticky top-0 z-40 border-b border-soj-line/70 bg-soj-bg/82 backdrop-blur-xl">
@@ -82,35 +87,65 @@ export function TopNav() {
             <button
               type="button"
               className="grid h-9 w-9 place-items-center rounded-soj-md border border-soj-line bg-soj-surface text-sm font-semibold text-soj-text transition hover:border-soj-accent/60 hover:bg-soj-surface-2 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
-              aria-label="Open user menu"
+              aria-label={accountLabel}
             >
-              LC
+              {accountInitials}
             </button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-56 p-2">
-            <div className="border-b border-soj-line/70 px-3 py-2">
-              <p className="text-sm font-medium text-soj-text">Lin Chen</p>
-              <p className="font-mono text-xs text-soj-muted">lin-chen</p>
-            </div>
+            {isAuthenticated ? (
+              <div className="border-b border-soj-line/70 px-3 py-2">
+                <p className="text-sm font-medium text-soj-text">{authenticatedUser.displayName}</p>
+                <p className="font-mono text-xs text-soj-muted">{authenticatedUser.handle}</p>
+              </div>
+            ) : (
+              <div className="border-b border-soj-line/70 px-3 py-2">
+                <p className="text-sm font-medium text-soj-text">Guest</p>
+                <p className="font-mono text-xs text-soj-muted">Not signed in</p>
+              </div>
+            )}
             <div className="grid gap-1 py-2">
-              <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/me">
-                Me
-              </Link>
-              <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/settings">
-                Settings
-              </Link>
-              {canAuthor ? (
-                <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/problems">
-                  Author problems
+              {isAuthenticated ? (
+                <>
+                  <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/me">
+                    Me
+                  </Link>
+                  <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/settings">
+                    Settings
+                  </Link>
+                  <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/problems">
+                    Author problems
+                  </Link>
+                  <button
+                    type="button"
+                    className="rounded-soj-sm px-3 py-2 text-left text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
+                    onClick={() => void handleLogout()}
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/auth/login">
+                  Login
                 </Link>
-              ) : null}
-              <Link className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/auth/login">
-                Login
-              </Link>
+              )}
             </div>
           </PopoverContent>
         </Popover>
       </div>
     </header>
   );
+}
+
+function initialsFor(value: string) {
+  const initials = value
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
+  return initials || "G";
 }
