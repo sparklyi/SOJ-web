@@ -1,11 +1,12 @@
 import type { AuthSession } from "@/lib/auth/session";
 import type { ScoreboardModel } from "@/lib/domain/scoreboard";
+import type { Permission, Role } from "@/lib/auth/permissions";
 
 export type ApiMode = "mock" | "http";
 
 export type ProblemDifficulty = "easy" | "medium" | "hard";
 export type ProblemStatus = "todo" | "attempted" | "accepted";
-export type ProblemPublicationStatus = "draft" | "published" | "archived";
+export type ProblemPublicationStatus = "draft" | "in_review" | "changes_requested" | "published" | "archived";
 export type ProblemVisibility = "private" | "public" | "contest_only";
 
 export type ProblemSummary = {
@@ -268,7 +269,8 @@ export type CurrentUser = {
   id: number;
   handle: string;
   displayName: string;
-  role: "user" | "admin" | "root";
+  roles: Role[];
+  permissions: Permission[];
 };
 
 export type PageResult<T> = {
@@ -294,7 +296,7 @@ export type ApiClient = {
     uploadTestcases: (id: number, input: { archive: File; caseCount: number }) => Promise<AuthoringTestcaseSet>;
     getAuthoringState: (id: number) => Promise<ProblemAuthoringState>;
     runCheck: (id: number) => Promise<ProblemCheckRun>;
-    publish: (id: number) => Promise<AuthoringProblem>;
+    submitReview: (id: number) => Promise<AuthoringProblem>;
   };
   submissions: {
     list: () => Promise<PageResult<SubmissionSummary>>;
