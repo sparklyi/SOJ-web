@@ -1,19 +1,22 @@
+"use client";
+
+import { useI18n } from "@/components/providers/i18n-provider";
 import type { JudgeStatus } from "@/lib/api/types";
 import { StatusPill } from "./status-pill";
 
-const labels: Record<JudgeStatus, string> = {
-  queued: "Queued",
-  compiling: "Compiling",
-  running: "Running",
-  accepted: "Accepted",
-  wrong_answer: "Wrong Answer",
-  runtime_error: "Runtime Error",
-  compile_error: "Compile Error",
-  time_limit: "Time Limit Exceeded",
-  memory_limit: "Memory Limit Exceeded",
-  canceled: "Canceled",
-  system_error: "System Error",
-};
+const labels = {
+  queued: "status.queued",
+  compiling: "status.compiling",
+  running: "status.running",
+  accepted: "status.accepted",
+  wrong_answer: "status.wrongAnswer",
+  runtime_error: "status.runtimeError",
+  compile_error: "status.compileError",
+  time_limit: "status.timeLimit",
+  memory_limit: "status.memoryLimit",
+  canceled: "status.canceled",
+  system_error: "status.systemError",
+} as const;
 
 const tones: Record<JudgeStatus, React.ComponentProps<typeof StatusPill>["tone"]> = {
   queued: "neutral",
@@ -34,5 +37,6 @@ type VerdictBadgeProps = {
 };
 
 export function VerdictBadge({ status }: VerdictBadgeProps) {
-  return <StatusPill tone={tones[status]}>{labels[status]}</StatusPill>;
+  const { t } = useI18n();
+  return <StatusPill tone={tones[status]}>{t(labels[status])}</StatusPill>;
 }

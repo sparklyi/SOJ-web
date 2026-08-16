@@ -4,9 +4,12 @@ import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useI18n } from "@/components/providers/i18n-provider";
 import type { ProblemAuthoringState, ProblemDifficulty, ProblemStatementInput, ProblemUpdateInput, ProblemVisibility } from "@/lib/api/types";
+import type { Translator } from "@/lib/i18n/translate";
 
 export function ProblemMetadataForm({ state, busy, onSave }: { state: ProblemAuthoringState; busy: boolean; onSave: (input: ProblemUpdateInput) => Promise<void> }) {
+  const { t } = useI18n();
   const problem = state.problem;
   const [form, setForm] = useState(() => metadataForm(problem));
 
@@ -25,26 +28,27 @@ export function ProblemMetadataForm({ state, busy, onSave }: { state: ProblemAut
 
   return (
     <form className="soj-account-panel grid gap-4 p-5" onSubmit={submit}>
-      <SectionTitle eyebrow="01 / Metadata" title="Problem settings" />
+      <SectionTitle eyebrow={t("authoring.sectionMetadata")} title={t("authoring.problemSettings")} />
       <div className="grid gap-4 md:grid-cols-2">
-        <Input id="problem-title" label="Title" required value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
-        <Input id="problem-slug" label="Slug" required value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))} />
+        <Input id="problem-title" label={t("authoring.titleLabel")} required value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+        <Input id="problem-slug" label={t("authoring.slug")} required value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <LabeledSelect label="Difficulty" value={form.difficulty} onChange={(value) => setForm((current) => ({ ...current, difficulty: value as ProblemDifficulty }))} options={["easy", "medium", "hard"]} />
-        <LabeledSelect label="Visibility" value={form.visibility} onChange={(value) => setForm((current) => ({ ...current, visibility: value as ProblemVisibility }))} options={["private", "public", "contest_only"]} />
+        <LabeledSelect label={t("authoring.difficulty")} value={form.difficulty} onChange={(value) => setForm((current) => ({ ...current, difficulty: value as ProblemDifficulty }))} options={["easy", "medium", "hard"]} />
+        <LabeledSelect label={t("authoring.visibility")} value={form.visibility} onChange={(value) => setForm((current) => ({ ...current, visibility: value as ProblemVisibility }))} options={["private", "public", "contest_only"]} />
       </div>
-      <Input id="problem-tags" label="Tags" value={form.tags} onChange={(event) => setForm((current) => ({ ...current, tags: event.target.value }))} />
+      <Input id="problem-tags" label={t("authoring.tags")} value={form.tags} onChange={(event) => setForm((current) => ({ ...current, tags: event.target.value }))} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input id="problem-time-limit" label="Time limit (ms)" min="1" required type="number" value={form.timeLimitMs} onChange={(event) => setForm((current) => ({ ...current, timeLimitMs: event.target.value }))} />
-        <Input id="problem-memory-limit" label="Memory limit (KB)" min="1" required type="number" value={form.memoryLimitKb} onChange={(event) => setForm((current) => ({ ...current, memoryLimitKb: event.target.value }))} />
+        <Input id="problem-time-limit" label={t("authoring.timeLimit")} min="1" required type="number" value={form.timeLimitMs} onChange={(event) => setForm((current) => ({ ...current, timeLimitMs: event.target.value }))} />
+        <Input id="problem-memory-limit" label={t("authoring.memoryLimit")} min="1" required type="number" value={form.memoryLimitKb} onChange={(event) => setForm((current) => ({ ...current, memoryLimitKb: event.target.value }))} />
       </div>
-      <div><Button type="submit" variant="secondary" loading={busy}>Save settings</Button></div>
+      <div><Button type="submit" variant="secondary" loading={busy}>{t("authoring.saveSettings")}</Button></div>
     </form>
   );
 }
 
 export function ProblemStatementForm({ state, busy, onSave }: { state: ProblemAuthoringState; busy: boolean; onSave: (input: ProblemStatementInput) => Promise<void> }) {
+  const { t } = useI18n();
   const [form, setForm] = useState(() => statementForm(state));
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -62,27 +66,28 @@ export function ProblemStatementForm({ state, busy, onSave }: { state: ProblemAu
 
   return (
     <form className="soj-account-panel grid gap-4 p-5" onSubmit={submit}>
-      <SectionTitle eyebrow="02 / Statement" title="Problem statement" />
-      <Input id="statement-title" label="Statement title" required value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
-      <Textarea id="statement-description" className="min-h-48" label="Description" required value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
+      <SectionTitle eyebrow={t("authoring.sectionStatement")} title={t("authoring.problemStatement")} />
+      <Input id="statement-title" label={t("authoring.statementTitle")} required value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+      <Textarea id="statement-description" className="min-h-48" label={t("authoring.description")} required value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
       <div className="grid gap-4 md:grid-cols-2">
-        <Textarea id="statement-input-description" label="Input description" value={form.inputDescription} onChange={(event) => setForm((current) => ({ ...current, inputDescription: event.target.value }))} />
-        <Textarea id="statement-output-description" label="Output description" value={form.outputDescription} onChange={(event) => setForm((current) => ({ ...current, outputDescription: event.target.value }))} />
+        <Textarea id="statement-input-description" label={t("authoring.inputDescription")} value={form.inputDescription} onChange={(event) => setForm((current) => ({ ...current, inputDescription: event.target.value }))} />
+        <Textarea id="statement-output-description" label={t("authoring.outputDescription")} value={form.outputDescription} onChange={(event) => setForm((current) => ({ ...current, outputDescription: event.target.value }))} />
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Textarea id="statement-sample-input" label="Sample input" value={form.sampleInput} onChange={(event) => setForm((current) => ({ ...current, sampleInput: event.target.value }))} />
-        <Textarea id="statement-sample-output" label="Sample output" value={form.sampleOutput} onChange={(event) => setForm((current) => ({ ...current, sampleOutput: event.target.value }))} />
+        <Textarea id="statement-sample-input" label={t("authoring.sampleInput")} value={form.sampleInput} onChange={(event) => setForm((current) => ({ ...current, sampleInput: event.target.value }))} />
+        <Textarea id="statement-sample-output" label={t("authoring.sampleOutput")} value={form.sampleOutput} onChange={(event) => setForm((current) => ({ ...current, sampleOutput: event.target.value }))} />
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Input id="statement-source" label="Source" value={form.source} onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))} />
-        <Input id="statement-hint" label="Hint" value={form.hint} onChange={(event) => setForm((current) => ({ ...current, hint: event.target.value }))} />
+        <Input id="statement-source" label={t("authoring.source")} value={form.source} onChange={(event) => setForm((current) => ({ ...current, source: event.target.value }))} />
+        <Input id="statement-hint" label={t("authoring.hint")} value={form.hint} onChange={(event) => setForm((current) => ({ ...current, hint: event.target.value }))} />
       </div>
-      <div><Button type="submit" variant="secondary" loading={busy}>Save statement</Button></div>
+      <div><Button type="submit" variant="secondary" loading={busy}>{t("authoring.saveStatement")}</Button></div>
     </form>
   );
 }
 
 export function TestcaseUploadForm({ busy, onUpload }: { busy: boolean; onUpload: (input: { archive: File; caseCount: number }) => Promise<void> }) {
+  const { t } = useI18n();
   const [archive, setArchive] = useState<File | null>(null);
   const [caseCount, setCaseCount] = useState("1");
 
@@ -94,10 +99,10 @@ export function TestcaseUploadForm({ busy, onUpload }: { busy: boolean; onUpload
 
   return (
     <form className="soj-account-panel grid gap-4 p-5" onSubmit={submit}>
-      <SectionTitle eyebrow="03 / Test data" title="Testcase archive" />
-      <Input id="testcase-archive" accept=".zip,application/zip" label="Archive" required type="file" onChange={(event) => setArchive(event.target.files?.[0] ?? null)} />
-      <Input id="testcase-case-count" label="Case count" min="1" required type="number" value={caseCount} onChange={(event) => setCaseCount(event.target.value)} />
-      <div><Button type="submit" variant="secondary" loading={busy} disabled={!archive}>Upload archive</Button></div>
+      <SectionTitle eyebrow={t("authoring.sectionTestData")} title={t("authoring.testcaseArchive")} />
+      <Input id="testcase-archive" accept=".zip,application/zip" label={t("authoring.archive")} required type="file" onChange={(event) => setArchive(event.target.files?.[0] ?? null)} />
+      <Input id="testcase-case-count" label={t("authoring.caseCount")} min="1" required type="number" value={caseCount} onChange={(event) => setCaseCount(event.target.value)} />
+      <div><Button type="submit" variant="secondary" loading={busy} disabled={!archive}>{t("authoring.uploadArchive")}</Button></div>
     </form>
   );
 }
@@ -112,14 +117,26 @@ function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
 }
 
 function LabeledSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
+  const { t } = useI18n();
+
   return (
     <label className="grid gap-2 text-sm font-medium text-soj-text">
       {label}
       <select className="h-10 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 text-sm" value={value} onChange={(event) => onChange(event.target.value)}>
-        {options.map((option) => <option key={option} value={option}>{option.replace("_", " ")}</option>)}
+        {options.map((option) => <option key={option} value={option}>{selectOptionLabel(t, option)}</option>)}
       </select>
     </label>
   );
+}
+
+function selectOptionLabel(t: Translator, option: string) {
+  if (option === "easy") return t("problems.difficulty.easy");
+  if (option === "medium") return t("problems.difficulty.medium");
+  if (option === "hard") return t("problems.difficulty.hard");
+  if (option === "private") return t("authoring.visibility.private");
+  if (option === "public") return t("authoring.visibility.public");
+  if (option === "contest_only") return t("authoring.visibility.contestOnly");
+  return option;
 }
 
 function metadataForm(problem: ProblemAuthoringState["problem"]) {
