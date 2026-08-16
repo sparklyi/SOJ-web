@@ -2,6 +2,15 @@ import { expect, test } from "@playwright/test";
 
 test("author creates, validates, and publishes a problem", async ({ page }) => {
   const slug = `author-flow-${Date.now()}`;
+  await page.addInitScript((session) => {
+    window.localStorage.setItem("soj.session", JSON.stringify(session));
+  }, {
+    accessToken: "e2e-author-access-token",
+    refreshToken: "e2e-author-refresh-token",
+    user: { id: 7, handle: "lin-chen", displayName: "Lin Chen", role: "user" },
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  });
+
   await page.goto("/manage/problems");
 
   await expect(page.getByRole("heading", { name: "Problem authoring" })).toBeVisible();
