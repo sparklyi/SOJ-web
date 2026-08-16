@@ -43,7 +43,7 @@ test("account pages render after a valid mock session is saved", async ({ page }
       handle: "lin-chen",
       displayName: "Lin Chen",
       roles: ["user"],
-      permissions: ["problem.solve", "submission.create", "contest.join"],
+      permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
     },
     expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   });
@@ -68,7 +68,7 @@ test("expired sessions are cleared before account UI is shown", async ({ page })
           handle: "lin-chen",
           displayName: "Lin Chen",
           roles: ["user"],
-          permissions: ["problem.solve", "submission.create", "contest.join"],
+          permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
         },
         expiresAt: "2020-01-01T00:00:00.000Z",
       }),

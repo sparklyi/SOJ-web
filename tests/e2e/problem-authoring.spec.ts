@@ -12,7 +12,7 @@ test("author creates, validates, and publishes a problem", async ({ page }) => {
       handle: "lin-chen",
       displayName: "Lin Chen",
       roles: ["user", "author"],
-      permissions: ["problem.solve", "submission.create", "contest.join", "problem.create", "problem.edit_own", "problem.submit_review"],
+      permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join", "problem.create", "problem.edit_own", "problem.testcase.manage_own", "problem.check_own", "problem.submit_review"],
     },
     expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   });
@@ -59,7 +59,7 @@ test("ordinary user sees the authoring 403 state without an author entry", async
       handle: "lin-chen",
       displayName: "Lin Chen",
       roles: ["user"],
-      permissions: ["problem.solve", "submission.create", "contest.join"],
+      permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
     },
     expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   });

@@ -25,7 +25,7 @@ export function TopNav() {
   const { localize, t } = useI18n();
   const authenticatedUser = status === "authenticated" ? user : null;
   const isAuthenticated = authenticatedUser !== null;
-  const canOpenAuthoring = can("problem.create") || can("problem.review");
+  const canOpenAuthoring = can("problem.create") || can("problem.review") || can("problem.manage_all");
   const visibleItems = canOpenAuthoring ? [...navItems, { href: "/manage/problems", labelKey: "nav.author" as const }] : navItems;
   const currentPathname = unlocalizePath(pathname);
   const activeHref = visibleItems.find((item) => currentPathname === item.href || (item.href !== "/" && currentPathname.startsWith(`${item.href}/`)))?.href ?? "/";
