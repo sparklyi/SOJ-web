@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { Table, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
@@ -34,6 +35,17 @@ function contestLabel(submission: SubmissionListProps["submissions"][number], t:
   return submission.contestTitle ?? `Contest #${submission.contestId}`;
 }
 
+/**
+ * 提交记录表。
+ *
+ * 「比赛」与「分数」原先各占一列，八列铺开必须横向滚动，
+ * 而这两项对绝大多数行是空的或常量——练习提交没有比赛，待判的提交没有分数。
+ * 空列比空行更刺眼：它让表格看起来像没填完。
+ *
+ * 现在把它们折进题名格，作为题名下方的第二行元信息（`P5 · SOJ Weekly Contest · 得分 35`），
+ * 有才显示。列数从八降到六，1280 宽度下一屏放得下，
+ * 而排查问题真正需要的耗时、内存、提交时间全部保留。
+ */
 export function SubmissionList({ submissions }: SubmissionListProps) {
   const { locale, t } = useI18n();
 
@@ -49,49 +61,61 @@ export function SubmissionList({ submissions }: SubmissionListProps) {
         </span>
       </div>
       <div className="overflow-x-auto">
-        <Table aria-label={t("submissions.list.ariaLabel")} className="min-w-[940px]">
+        <Table aria-label={t("submissions.list.ariaLabel")} className="min-w-[820px]">
           <TableHead className="border-soj-line/70 bg-soj-bg/28">
             <tr>
               <TableHeaderCell>{t("submissions.list.run")}</TableHeaderCell>
               <TableHeaderCell>{t("submissions.list.verdict")}</TableHeaderCell>
               <TableHeaderCell>{t("submissions.list.problem")}</TableHeaderCell>
-              <TableHeaderCell>{t("submissions.list.contest")}</TableHeaderCell>
-              <TableHeaderCell className="text-right">{t("submissions.list.score")}</TableHeaderCell>
               <TableHeaderCell className="text-right">{t("submissions.list.time")}</TableHeaderCell>
               <TableHeaderCell className="text-right">{t("submissions.list.memory")}</TableHeaderCell>
               <TableHeaderCell className="text-right">{t("submissions.list.submitted")}</TableHeaderCell>
             </tr>
           </TableHead>
           <tbody>
-            {submissions.map((submission) => (
-              <TableRow
-                key={submission.id}
-                className={cn("soj-submission-row", submission.displayState.terminal ? "soj-submission-row-terminal" : "soj-submission-row-live")}
-              >
-                <TableCell className="font-mono text-soj-text">
-                  <LocalizedLink
-                    className="inline-flex min-w-14 items-center justify-center rounded-soj-md border border-soj-line/60 bg-soj-bg/42 px-2.5 py-1.5 transition hover:border-soj-accent/55 hover:text-soj-accent focus-visible:outline-soj-accent"
-                    href={`/submissions/${submission.id}`}
-                  >
-                    #{submission.id}
-                  </LocalizedLink>
-                </TableCell>
-                <TableCell>
-                  <VerdictBadge status={submission.status} />
-                </TableCell>
-                <TableCell>
-                  <div className="grid gap-1">
-                    <span className="font-medium text-soj-text">{submission.problemTitle}</span>
-                    <span className="font-mono text-xs text-soj-muted">P{submission.problemId}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-soj-muted">{contestLabel(submission, t)}</TableCell>
-                <TableCell className="text-right font-mono text-soj-text">{submission.score}</TableCell>
-                <TableCell className="text-right font-mono text-soj-muted">{formatRuntime(submission.timeMs, t)}</TableCell>
-                <TableCell className="text-right font-mono text-soj-muted">{formatMemory(submission.memoryKb, t)}</TableCell>
-                <TableCell className="text-right font-mono text-xs text-soj-muted">{formatSubmittedAt(submission.submittedAt, locale)}</TableCell>
-              </TableRow>
-            ))}
+            {submissions.map((submission) => {
+              const meta = [`P${submission.problemId}`, contestLabel(submission, t)];
+              if (submission.score > 0) meta.push(`${t("submissions.list.score")} ${submission.score}`);
+
+              return (
+                <TableRow
+                  key={submission.id}
+                  className={cn("soj-submission-row", submission.displayState.terminal ? "soj-submission-row-terminal" : "soj-submission-row-live")}
+                >
+                  <TableCell className="font-mono text-soj-text">
+                    <LocalizedLink
+                      className="inline-flex min-w-14 items-center justify-center rounded-soj-md border border-soj-line/60 bg-soj-bg/42 px-2.5 py-1.5 transition hover:border-soj-accent/55 hover:text-soj-accent focus-visible:outline-soj-accent"
+                      href={`/submissions/${submission.id}`}
+                    >
+                      #{submission.id}
+                    </LocalizedLink>
+                  </TableCell>
+                  <TableCell>
+                    <VerdictBadge status={submission.status} />
+                  </TableCell>
+                  <TableCell>
+                    <div className="grid gap-1">
+                      <span className="font-medium text-soj-text">{submission.problemTitle}</span>
+                      <span className="flex flex-wrap items-center gap-1.5 font-mono text-xs text-soj-muted">
+                        {meta.map((item, index) => (
+                          <Fragment key={item}>
+                            {index > 0 ? (
+                              <span aria-hidden className="text-soj-faint">
+                                ·
+                              </span>
+                            ) : null}
+                            <span>{item}</span>
+                          </Fragment>
+                        ))}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-soj-muted">{formatRuntime(submission.timeMs, t)}</TableCell>
+                  <TableCell className="text-right font-mono text-soj-muted">{formatMemory(submission.memoryKb, t)}</TableCell>
+                  <TableCell className="text-right font-mono text-xs text-soj-muted">{formatSubmittedAt(submission.submittedAt, locale)}</TableCell>
+                </TableRow>
+              );
+            })}
           </tbody>
         </Table>
       </div>

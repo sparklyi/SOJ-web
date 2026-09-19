@@ -13,7 +13,7 @@ export default async function RegisterPage() {
       title={t("auth.register.title")}
       description={t("auth.register.description")}
       meta={t("auth.register.meta")}
-      signal={
+      aside={
         <>
           <div className="flex items-start justify-between gap-4">
             <div>

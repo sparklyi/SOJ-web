@@ -1,10 +1,15 @@
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { StatusPill } from "@/components/soj/status-pill";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Panel, PanelHeader } from "@/components/ui/panel";
+import { Stat, StatDivider, StatGroup } from "@/components/ui/stat";
 import { getContestDurationMinutes } from "@/lib/domain/contest";
 import type { ContestStatus, ContestSummary, ContestType } from "@/lib/api/types";
 import { getServerTranslator } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translator } from "@/lib/i18n/translate";
+import { cn } from "@/lib/ui/cn";
 
 type ContestListItem = ContestSummary & {
   canRegister: boolean;
@@ -15,12 +20,12 @@ type ContestListProps = {
   contests: ContestListItem[];
 };
 
-const statusView: Record<ContestStatus, { label: MessageKey; tone: React.ComponentProps<typeof StatusPill>["tone"]; signal: MessageKey }> = {
-  scheduled: { label: "contests.status.scheduled", tone: "info", signal: "contests.signal.registrationOpen" },
-  running: { label: "contests.status.running", tone: "accent", signal: "contests.signal.liveSubmissions" },
-  frozen: { label: "contests.status.frozen", tone: "warning", signal: "contests.signal.scoreboardHidden" },
-  ended: { label: "contests.status.ended", tone: "neutral", signal: "contests.signal.submissionsClosed" },
-  unsealed: { label: "contests.status.unsealed", tone: "success", signal: "contests.signal.finalRanksPublic" },
+const statusView: Record<ContestStatus, { label: MessageKey; tone: React.ComponentProps<typeof StatusPill>["tone"]; phase: MessageKey }> = {
+  scheduled: { label: "contests.status.scheduled", tone: "info", phase: "contests.phase.registrationOpen" },
+  running: { label: "contests.status.running", tone: "accent", phase: "contests.phase.liveSubmissions" },
+  frozen: { label: "contests.status.frozen", tone: "warning", phase: "contests.phase.scoreboardHidden" },
+  ended: { label: "contests.status.ended", tone: "neutral", phase: "contests.phase.submissionsClosed" },
+  unsealed: { label: "contests.status.unsealed", tone: "success", phase: "contests.phase.finalRanksPublic" },
 };
 
 const typeLabel: Record<ContestType, MessageKey> = {
@@ -28,170 +33,170 @@ const typeLabel: Record<ContestType, MessageKey> = {
   oi: "status.oi",
 };
 
+/**
+ * 赛事列表。
+ *
+ * 三处删减，判断依据都是同一句：**这块内容属于谁**。
+ *
+ * 1. 焦点赛事的卡片里原先还放着「进行中 N 场」「已参加 N 场」——
+ *    那是整页的聚合，却挂在一张只讲某一场比赛的卡片里。数字只要不描述卡片的主体，
+ *    就一定会让人读错主语（「进行中 2」是这个比赛有 2 个环节，还是站里有 2 场比赛？）。
+ *    现在卡片里只留描述这一场比赛的两个数字：时长、题目数。
+ *
+ * 2. 左边那栏「比赛类型」是一段 ACM / OI 规则说明——那是文档，不是界面。
+ *    它对一个已经知道自己在打什么赛制的选手毫无用处，却占掉整整一列，
+ *    把赛程表挤到 2/3 宽。赛制在每一行里已经标了（赛制 · ACM）。
+ *
+ * 3. 每一行原本有三个等权按钮（打开 / 排行榜 / 赛场），两行就是六个。
+ *    进场是唯一的主操作，另外两个是查看入口，降为次级文字链接即可——
+ *    三枚同样重的按钮并排，等于没有主次。
+ */
 export async function ContestList({ contests }: ContestListProps) {
   const t = await getServerTranslator();
-  const liveCount = contests.filter((contest) => contest.status === "running" || contest.status === "frozen").length;
-  const registeredCount = contests.filter((contest) => contest.registered).length;
   const featuredContest = contests.find((contest) => contest.status === "running" || contest.status === "frozen") ?? contests[0];
-  const acmCount = contests.filter((contest) => contest.type === "acm").length;
-  const oiCount = contests.filter((contest) => contest.type === "oi").length;
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
       {featuredContest ? (
-        <section aria-label={t("contests.list.featured")} className="soj-contest-stage soj-enter grid min-h-[430px] gap-6 p-5 md:p-7 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="relative z-[1] flex min-w-0 flex-col justify-between gap-8">
+        <section
+          aria-label={t("contests.list.featured")}
+          className="soj-panel soj-enter relative grid min-h-[300px] gap-6 overflow-hidden p-5 md:p-7 lg:grid-cols-[minmax(0,1fr)_320px]"
+        >
+          {/* 全站只允许两处辉光，这里是第二处：焦点赛事是「正在发生的事」，配得上一个光源。
+              网格不再单独画——整站环境层已经有一层，局部再叠一层会变成双线。 */}
+          <div className="soj-glow inset-0" aria-hidden />
+
+          <div className="relative grid min-w-0 content-between gap-8">
             <div>
               <div className="flex flex-wrap items-center gap-3">
-                <StatusPill tone={statusView[featuredContest.status].tone}>{t(statusView[featuredContest.status].label)}</StatusPill>
-                <span className="font-mono text-xs uppercase tracking-[0.18em] text-soj-muted">{t(typeLabel[featuredContest.type])}</span>
+                <StatusPill tone={statusView[featuredContest.status].tone} withDot>
+                  {t(statusView[featuredContest.status].label)}
+                </StatusPill>
+                <span className="soj-eyebrow">{t(typeLabel[featuredContest.type])}</span>
+                <span className="soj-eyebrow">{t(statusView[featuredContest.status].phase)}</span>
               </div>
-              <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-none tracking-tight md:text-7xl">{featuredContest.title}</h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-soj-muted">
-                {t("contests.list.description")}
-              </p>
+              <h1 className="soj-display mt-5 max-w-4xl text-4xl md:text-6xl">{featuredContest.title}</h1>
+              <p className="mt-5 max-w-2xl text-sm leading-7 text-soj-muted">{t("contests.list.description")}</p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
-              <div className="soj-contest-runway">
-                <div className="soj-contest-sweep" />
-                <div className="soj-contest-node soj-contest-node-live">
-                  <span>{t("contests.list.timeline.start")}</span>
-                </div>
-                <div className="soj-contest-node soj-contest-node-freeze">
-                  <span>{t("contests.list.timeline.freeze")}</span>
-                </div>
-                <div className="soj-contest-node soj-contest-node-rank">
-                  <span>{t("contests.list.timeline.rank")}</span>
-                </div>
-              </div>
-              <dl className="grid grid-cols-2 gap-3 md:grid-cols-1">
-                <ContestMetric label={t("contests.metric.duration")} value={formatDuration(getContestDurationMinutes(featuredContest), t)} />
-                <ContestMetric label={t("contests.metric.problems")} value={String(featuredContest.problems.length)} />
-              </dl>
-            </div>
+            <StatGroup>
+              <Stat label={t("contests.metric.duration")} value={formatDuration(getContestDurationMinutes(featuredContest), t)} />
+              <StatDivider />
+              <Stat label={t("contests.metric.problems")} value={String(featuredContest.problems.length)} />
+            </StatGroup>
           </div>
 
-          <aside className="relative z-[1] grid content-between gap-4">
-            <div className="soj-contest-console p-4">
-              <div className="border-b border-soj-line/55 pb-4">
-                <h2 className="text-xl font-semibold text-soj-text">{t("contests.list.access")}</h2>
-                <p className="mt-2 text-sm leading-6 text-soj-muted">{t(statusView[featuredContest.status].signal)}</p>
-              </div>
-              <div className="mt-4 grid gap-3">
-                <ContestAction href={`/contests/${featuredContest.id}`} label={featuredContest.canRegister ? t("contests.list.register") : t("contests.list.contest")} primary />
-                <ContestAction href={`/contests/${featuredContest.id}/scoreboard`} label={t("contests.action.scoreboard")} />
-                <ContestAction href={`/contests/${featuredContest.id}/arena`} label={t("contests.list.arena")} />
-              </div>
+          <aside className="relative grid content-start gap-3 self-start rounded-soj-lg border border-soj-line bg-soj-bg/45 p-4">
+            <div className="border-b border-soj-line pb-3">
+              <h2 className="text-sm font-semibold text-soj-text">{t("contests.list.access")}</h2>
+              <p className="mt-1.5 text-xs leading-5 text-soj-muted">{t(statusView[featuredContest.status].phase)}</p>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <ContestMetric label={t("contests.list.listed")} value={String(contests.length)} />
-              <ContestMetric label={t("contests.list.live")} value={String(liveCount)} tone={liveCount > 0 ? "accent" : "muted"} />
-              <ContestMetric label={t("contests.list.joined")} value={String(registeredCount)} tone={registeredCount > 0 ? "success" : "muted"} />
+            <div className="mt-1 grid gap-3">
+              <ContestAction
+                href={`/contests/${featuredContest.id}`}
+                label={featuredContest.canRegister ? t("contests.list.register") : t("contests.list.contest")}
+                primary
+              />
+              <ContestSubLinks contestId={featuredContest.id} t={t} />
             </div>
           </aside>
         </section>
       ) : null}
 
-      <section aria-label={t("contests.list.lanes")} className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <div className="soj-contest-format p-5">
-          <h2 className="text-2xl font-semibold tracking-tight">{t("contests.list.lanes")}</h2>
-          <p className="mt-3 text-sm leading-6 text-soj-muted">{t("contests.list.lanesDescription")}</p>
-          <div className="mt-6 grid gap-3">
-            <ContestFormat label={t("status.acm")} value={acmCount} description={t("contests.list.penaltyRanks")} />
-            <ContestFormat label={t("status.oi")} value={oiCount} description={t("contests.list.scorePartials")} />
-          </div>
-        </div>
-
-        <div className="soj-contest-manifest overflow-hidden">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 border-b border-soj-line/55 px-4 py-3">
-            <h2 className="text-lg font-semibold">{t("contests.list.manifest")}</h2>
-            <span className="font-mono text-xs text-soj-muted">{t("contests.list.rounds", { count: contests.length })}</span>
-          </div>
-          <div className="grid">
-            {contests.map((contest) => {
-              const status = statusView[contest.status];
-              return (
-                <article key={contest.id} className="soj-contest-row grid gap-4 px-4 py-4 md:grid-cols-[minmax(0,1fr)_150px_150px_210px] md:items-center">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <LocalizedLink href={`/contests/${contest.id}`} className="text-xl font-semibold tracking-tight text-soj-text transition hover:text-soj-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent">
-                        {contest.title}
-                      </LocalizedLink>
-                      <StatusPill tone={status.tone}>{t(status.label)}</StatusPill>
-                    </div>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-soj-muted">{t(status.signal)}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {contest.problems.slice(0, 4).map((problem) => (
-                        <span key={problem.alias} className="rounded-soj-sm border border-soj-line/50 bg-soj-bg/24 px-2 py-1 font-mono text-xs text-soj-muted">
-                          {problem.alias}
-                        </span>
-                      ))}
-                    </div>
+      <Panel variant="flush">
+        <PanelHeader
+          title={t("contests.list.manifest")}
+          action={<span className="font-mono text-xs text-soj-muted">{t("contests.list.rounds", { count: contests.length })}</span>}
+        />
+        <div className="grid">
+          {contests.map((contest) => {
+            const status = statusView[contest.status];
+            return (
+              <article
+                key={contest.id}
+                className="grid gap-4 px-4 py-4 transition-colors hover:bg-soj-surface/55 md:grid-cols-[minmax(0,1fr)_110px_120px_180px] md:items-center"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <LocalizedLink
+                      href={`/contests/${contest.id}`}
+                      className="text-lg font-semibold tracking-tight text-soj-text transition-colors hover:text-soj-accent"
+                    >
+                      {contest.title}
+                    </LocalizedLink>
+                    <StatusPill tone={status.tone}>{t(status.label)}</StatusPill>
                   </div>
-                  <ContestRowStat label={t("contests.list.format")} value={t(typeLabel[contest.type])} />
-                  <ContestRowStat label={t("contests.list.window")} value={formatDuration(getContestDurationMinutes(contest), t)} />
-                  <div className="grid gap-2 sm:grid-cols-3 md:grid-cols-1">
-                    <ContestAction href={`/contests/${contest.id}`} label={contest.canRegister ? t("contests.list.register") : t("contests.list.open")} primary={contest.canRegister || contest.canSubmit} />
-                    <ContestAction href={`/contests/${contest.id}/scoreboard`} label={t("contests.action.scoreboard")} />
-                    <ContestAction href={`/contests/${contest.id}/arena`} label={t("contests.list.arena")} />
+                  <p className="mt-1.5 max-w-2xl text-xs leading-5 text-soj-muted">{t(status.phase)}</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {contest.problems.slice(0, 4).map((problem) => (
+                      <Badge key={problem.alias} tone="neutral" size="sm">
+                        {problem.alias}
+                      </Badge>
+                    ))}
                   </div>
-                </article>
-              );
-            })}
-          </div>
+                </div>
+                <ContestRowStat label={t("contests.list.format")} value={t(typeLabel[contest.type])} />
+                <ContestRowStat label={t("contests.list.window")} value={formatDuration(getContestDurationMinutes(contest), t)} />
+                <div className="grid gap-2.5">
+                  <ContestAction
+                    href={`/contests/${contest.id}`}
+                    label={contest.canRegister ? t("contests.list.register") : t("contests.list.open")}
+                    primary={contest.canRegister || contest.canSubmit}
+                  />
+                  <ContestSubLinks contestId={contest.id} t={t} />
+                </div>
+              </article>
+            );
+          })}
         </div>
-      </section>
+      </Panel>
     </div>
   );
 }
 
-function ContestMetric({ label, value, tone = "text" }: { label: string; value: string; tone?: "text" | "accent" | "success" | "muted" }) {
-  const toneClass = {
-    text: "text-soj-text",
-    accent: "text-soj-accent",
-    success: "text-soj-success",
-    muted: "text-soj-muted",
-  }[tone];
+/**
+ * 查看入口。
+ *
+ * 排行榜与赛场是「去看」，不是「去做」，所以不再各占一枚按钮。
+ * 一行文字链接既保住了入口，也让「进场」这件事重新成为唯一的主操作。
+ */
+function ContestSubLinks({ contestId, t }: { contestId: number; t: Translator }) {
+  const linkClass = "text-xs text-soj-muted transition-colors hover:text-soj-accent";
 
   return (
-    <div className="rounded-soj-md border border-soj-line/50 bg-soj-bg/24 p-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
-      <dt className="text-xs text-soj-muted">{label}</dt>
-      <dd className={`mt-1 font-mono text-lg ${toneClass}`}>{value}</dd>
-    </div>
-  );
-}
-
-function ContestFormat({ label, value, description }: { label: string; value: number; description: string }) {
-  return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-[16px_6px_14px_6px] border border-soj-line/50 bg-soj-bg/22 p-3">
-      <span className="grid h-11 w-11 place-items-center rounded-soj-md border border-soj-accent/35 bg-soj-accent/10 font-mono text-sm text-soj-accent">{value}</span>
-      <span>
-        <span className="block font-medium text-soj-text">{label}</span>
-        <span className="block text-sm text-soj-muted">{description}</span>
-      </span>
+    <div className="flex items-center gap-2.5 text-xs text-soj-faint">
+      <LocalizedLink className={linkClass} href={`/contests/${contestId}/scoreboard`}>
+        {t("contests.action.scoreboard")}
+      </LocalizedLink>
+      <span aria-hidden>·</span>
+      <LocalizedLink className={linkClass} href={`/contests/${contestId}/arena`}>
+        {t("contests.list.arena")}
+      </LocalizedLink>
     </div>
   );
 }
 
 function ContestRowStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid gap-1 border-l border-soj-line/55 pl-3">
-      <span className="text-xs text-soj-muted">{label}</span>
+    <div className="grid gap-1 border-l border-soj-line pl-3">
+      <span className="soj-eyebrow">{label}</span>
       <span className="font-mono text-sm text-soj-text">{value}</span>
     </div>
   );
 }
 
+/**
+ * 赛事入口按钮。
+ *
+ * primary 直接复用 buttonVariants 的金属变体，不再自己写
+ * 「实心曜石蓝 + 彩色外发光」——那枚按钮此前是整页最响的元素，
+ * 而它既不是实时状态也不是链接，属于纯粹的强调色超支。
+ */
 function ContestAction({ href, label, primary = false }: { href: string; label: string; primary?: boolean }) {
   return (
     <LocalizedLink
       href={href}
-      className={
-        primary
-          ? "inline-flex min-h-9 items-center justify-center rounded-soj-md bg-soj-accent px-3 py-2 text-sm font-semibold text-black shadow-[0_14px_34px_rgb(var(--soj-accent)/0.16)] transition hover:brightness-110 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
-          : "inline-flex min-h-9 items-center justify-center rounded-soj-md border border-soj-line/55 bg-soj-bg/28 px-3 py-2 text-sm font-medium text-soj-muted transition hover:border-soj-accent/45 hover:text-soj-text active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
-      }
+      className={cn(buttonVariants({ variant: primary ? "primary" : "secondary", size: "md" }), "w-full")}
     >
       {label}
     </LocalizedLink>

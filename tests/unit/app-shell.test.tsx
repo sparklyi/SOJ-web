@@ -33,9 +33,12 @@ describe("app shell", () => {
 
     expect(screen.getByRole("navigation", { name: "Primary navigation" })).toBeVisible();
     expect(screen.getByRole("main")).toBeVisible();
+    // 主导航只放「场所」：首页 / 题库 / 比赛。
+    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/en");
     expect(screen.getByRole("link", { name: "Problems" })).toHaveAttribute("href", "/en/problems");
     expect(screen.getByRole("link", { name: "Contests" })).toHaveAttribute("href", "/en/contests");
-    expect(screen.getByRole("link", { name: "Submissions" })).toHaveAttribute("href", "/en/submissions");
+    // 「我的提交」是**我的**东西，收在账号菜单里；未登录时连入口都没有。
+    expect(screen.queryByRole("link", { name: "My submissions" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open guest menu" })).toBeVisible();
     expect(screen.queryByText("Lin Chen")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Author" })).not.toBeInTheDocument();

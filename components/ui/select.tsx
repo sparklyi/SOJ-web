@@ -10,7 +10,7 @@ export function SelectTrigger({ className, children, ...props }: SelectPrimitive
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        "inline-flex h-10 items-center justify-between gap-3 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 text-sm text-soj-text shadow-[inset_0_1px_0_rgb(255_255_255/0.04)] transition hover:border-soj-accent/60",
+        "soj-inset-light inline-flex h-10 items-center justify-between gap-3 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 text-sm text-soj-text transition hover:border-soj-accent/60",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent",
         className,
       )}

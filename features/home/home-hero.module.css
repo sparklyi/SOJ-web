@@ -1,342 +1,245 @@
+/* 首页首屏。
+   取色一律走 @theme 暴露的 --color-soj-*（完整色值），需要透明度时用 color-mix：
+   本项目 style-lint 禁止在源码里出现 RGB / hex 色值字面量，
+   因此不能写成「函数式色值 + 斜杠透明度」那种写法，即使是在注释里。
+
+   关键：这一屏是半透明的。它下方的整站环境层（流场、网格、双光源）从面板里透上来，
+   于是首屏不再是一个自带背景的黑盒子，而是环境最清楚的一处窗口。 */
+
 .hero {
   position: relative;
-  min-height: max(620px, calc(100dvh - 164px));
-  overflow: hidden;
   isolation: isolate;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: clamp(420px, 58vh, 540px);
+  overflow: hidden;
+  border: 1px solid var(--color-soj-line);
+  border-radius: var(--radius-soj-xl);
+  /* 半透明 + 内高光：读成一块「盖在环境上的玻璃」，而不是一块实心板。
+     数值取 62%：再低会让标题后面的粒子穿过字面、伤到可读性；
+     再高就完全挡住了环境，等于回到原来的黑盒子。 */
+  background-color: color-mix(in oklab, var(--color-soj-bg-raised) 62%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in oklab, var(--color-soj-silver) 9%, transparent);
 }
 
-.atmosphere {
+/* 顶点受光。整页最亮的一条线，用来把首屏和下面的内容明确分开——
+   靠投影分层会显得脏，靠一条高光线分层才有「压出来」的实体感。 */
+.hero::before {
+  content: "";
   position: absolute;
-  inset: 0;
-  z-index: -2;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--color-soj-text) 2.2%, transparent) 1px, transparent 1px),
-    linear-gradient(180deg, color-mix(in srgb, var(--color-soj-text) 1.8%, transparent) 1px, transparent 1px);
-  background-size: 52px 52px;
-  mask-image: linear-gradient(to bottom, black, black 82%, transparent);
-}
-
-.horizon,
-.greenField,
-.blueField {
-  position: absolute;
-  pointer-events: none;
-}
-
-.horizon {
-  right: 2%;
-  bottom: 22%;
-  width: 72%;
+  inset: 0 0 auto;
+  z-index: 4;
   height: 1px;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-soj-line) 70%, transparent), transparent);
-  box-shadow: 0 -80px 120px color-mix(in srgb, var(--color-soj-accent) 4%, transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--color-soj-silver) 38%, transparent) 18%,
+    color-mix(in oklab, var(--color-soj-accent) 62%, transparent) 52%,
+    transparent
+  );
 }
 
-.greenField {
-  top: 4%;
-  right: 8%;
-  width: 54%;
-  height: 62%;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--color-soj-accent) 7.5%, transparent);
-  filter: blur(110px);
-  opacity: 0.62;
-}
-
-.blueField {
-  top: 24%;
-  right: -8%;
-  width: 32%;
-  height: 48%;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--color-soj-info) 7.5%, transparent);
-  filter: blur(110px);
-  opacity: 0.48;
-}
-
-.visualStage {
+/* 局部光：把视线钉在标题区。全局光是一次大范围铺色，不负责定点，
+   所以这里需要一个范围更小、更亮的同色光——两盏同向的灯，不是两个光源。 */
+.glow {
   position: absolute;
-  top: -3%;
-  right: -6%;
-  width: 84%;
-  height: 82%;
-  perspective: 1200px;
-  transform-origin: 62% 48%;
-  will-change: transform, opacity;
+  inset: -30% 30% 10% 8%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    48% 54% at 68% 44%,
+    color-mix(in oklab, var(--color-soj-accent) 17%, transparent),
+    transparent 72%
+  );
 }
 
-.parallax {
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  will-change: transform;
+/* 右缘刻度：仪器感来自「这里被测量过」，而不是来自更多装饰。 */
+.measure {
+  position: absolute;
+  top: 14%;
+  right: 18px;
+  bottom: 30%;
+  z-index: 3;
+  width: 26px;
+  pointer-events: none;
 }
 
-.sculpture {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+.measureMinor,
+.measureMajor {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
 }
 
-.wordShape {
-  font-family: var(--font-soj-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: 338px;
-  font-weight: 760;
-  letter-spacing: -22px;
+.measureMinor {
+  width: 5px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--color-soj-line-strong) 85%, transparent) 0 1px,
+    transparent 1px 13px
+  );
 }
 
-.wordFace {
-  fill: url("#soj-silver");
-  stroke: color-mix(in srgb, var(--color-soj-text) 50%, transparent);
-  stroke-width: 1.2px;
-}
-
-.wordDepth {
-  fill: url("#soj-depth");
-  stroke: color-mix(in srgb, var(--color-soj-info) 28%, transparent);
-  stroke-width: 1px;
-}
-
-.internalCode {
-  fill: color-mix(in srgb, var(--color-soj-bg) 46%, transparent);
-  font-family: var(--font-soj-mono), ui-monospace, monospace;
-  font-size: 17px;
-  letter-spacing: 0;
-}
-
-.channelShadow {
-  fill: color-mix(in srgb, var(--color-soj-bg) 96%, transparent);
-  stroke: color-mix(in srgb, var(--color-soj-text) 8%, transparent);
-  stroke-width: 2px;
-}
-
-.channelEdge,
-.channelEdgeBlue {
-  fill: none;
-  stroke-width: 2.2px;
-}
-
-.channelEdge {
-  stroke: color-mix(in srgb, var(--color-soj-accent) 76%, transparent);
-  filter: url("#soj-green-glow");
-}
-
-.channelEdgeBlue {
-  stroke: color-mix(in srgb, var(--color-soj-info) 66%, transparent);
-}
-
-.routeBase,
-.routeActive {
-  fill: none;
-  vector-effect: non-scaling-stroke;
-}
-
-.routeBase {
-  stroke: color-mix(in srgb, var(--color-soj-accent) 16%, transparent);
-  stroke-width: 9px;
-}
-
-.routeActive {
-  stroke: url("#soj-route");
-  stroke-width: 2.8px;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 0;
-  filter: url("#soj-green-glow");
-  will-change: opacity;
-}
-
-.nodes {
-  fill: var(--color-soj-bg);
-  stroke: var(--color-soj-accent);
-  stroke-width: 2px;
-  filter: url("#soj-green-glow");
-  transform-origin: center;
-}
-
-.microLabels {
-  fill: color-mix(in srgb, var(--color-soj-muted) 72%, transparent);
-  font-family: var(--font-soj-mono), ui-monospace, monospace;
-  font-size: 12px;
-  letter-spacing: 1px;
+.measureMajor {
+  width: 13px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--color-soj-muted) 55%, transparent) 0 1px,
+    transparent 1px 65px
+  );
 }
 
 .content {
-  position: absolute;
-  z-index: 4;
-  left: 0;
-  bottom: 76px;
-  width: min(430px, 42%);
+  position: relative;
+  z-index: 2;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  max-width: min(640px, 64%);
+  padding: clamp(34px, 4.8vw, 62px) clamp(26px, 4.4vw, 58px) clamp(24px, 3.2vw, 42px);
 }
 
+/* eyebrow 是「这是什么」的说明，不是操作，因此不占用强调色——
+   首屏的彩色只出现在粒子与下划线，视线落点唯一地指向主按钮。 */
 .eyebrow {
-  margin: 0 0 16px;
-  color: var(--color-soj-accent);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: var(--color-soj-muted);
   font-family: var(--font-soj-mono), ui-monospace, monospace;
   font-size: 11px;
-  line-height: 1;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+.eyebrow::before {
+  content: "";
+  width: 36px;
+  height: 1px;
+  background: color-mix(in oklab, var(--color-soj-accent) 75%, transparent);
 }
 
 .title {
-  margin: 0;
+  margin: 16px 0 0;
+  font-family: var(--font-soj-display), ui-sans-serif, system-ui, "PingFang SC", sans-serif;
+  font-size: clamp(62px, 9.4vw, 130px);
+  font-weight: 640;
+  line-height: 0.86;
+  letter-spacing: -0.055em;
   color: var(--color-soj-text);
-  font-size: clamp(64px, 7vw, 108px);
-  font-weight: 620;
-  line-height: 0.82;
-  letter-spacing: 0;
+}
+
+/* 大字号必须有一段自上而下的受光，否则纯色的大字面会发平、像占位符。
+   降级路径留在上面：不支持 background-clip: text 时仍然是不透明的实色。 */
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .title {
+    background-image: linear-gradient(
+      176deg,
+      var(--color-soj-text) 6%,
+      color-mix(in oklab, var(--color-soj-text) 46%, transparent) 94%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 }
 
 .statement {
-  max-width: 380px;
-  margin: 22px 0 0;
+  max-width: 34ch;
+  margin: 24px 0 0;
   color: var(--color-soj-muted);
-  font-size: clamp(16px, 1.5vw, 20px);
-  line-height: 1.5;
+  font-size: clamp(15px, 1.2vw, 17px);
+  line-height: 1.68;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 28px;
+  gap: 12px;
+  margin-top: 34px;
 }
 
-.primaryAction,
-.secondaryAction {
-  display: inline-flex;
-  min-height: 46px;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 0 18px;
-  border: 1px solid;
-  border-radius: var(--radius-soj-md);
-  font-size: 14px;
-  font-weight: 560;
-  text-decoration: none;
-  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+/* 底部事实条。
+   只放两条：题目体量、正在进行的比赛。它们是新访客判断「这里值不值得留下」的依据。
+   左对齐 + 自适应宽度，而不是等分铺满——等分四格会强迫我再塞两个凑数的数字进去，
+   那正是「大杂烩」的起点。 */
+.facts {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 clamp(22px, 3.4vw, 46px);
+  margin: 0;
+  padding: 15px clamp(26px, 4.4vw, 58px) 17px;
+  border-top: 1px solid var(--color-soj-line);
+  background-color: color-mix(in oklab, var(--color-soj-bg) 62%, transparent);
+  backdrop-filter: blur(10px) saturate(130%);
 }
 
-.primaryAction {
-  border-color: var(--color-soj-accent);
-  background: var(--color-soj-accent);
-  color: var(--color-soj-bg);
-  box-shadow: 0 14px 34px color-mix(in srgb, var(--color-soj-accent) 16%, transparent);
-}
-
-.secondaryAction {
-  border-color: color-mix(in srgb, var(--color-soj-line) 82%, transparent);
-  background: color-mix(in srgb, var(--color-soj-bg-raised) 72%, transparent);
-  color: var(--color-soj-text);
-  backdrop-filter: blur(12px);
-}
-
-.primaryAction:hover,
-.secondaryAction:hover {
-  transform: translateY(-2px);
-}
-
-.secondaryAction:hover {
-  border-color: color-mix(in srgb, var(--color-soj-accent) 62%, transparent);
-}
-
-.primaryAction:focus-visible,
-.secondaryAction:focus-visible {
-  outline: 2px solid var(--color-soj-accent);
-  outline-offset: 3px;
-}
-
-.footerLine {
-  position: absolute;
-  right: 0;
-  bottom: 16px;
-  left: 0;
+.fact {
   display: grid;
-  grid-template-columns: auto minmax(30px, 1fr) auto;
-  align-items: center;
-  gap: 14px;
-  color: color-mix(in srgb, var(--color-soj-muted) 62%, transparent);
-  font-family: var(--font-soj-mono), ui-monospace, monospace;
-  font-size: 9px;
+  gap: 7px;
+  align-content: start;
 }
 
-.footerRule {
-  height: 1px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--color-soj-accent) 50%, transparent), color-mix(in srgb, var(--color-soj-line) 48%, transparent) 24%, color-mix(in srgb, var(--color-soj-line) 48%, transparent));
+.fact + .fact {
+  padding-left: clamp(22px, 3.4vw, 46px);
+  border-left: 1px solid var(--color-soj-line);
+}
+
+.fact dt {
+  color: var(--color-soj-faint);
+  font-family: var(--font-soj-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.fact dd {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0;
+  color: var(--color-soj-text);
+  font-family: var(--font-soj-mono), ui-monospace, monospace;
+  font-size: clamp(20px, 2.2vw, 27px);
+  font-weight: 620;
+  line-height: 1;
+}
+
+.factSuffix {
+  color: var(--color-soj-faint);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 @media (max-width: 1023px) {
-  .visualStage {
-    top: 0;
-    right: -16%;
-    width: 104%;
-    height: 72%;
+  .content {
+    max-width: 100%;
   }
 
-  .content {
-    width: min(390px, 48%);
+  /* 窄屏没有横向余量，刻度压到标题上只会变成噪点。 */
+  .measure {
+    display: none;
   }
 }
 
 @media (max-width: 767px) {
   .hero {
-    min-height: max(620px, calc(100svh - 164px));
-  }
-
-  .visualStage {
-    top: -4%;
-    right: -24%;
-    width: 148%;
-    height: 58%;
+    min-height: clamp(350px, 54vh, 440px);
   }
 
   .content {
-    right: 0;
-    bottom: 62px;
-    width: 100%;
+    padding: 30px 22px 22px;
   }
 
-  .eyebrow {
-    margin-bottom: 12px;
+  .facts {
+    padding: 13px 22px 15px;
   }
 
-  .title {
-    font-size: 58px;
-  }
-
-  .statement {
-    max-width: 320px;
-    margin-top: 16px;
-    font-size: 15px;
-  }
-
-  .actions {
-    margin-top: 20px;
-  }
-
-  .primaryAction,
-  .secondaryAction {
-    min-height: 42px;
-    padding-inline: 14px;
-    font-size: 13px;
-  }
-
-  .microLabels {
-    display: none;
-  }
-
-  .footerLine {
-    bottom: 12px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .visualStage,
-  .parallax,
-  .routeActive,
-  .content {
-    transform: none !important;
-    opacity: 1 !important;
+  .fact dd {
+    font-size: 19px;
   }
 }

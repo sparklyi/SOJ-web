@@ -1,6 +1,9 @@
+import { SearchX } from "lucide-react";
 import type { ProblemSummary } from "@/lib/api/types";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
-import { getServerTranslator } from "@/lib/i18n/server";
+import { getServerLocale, getServerTranslator } from "@/lib/i18n/server";
+import { formatNumber } from "@/lib/ui/number";
 import { ProblemRow } from "./problem-row";
 
 type ProblemListProps = {
@@ -8,54 +11,53 @@ type ProblemListProps = {
   totalCount: number;
 };
 
+/**
+ * 题库表格。
+ *
+ * 表头吸顶，长列表滚动时不丢列名；列宽按内容固定，
+ * 保证难度/通过率/状态纵向成列，扫读时不需要重新找基准。
+ *
+ * 只有四列，而且在 1280 宽度下也不需要横向滚动——列数本身就是一种设计决定：
+ * 能放进一屏、并且每一列都参与「要不要做这道题」这个判断的，才留下。
+ *
+ * 页脚那行同时回答两个问题：「这一屏能练多少」（可练习条数）
+ * 与「筛选后还剩多少」（x / 总数）。数字走 formatNumber，
+ * 与页头保持同一种写法，不会出现 13543 与 13,543 并存。
+ */
 export async function ProblemList({ problems, totalCount }: ProblemListProps) {
-  const t = await getServerTranslator();
+  const [t, locale] = await Promise.all([getServerTranslator(), getServerLocale()]);
 
   if (problems.length === 0) {
-    return (
-      <section className="soj-data-panel p-8">
-        <h2 className="text-lg font-semibold text-soj-text">{t("problems.noMatching")}</h2>
-        <p className="mt-2 max-w-xl text-sm leading-6 text-soj-muted">
-          {t("problems.noMatchingDescription")}
-        </p>
-      </section>
-    );
+    return <EmptyState icon={SearchX} title={t("problems.noMatching")} description={t("problems.noMatchingDescription")} />;
   }
 
   return (
-    <section className="soj-data-panel overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-soj-line/55 px-4 py-4 md:px-5">
-        <div>
-          <h2 className="text-lg font-semibold text-soj-text">{t("problems.inView")}</h2>
-          <p className="mt-1 text-sm text-soj-muted">{t("problems.openStatement")}</p>
-        </div>
-        <div className="rounded-soj-md border border-soj-accent/35 bg-soj-accent/10 px-3 py-1.5 font-mono text-xs text-soj-accent">
-          {problems.length}/{totalCount}
-        </div>
-      </div>
+    <>
       <div className="overflow-x-auto">
         <Table>
-          <TableHead>
+          <TableHead sticky>
             <TableRow>
-              <TableHeaderCell>{t("problems.table.problem")}</TableHeaderCell>
-              <TableHeaderCell>{t("problems.table.status")}</TableHeaderCell>
-              <TableHeaderCell>{t("problems.table.difficulty")}</TableHeaderCell>
-              <TableHeaderCell>{t("problems.table.tags")}</TableHeaderCell>
-              <TableHeaderCell>{t("problems.table.acceptance")}</TableHeaderCell>
-              <TableHeaderCell>{t("problems.table.submissions")}</TableHeaderCell>
-              <TableHeaderCell>{t("problems.table.action")}</TableHeaderCell>
+              <TableHeaderCell className="min-w-64">{t("problems.table.problem")}</TableHeaderCell>
+              <TableHeaderCell className="w-24">{t("problems.table.difficulty")}</TableHeaderCell>
+              <TableHeaderCell className="w-36 text-right">{t("problems.table.acceptance")}</TableHeaderCell>
+              <TableHeaderCell className="w-28">{t("problems.table.status")}</TableHeaderCell>
             </TableRow>
           </TableHead>
           <tbody>
             {problems.map((problem) => (
-              <ProblemRow key={problem.id} problem={problem} t={t} />
+              <ProblemRow key={problem.id} problem={problem} t={t} locale={locale} />
             ))}
           </tbody>
         </Table>
       </div>
-      <div className="border-t border-soj-line/55 px-4 py-3 font-mono text-xs text-soj-muted">
-        {t("problems.readyForPractice", { count: problems.length })}
+      <div className="flex items-center justify-between gap-3 border-t border-soj-line px-4 py-2.5">
+        <span className="font-mono text-xs text-soj-muted">
+          {t("problems.readyForPractice", { count: formatNumber(problems.length, { locale }) })}
+        </span>
+        <span className="font-mono text-xs text-soj-faint">
+          {formatNumber(problems.length, { locale })}/{formatNumber(totalCount, { locale })}
+        </span>
       </div>
-    </section>
+    </>
   );
 }

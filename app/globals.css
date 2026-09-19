@@ -1,42 +1,104 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   SOJ 视觉语言
+   --------------------------------------------------------------------------
+   材料主张：冷银 + 曜石蓝。
+
+   底色是偏蓝的近黑（曜石），抬升面靠「顶部受光」的极浅渐变而不是描边；
+   文字是冷银白，三级明度阶梯；唯一的彩色是曜石蓝，只给实时状态、焦点与链接。
+   主操作不用彩色，用一块金属银——它是整个页面上最亮的东西，层级自然成立。
+
+   质感来自三件事，缺一不可：
+     1. 微颗粒（body::after 的噪点）——消除纯色填充的「数字感」
+     2. 1px 内高光（面板顶部）——让平面读成有厚度的实体
+     3. 单点径向辉光——给整页一个光源方向
+
+   动效只解释状态与纵深，不做装饰；在 prefers-reduced-motion 下全部降级为静帧。
+   ========================================================================== */
+
 @theme {
   --color-soj-bg: rgb(var(--soj-bg));
   --color-soj-bg-raised: rgb(var(--soj-bg-raised));
   --color-soj-surface: rgb(var(--soj-surface));
   --color-soj-surface-2: rgb(var(--soj-surface-2));
   --color-soj-line: rgb(var(--soj-line));
+  --color-soj-line-strong: rgb(var(--soj-line-strong));
   --color-soj-text: rgb(var(--soj-text));
   --color-soj-muted: rgb(var(--soj-text-muted));
+  --color-soj-faint: rgb(var(--soj-text-faint));
   --color-soj-accent: rgb(var(--soj-accent));
+  --color-soj-silver: rgb(var(--soj-silver));
   --color-soj-success: rgb(var(--soj-success));
   --color-soj-warning: rgb(var(--soj-warning));
   --color-soj-danger: rgb(var(--soj-danger));
   --color-soj-info: rgb(var(--soj-info));
-  --font-sans: var(--font-soj-sans);
-  --font-mono: var(--font-soj-mono);
+
+  --font-display: var(--font-soj-display), ui-sans-serif, system-ui, -apple-system, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-sans: var(--font-soj-sans), ui-sans-serif, system-ui, -apple-system, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-mono: var(--font-soj-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
   --radius-soj-sm: 4px;
   --radius-soj-md: 6px;
   --radius-soj-lg: 8px;
+  --radius-soj-xl: 12px;
 }
 
 :root {
-  --soj-bg: 16 18 17;
-  --soj-bg-raised: 23 26 24;
-  --soj-surface: 28 32 30;
-  --soj-surface-2: 36 41 38;
-  --soj-line: 68 76 70;
-  --soj-text: 236 241 235;
-  --soj-text-muted: 154 164 154;
-  --soj-accent: 179 255 67;
-  --soj-success: 117 217 122;
-  --soj-warning: 226 181 83;
-  --soj-danger: 231 102 92;
-  --soj-info: 112 173 230;
-  --soj-focus: 179 255 67;
+  /* 曜石底：偏蓝的近黑。中性灰会让曜石蓝显灰，偏绿灰则直接把它压死。 */
+  --soj-bg: 8 10 15;
+  --soj-bg-raised: 12 15 21;
+  --soj-surface: 17 21 30;
+  --soj-surface-2: 25 30 41;
+
+  --soj-line: 30 36 47;
+  --soj-line-strong: 46 54 68;
+
+  /* 文字三级：冷银白 / 次要标签 / 辅助与占位 */
+  --soj-text: 226 232 241;
+  --soj-text-muted: 146 157 174;
+  --soj-text-faint: 96 106 122;
+
+  /* 唯一的彩色：曜石蓝。用于实时状态、焦点环与链接。 */
+  --soj-accent: 108 152 255;
+  --soj-info: 108 152 255;
+  --soj-focus: 140 176 255;
+
+  /* 冷银：主操作的材料。金属渐变两端 + 其上文字颜色。 */
+  --soj-silver: 205 216 231;
+  --soj-metal-from: 238 243 250;
+  --soj-metal-to: 176 190 212;
+  --soj-metal-ink: 9 12 18;
+
+  /* 语义色。它们只出现在状态徽标里，不参与品牌表达。 */
+  --soj-success: 74 214 158;
+  --soj-warning: 240 178 88;
+  --soj-danger: 246 106 118;
+
+  /* ---- Canvas 用色 ----
+     粒子系统在运行时读取这几个变量，源码里因此不需要出现任何颜色字面量
+     （style-lint 禁止源码出现 RGB / hex 字面量）。必须是**已解析、逗号分隔**的
+     完整颜色：写成 rgb(var(--x)) 会让 getPropertyValue 拿回未求值的原文，
+     用空格分隔的 CSS Color 4 写法则不被部分浏览器的 canvas 接受。 */
+  --soj-fx-bg: rgb(8, 10, 15);
+  --soj-fx-particle: rgb(198, 212, 232);
+  --soj-fx-particle-accent: rgb(108, 152, 255);
+  --soj-fx-particle-dim: rgb(96, 106, 122);
+
+  /* 层级与光源 */
+  --soj-shadow-lift: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -12px rgb(0 0 0 / 0.7);
+  --soj-inner-light: inset 0 1px 0 rgb(255 255 255 / 0.05);
 }
 
-* {
+/* ==========================================================================
+   基础
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -44,1313 +106,619 @@ html {
   background: rgb(var(--soj-bg));
   color-scheme: dark;
   scroll-behavior: smooth;
+  scrollbar-color: rgb(var(--soj-line-strong)) transparent;
+  scrollbar-width: thin;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.032) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(255 255 255 / 0.022) 1px, transparent 1px),
-    radial-gradient(ellipse at 50% -10%, rgb(var(--soj-accent) / 0.11), transparent 42%),
-    linear-gradient(145deg, rgb(18 22 17) 0%, rgb(var(--soj-bg)) 48%, rgb(8 10 9) 100%);
-  background-size: 48px 48px, 48px 48px, auto, auto;
+  background: rgb(var(--soj-bg));
   color: rgb(var(--soj-text));
   font-family: var(--font-soj-sans), ui-sans-serif, system-ui, sans-serif;
-  text-rendering: geometricPrecision;
+  /* 榜单、计时器、资源占用必须成列对齐，这是「仪器」观感的地基。 */
+  font-variant-numeric: tabular-nums;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body::before {
+/* 微颗粒。固定覆盖全视口，只提供材质，不参与任何布局或交互。 */
+body::after {
+  content: "";
   position: fixed;
   inset: 0;
-  z-index: -2;
+  z-index: 80;
   pointer-events: none;
-  content: "";
-  background:
-    linear-gradient(112deg, transparent 0%, rgb(var(--soj-accent) / 0.08) 34%, transparent 49%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.05), transparent 26%);
-  mask-image: linear-gradient(180deg, black 0%, transparent 74%);
+  opacity: 0.042;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-body::after {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  content: "";
-  opacity: 0.14;
-  background-image: radial-gradient(rgb(255 255 255 / 0.38) 0.55px, transparent 0.55px);
-  background-size: 3px 3px;
-  mix-blend-mode: overlay;
+/* 标题走展示字。Space Grotesk 只覆盖拉丁，中文按 font-family 链回落到系统字体，
+   两侧字重接近，中英混排不会出现明显的粗细断层。 */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-soj-display), ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  text-wrap: balance;
+  letter-spacing: -0.015em;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 ::selection {
-  background: rgb(var(--soj-accent) / 0.28);
+  background: rgb(var(--soj-accent) / 0.3);
   color: rgb(var(--soj-text));
 }
 
 :focus-visible {
   outline: 2px solid rgb(var(--soj-focus));
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
+::placeholder {
+  color: rgb(var(--soj-text-faint));
+}
+
+/* ==========================================================================
+   排版原语
+   ========================================================================== */
+
+/* 展示字：只给页面级标题和品牌字用。收紧字距是它「被设计过」的关键。 */
+.soj-display {
+  font-family: var(--font-soj-display), ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+}
+
+/* 微型标签：分区名、单位、坐标轴注释。全大写 + 宽字距 + 等宽。 */
+.soj-eyebrow {
+  font-family: var(--font-soj-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgb(var(--soj-text-faint));
+}
+
+/* 数字：等宽 + 逐位对齐。 */
+.soj-num {
+  font-family: var(--font-soj-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   材质原语
+   ========================================================================== */
+
+/* 面板：顶部受光的抬升面。渐变极浅——它要读成「厚度」，不是「渐变」。
+   底色刻意**留一点透明**（14%）：环境层因此从每一块面板下面透上来，
+   面板读成「浮在环境上的一块板」，而不是「在黑色上挖出来的洞」。
+   这是整站效果能不能连成一片的关键一处——面板全不透明的话，
+   环境只在首屏和页边缝里看得见，其余页面又变回空底色。
+   透明度上限就到这里：再透会让活动的粒子穿过正文，伤可读性。 */
 .soj-panel {
-  border: 1px solid rgb(var(--soj-line) / 0.62);
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.016)),
-    rgb(var(--soj-bg-raised) / 0.76);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.055), inset 0 -1px 0 rgb(255 255 255 / 0.02);
-  backdrop-filter: blur(18px);
-}
-
-.soj-hero {
   position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 18px 8px 26px 8px;
-  background:
-    linear-gradient(124deg, rgb(var(--soj-accent) / 0.075), transparent 34%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.064), rgb(255 255 255 / 0.014)),
-    rgb(var(--soj-bg-raised) / 0.72);
-  box-shadow:
-    0 24px 72px rgb(0 0 0 / 0.2),
-    inset 0 1px 0 rgb(255 255 255 / 0.07),
-    inset 0 -1px 0 rgb(255 255 255 / 0.02);
-  backdrop-filter: blur(20px);
+  border: 1px solid rgb(var(--soj-line));
+  border-radius: var(--radius-soj-lg);
+  background-image: linear-gradient(180deg, rgb(var(--soj-surface) / 0.5), transparent 46%);
+  background-color: rgb(var(--soj-bg-raised) / 0.86);
+  box-shadow: var(--soj-inner-light);
 }
 
-.soj-hero::before {
+/* 凹陷井：代码区、样例区、日志区。它是「凹下去的」，与面板方向相反。 */
+.soj-well {
+  border: 1px solid rgb(var(--soj-line));
+  border-radius: var(--radius-soj-md);
+  background-color: rgb(var(--soj-bg) / 0.72);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.55);
+}
+
+.soj-panel-flat {
+  border: 1px solid rgb(var(--soj-line));
+  border-radius: var(--radius-soj-lg);
+  background-image: linear-gradient(180deg, rgb(var(--soj-surface) / 0.35), transparent 60%);
+}
+
+/* 指标小格：比面板更轻的一层。用于页头、侧栏里孤立的读数或计数。
+   它和「把每个指标都包成带框小卡片」是两回事——后者是仪表盘噪音，
+   这里的方格只承担「这一格是一个独立读数」，不承担分组。 */
+.soj-chip {
+  border: 1px solid rgb(var(--soj-line));
+  border-radius: var(--radius-soj-md);
+  background-color: rgb(var(--soj-bg) / 0.45);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.045);
+}
+
+/* 顶部内高光。输入框、下拉框、导航选中态这类「薄面」用它，
+   使平面读成有厚度的实体；面板与凹陷井各自已内置，不需要再加。 */
+.soj-inset-light {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+
+/* 金属面：主操作。上亮下暗的垂直渐变 + 顶部白边 + 底部暗边 = 一块压出来的金属。 */
+.soj-metal {
+  border: 1px solid rgb(var(--soj-metal-from) / 0.9);
+  background-image: linear-gradient(180deg, rgb(var(--soj-metal-from)), rgb(var(--soj-metal-to)));
+  color: rgb(var(--soj-metal-ink));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.75),
+    inset 0 -1px 0 rgb(0 0 0 / 0.22),
+    0 1px 2px rgb(0 0 0 / 0.45);
+}
+
+.soj-metal:hover {
+  background-image: linear-gradient(180deg, rgb(255 255 255), rgb(var(--soj-metal-from)));
+}
+
+/* 辉光：页面级光源。只放在首屏与实时区域，全站最多两处。 */
+.soj-glow {
+  position: absolute;
+  pointer-events: none;
+  background: radial-gradient(52% 46% at 68% 38%, rgb(var(--soj-accent) / 0.16), transparent 72%);
+}
+
+/* 坐标网格：给密集区域一个可读的空间参照。 */
+.soj-gridlines {
+  background-image:
+    linear-gradient(to right, rgb(var(--soj-line) / 0.5) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--soj-line) / 0.5) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+.soj-hairline {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(var(--soj-line-strong)), transparent);
+}
+
+/* ==========================================================================
+   环境层（AppAtmosphere）
+   --------------------------------------------------------------------------
+   整站背景不是「一张底色」，而是四层叠出来的环境，自下而上：
+
+     1. 流场画布 —— 唯一的动态来源，同时是材质的底
+     2. 坐标网格 —— 空间参照。用径向遮罩收成一块「地面」，而不是铺满屏幕的壁纸
+     3. 双光源柔晕 —— 给整页一个光照方向（右上主光 / 左下副光）
+     4. 暗角 —— 压低四周，把注意力收回中间的内容列
+
+   一条总规则：**动效强度与页面所需的注意力成反比**。
+   首页最活、列表页中等、读题与写代码的页面近乎静止。这不是逐页随手调参，
+   而是让背景在任何页面上都不与正文争注意力。
+
+   为什么要有这一层：第一版只在首屏 hero 里放了一个粒子场，其余页面底色是空的。
+   于是那个效果读起来是「贴在首屏上的一块装饰」，而不是这个站的环境——
+   用户在别的页面感受不到它，在首屏又要被它和正文抢视线。分层 + 逐页定强是全部答案。
+   ========================================================================== */
+
+.soj-atmo {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* 网格遮罩：网格从视口上方铺下来，向下与向两侧淡出，读成一块「地面」。
+   铺满全屏的等距网格是最容易显廉价的做法之一，它会让整页读成一张工程图纸。
+   锚点压低到 -4%：锚在 0 以下的话最亮的一条正好落在导航后面，正文区反而全淡没了。 */
+.soj-atmo-grid-mask {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-  content: "";
-  background:
-    linear-gradient(135deg, transparent 0 17px, rgb(var(--soj-accent) / 0.28) 18px, transparent 19px),
-    linear-gradient(315deg, transparent 0 24px, rgb(255 255 255 / 0.08) 25px, transparent 26px);
-  opacity: 0.78;
+  opacity: var(--atmo-grid, 0.5);
+  -webkit-mask-image: radial-gradient(118% 74% at 60% -4%, black 10%, transparent 74%);
+  mask-image: radial-gradient(118% 74% at 60% -4%, black 10%, transparent 74%);
 }
 
-.soj-workbench {
-  position: relative;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 8px 24px 8px 18px;
-  background:
-    linear-gradient(116deg, transparent 0 64%, rgb(var(--soj-accent) / 0.032) 64% 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.042), transparent 22%),
-    rgb(var(--soj-bg-raised) / 0.72);
-  box-shadow:
-    0 26px 80px rgb(0 0 0 / 0.18),
-    inset 0 1px 0 rgb(255 255 255 / 0.055);
-  backdrop-filter: blur(18px);
-}
-
-.soj-workbench::before {
+/* 网格本体比遮罩大一圈（overscan 一整格），平移时边缘不会露空。 */
+.soj-atmo-grid {
   position: absolute;
-  top: 0;
-  right: 18px;
-  left: 28%;
-  height: 1px;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.42), transparent);
+  inset: -64px;
+  background-image:
+    linear-gradient(to right, rgb(var(--soj-line) / 0.62) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--soj-line) / 0.62) 1px, transparent 1px);
+  background-size: 64px 64px;
+  animation: soj-atmo-grid-drift 72s linear infinite;
+  will-change: transform;
 }
 
-.soj-control-panel {
-  border-bottom: 1px solid rgb(var(--soj-line) / 0.58);
-  background:
-    linear-gradient(105deg, rgb(var(--soj-accent) / 0.055), transparent 26%),
-    rgb(var(--soj-bg) / 0.16);
+/* 一整格走 72 秒：肉眼几乎察觉不到，但页面不会「死」。
+   必须用 transform 而不是 background-position —— 后者每帧都要重绘整个视口。 */
+@keyframes soj-atmo-grid-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(64px, 64px, 0);
+  }
 }
 
-.soj-data-panel {
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.026), transparent 42%),
-    rgb(var(--soj-bg) / 0.12);
-}
-
-.soj-rail-panel {
-  border-left: 1px solid rgb(var(--soj-line) / 0.58);
-  background:
-    linear-gradient(155deg, rgb(var(--soj-accent) / 0.052), transparent 42%),
-    rgb(var(--soj-bg) / 0.14);
-}
-
-.soj-rail-section + .soj-rail-section {
-  border-top: 1px solid rgb(var(--soj-line) / 0.58);
-}
-
-.soj-reading-stage {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 22px 8px 8px 18px;
-  background:
-    linear-gradient(112deg, transparent 0 72%, rgb(var(--soj-accent) / 0.026) 72% 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.014)),
-    rgb(var(--soj-bg-raised) / 0.76);
-  box-shadow:
-    0 26px 80px rgb(0 0 0 / 0.18),
-    inset 0 1px 0 rgb(255 255 255 / 0.06);
-  backdrop-filter: blur(18px);
-}
-
-.soj-reading-stage::before {
+.soj-atmo-bloom {
   position: absolute;
-  top: 0;
-  right: 18px;
-  left: 22px;
-  height: 1px;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, rgb(var(--soj-accent) / 0.58), transparent 62%);
+  border-radius: 999px;
+  opacity: var(--atmo-bloom, 1);
+  will-change: transform;
 }
 
-.soj-io-cassette {
-  border: 1px solid rgb(var(--soj-line) / 0.54);
-  border-radius: 16px 6px 14px 6px;
-  background:
-    linear-gradient(135deg, rgb(var(--soj-accent) / 0.045), transparent 42%),
-    rgb(var(--soj-bg) / 0.22);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+/* 主光：曜石蓝，落在右上——即页面主标题与首屏图形所在的方位。 */
+.soj-atmo-bloom-primary {
+  top: -30%;
+  right: -14%;
+  width: 78vw;
+  height: 70vh;
+  background: radial-gradient(closest-side, rgb(var(--soj-accent) / 0.2), transparent 74%);
+  animation: soj-atmo-breathe 34s ease-in-out infinite;
 }
 
-.soj-submit-console {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 8px 20px 8px 18px;
-  background:
-    linear-gradient(150deg, rgb(var(--soj-accent) / 0.058), transparent 36%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.048), rgb(255 255 255 / 0.012)),
-    rgb(var(--soj-bg-raised) / 0.78);
-  box-shadow:
-    0 22px 68px rgb(0 0 0 / 0.2),
-    inset 0 1px 0 rgb(255 255 255 / 0.055);
-  backdrop-filter: blur(18px);
+/* 副光：冷银，左下角，极弱。它唯一的职责是证明画面还有第二个光源——
+   单光源会让整页读成「一张渐变的壁纸」，两个方向的光才有空间。 */
+.soj-atmo-bloom-secondary {
+  bottom: -38%;
+  left: -18%;
+  width: 70vw;
+  height: 62vh;
+  background: radial-gradient(closest-side, rgb(var(--soj-silver) / 0.085), transparent 72%);
+  animation: soj-atmo-breathe 52s ease-in-out infinite reverse;
 }
 
-.soj-submit-console::after {
+@keyframes soj-atmo-breathe {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-2.5%, 3%, 0) scale(1.09);
+  }
+}
+
+/* 暗角：四周压暗，中间的 1440px 内容列因此自动成为画面主体。 */
+.soj-atmo-vignette {
   position: absolute;
-  top: -1px;
-  right: -1px;
-  width: 42px;
-  height: 42px;
-  pointer-events: none;
-  content: "";
-  border-bottom: 1px solid rgb(var(--soj-line) / 0.48);
-  border-left: 1px solid rgb(var(--soj-line) / 0.48);
-  background: rgb(var(--soj-bg) / 0.46);
-  transform: skew(-20deg) translateX(20px);
+  inset: 0;
+  background: radial-gradient(126% 92% at 50% 0%, transparent 40%, rgb(var(--soj-bg) / 0.7) 100%);
 }
 
-.soj-contest-stage {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 8px 26px 8px 22px;
-  background:
-    linear-gradient(112deg, transparent 0 56%, rgb(var(--soj-accent) / 0.044) 56% 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.058), rgb(255 255 255 / 0.014)),
-    rgb(var(--soj-bg-raised) / 0.74);
-  box-shadow:
-    0 26px 86px rgb(0 0 0 / 0.22),
-    inset 0 1px 0 rgb(255 255 255 / 0.065);
-  backdrop-filter: blur(20px);
-}
-
-.soj-contest-stage::before {
+/* 顶部受光：与面板的「顶部内高光」同一套光照逻辑，只是放大到整页尺度。 */
+.soj-atmo-toplight {
   position: absolute;
-  top: 0;
-  right: 20px;
-  left: 20px;
-  height: 1px;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.64), transparent);
+  inset: 0 0 auto;
+  height: 44vh;
+  opacity: var(--atmo-toplight, 1);
+  background: linear-gradient(180deg, rgb(var(--soj-surface) / 0.4), transparent);
 }
 
-.soj-contest-stage::after {
-  position: absolute;
-  inset: auto -8% -38% 18%;
-  height: 72%;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(102deg, transparent 0 34%, rgb(var(--soj-accent) / 0.052) 34% 48%, transparent 48% 100%);
-  transform: skew(-18deg);
+@media (max-width: 1023px) {
+  /* 窄屏没有横向余量，网格压到正文上只会变成噪点。 */
+  .soj-atmo-grid-mask {
+    display: none;
+  }
+
+  /* 主光要放大并重新定位：按桌面比例摆的话，最强的光会落在屏幕之外。 */
+  .soj-atmo-bloom-primary {
+    top: -22%;
+    right: -46%;
+    width: 132vw;
+    height: 56vh;
+  }
+
+  .soj-atmo-bloom-secondary {
+    display: none;
+  }
+
+  .soj-atmo-vignette {
+    background: radial-gradient(150% 70% at 50% 0%, transparent 34%, rgb(var(--soj-bg) / 0.66) 100%);
+  }
 }
 
+/* ==========================================================================
+   历史「舞台」类收敛
+   --------------------------------------------------------------------------
+   未迁移的页面仍在引用这些类。它们原先各自带不对称切角、多层渐变与斜纹伪元素，
+   是视觉噪音的主要来源。现在统一折叠成同一套面板样式：已迁移页面用新原语，
+   未迁移页面自动收敛，不会出现两套并存的中间态。
+   ========================================================================== */
+
+.soj-hero,
+.soj-workbench,
+.soj-reading-stage,
+.soj-io-cassette,
+.soj-submit-console,
+.soj-contest-stage,
 .soj-contest-console,
 .soj-contest-format,
-.soj-contest-manifest {
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0.012)),
-    rgb(var(--soj-bg-raised) / 0.72);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.052);
-  backdrop-filter: blur(18px);
-}
-
-.soj-contest-console {
-  border-radius: 18px 6px 16px 6px;
-}
-
-.soj-contest-format {
-  border-radius: 6px 20px 6px 16px;
-}
-
-.soj-contest-manifest {
-  border-radius: 20px 6px 18px 6px;
-}
-
-.soj-contest-row {
-  position: relative;
-  background:
-    linear-gradient(90deg, rgb(var(--soj-accent) / 0.035), transparent 28%),
-    rgb(var(--soj-bg) / 0.12);
-}
-
-.soj-contest-row + .soj-contest-row {
-  border-top: 1px solid rgb(var(--soj-line) / 0.55);
-}
-
-.soj-contest-row::before {
-  position: absolute;
-  top: 18px;
-  bottom: 18px;
-  left: 0;
-  width: 2px;
-  content: "";
-  background: linear-gradient(180deg, transparent, rgb(var(--soj-accent) / 0.62), transparent);
-}
-
-.soj-contest-runway {
-  position: relative;
-  min-height: 132px;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.55);
-  border-radius: 18px 6px 14px 6px;
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.042) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(255 255 255 / 0.026) 1px, transparent 1px),
-    radial-gradient(ellipse at 72% 36%, rgb(var(--soj-accent) / 0.12), transparent 48%),
-    rgb(var(--soj-bg) / 0.3);
-  background-size: 30px 30px, 30px 30px, auto, auto;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.055);
-}
-
-.soj-contest-runway::before,
-.soj-contest-runway::after {
-  position: absolute;
-  right: 18px;
-  left: 18px;
-  height: 1px;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.72), transparent);
-}
-
-.soj-contest-runway::before {
-  top: 38%;
-}
-
-.soj-contest-runway::after {
-  top: 68%;
-  opacity: 0.48;
-}
-
-.soj-contest-sweep {
-  position: absolute;
-  inset: -35% auto -35% 12%;
-  width: 24%;
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.12), transparent);
-  transform: skew(-18deg);
-}
-
-.soj-contest-node {
-  position: absolute;
-  display: grid;
-  min-width: 72px;
-  height: 28px;
-  place-items: center;
-  border: 1px solid rgb(var(--soj-accent) / 0.42);
-  border-radius: var(--radius-soj-md);
-  background: rgb(var(--soj-accent) / 0.13);
-  color: rgb(var(--soj-accent));
-  font-family: var(--font-soj-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
-}
-
-.soj-contest-node-live {
-  top: calc(38% - 14px);
-  left: 9%;
-}
-
-.soj-contest-node-freeze {
-  top: calc(68% - 14px);
-  left: 44%;
-  border-color: rgb(var(--soj-warning) / 0.4);
-  background: rgb(var(--soj-warning) / 0.12);
-  color: rgb(var(--soj-warning));
-}
-
-.soj-contest-node-rank {
-  top: calc(38% - 14px);
-  right: 10%;
-}
-
-.soj-contest-detail-stage {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 24px 8px 8px 18px;
-  background:
-    linear-gradient(116deg, transparent 0 62%, rgb(var(--soj-accent) / 0.036) 62% 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.058), rgb(255 255 255 / 0.014)),
-    rgb(var(--soj-bg-raised) / 0.76);
-  box-shadow:
-    0 26px 86px rgb(0 0 0 / 0.22),
-    inset 0 1px 0 rgb(255 255 255 / 0.065);
-  backdrop-filter: blur(20px);
-}
-
-.soj-contest-detail-stage::before {
-  position: absolute;
-  top: 0;
-  right: 20px;
-  left: 20px;
-  height: 1px;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, rgb(var(--soj-accent) / 0.58), transparent 72%);
-}
-
-.soj-contest-detail-stage::after {
-  position: absolute;
-  inset: -12% 16% -40% auto;
-  width: 32%;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(104deg, transparent, rgb(var(--soj-accent) / 0.052), transparent);
-  transform: skew(-18deg);
-}
-
+.soj-contest-manifest,
+.soj-contest-detail-stage,
 .soj-contest-access,
 .soj-contest-brief,
-.soj-contest-problem-deck {
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0.012)),
-    rgb(var(--soj-bg-raised) / 0.72);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.052);
-  backdrop-filter: blur(18px);
-}
-
-.soj-contest-access {
-  border-radius: 18px 6px 16px 6px;
-}
-
-.soj-contest-brief {
-  border-radius: 6px 20px 6px 16px;
-}
-
-.soj-contest-problem-deck {
-  border-radius: 20px 6px 18px 6px;
-}
-
-.soj-contest-problem-row {
-  position: relative;
-  background:
-    linear-gradient(90deg, rgb(var(--soj-accent) / 0.035), transparent 30%),
-    rgb(var(--soj-bg) / 0.12);
-}
-
-.soj-contest-problem-row + .soj-contest-problem-row {
-  border-top: 1px solid rgb(var(--soj-line) / 0.55);
-}
-
-.soj-contest-problem-row::before {
-  position: absolute;
-  top: 18px;
-  bottom: 18px;
-  left: 0;
-  width: 2px;
-  content: "";
-  background: linear-gradient(180deg, transparent, rgb(var(--soj-accent) / 0.62), transparent);
-}
-
+.soj-contest-problem-deck,
+.soj-scoreboard-stage,
+.soj-scoreboard-leader,
+.soj-scoreboard-board,
+.soj-arena-stage,
+.soj-arena-leader,
+.soj-arena-clock,
+.soj-arena-ticker,
+.soj-arena-panel,
+.soj-submission-stage,
+.soj-submission-metric,
+.soj-submission-latest,
+.soj-submission-board,
+.soj-submission-detail-stage,
+.soj-submission-result-panel,
+.soj-submission-detail-panel,
+.soj-workspace-stage,
+.soj-workspace-console,
+.soj-workspace-paper,
+.soj-workspace-editor,
+.soj-workspace-panel,
+.soj-workspace-note,
+.soj-workspace-sample,
+.soj-account-stage,
+.soj-account-aside,
+.soj-account-panel,
+.soj-feed,
 .soj-contest-timeline {
   position: relative;
-  min-height: 132px;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.55);
-  border-radius: 18px 6px 14px 6px;
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.042) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(255 255 255 / 0.026) 1px, transparent 1px),
-    radial-gradient(ellipse at 72% 36%, rgb(var(--soj-accent) / 0.12), transparent 48%),
-    rgb(var(--soj-bg) / 0.3);
-  background-size: 30px 30px, 30px 30px, auto, auto;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.055);
+  border: 1px solid rgb(var(--soj-line));
+  border-radius: var(--radius-soj-lg);
+  background-color: rgb(var(--soj-bg-raised) / 0.86);
+  box-shadow: var(--soj-inner-light);
+  backdrop-filter: none;
 }
 
+/* 清理这些容器上遗留的装饰性伪元素（切角、扫描线、斜纹、亮边线）。 */
+.soj-hero::before,
+.soj-hero::after,
+.soj-workbench::before,
+.soj-workbench::after,
+.soj-reading-stage::before,
+.soj-reading-stage::after,
+.soj-submit-console::after,
+.soj-contest-stage::before,
+.soj-contest-stage::after,
+.soj-contest-row::before,
+.soj-contest-detail-stage::before,
+.soj-contest-detail-stage::after,
+.soj-contest-problem-row::before,
 .soj-contest-timeline::before,
-.soj-contest-timeline::after {
-  position: absolute;
-  right: 18px;
-  left: 18px;
-  height: 1px;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.72), transparent);
+.soj-contest-timeline::after,
+.soj-scoreboard-stage::before,
+.soj-scoreboard-stage::after,
+.soj-arena-stage::before,
+.soj-arena-stage::after,
+.soj-submission-stage::before,
+.soj-submission-stage::after,
+.soj-submission-metric::before,
+.soj-submission-latest::before,
+.soj-submission-latest::after,
+.soj-submission-row::before,
+.soj-submission-detail-stage::before,
+.soj-submission-detail-stage::after,
+.soj-workspace-stage::before,
+.soj-workspace-stage::after,
+.soj-workspace-paper::before,
+.soj-workspace-editor::before,
+.soj-workspace-panel::before,
+.soj-workspace-note::before,
+.soj-account-stage::before,
+.soj-account-stage::after,
+.soj-account-panel::before,
+.soj-judge-segment::after,
+.soj-test-point::after,
+.soj-scoreboard-leader::before {
+  content: none;
 }
 
-.soj-contest-timeline::before {
-  top: 42%;
+/* 纯装饰的跑道 / 节点图形：保留类名以免引用报错，但不再渲染图形。
+   --------------------------------------------------------------------------
+   注意：这份清单只能放**纯装饰元素**。
+   踩过的坑：`soj-scanline` 曾在这份清单里，而它在 submissions / workspace /
+   account 三处是当作**修饰类**贴在真实容器上的
+   （`className="soj-submission-stage soj-scanline ..."`）。
+   两个类名权重相同、它在文件里更靠后，于是 `display: none` 生效，
+   整块页头被整个隐藏——页面只剩内容，标题和统计凭空消失，而且不报任何错。
+   教训：往「隐藏装饰」清单里加类名之前，必须确认它从未与真实容器共用 class。 */
+.soj-contest-node,
+.soj-contest-node-live,
+.soj-contest-node-freeze,
+.soj-contest-node-rank,
+.soj-contest-mark,
+.soj-contest-mark-start,
+.soj-contest-mark-freeze,
+.soj-contest-mark-end,
+.soj-contest-sweep,
+.soj-packet,
+.soj-packet-secondary,
+.soj-runway-crop,
+.soj-horizon {
+  display: none;
 }
 
-.soj-contest-timeline::after {
-  top: 66%;
-  opacity: 0.48;
-}
+/* ==========================================================================
+   行 / 条纹：数据骨架
+   ========================================================================== */
 
-.soj-contest-mark {
-  position: absolute;
-  display: grid;
-  min-width: 72px;
-  height: 28px;
-  place-items: center;
-  border: 1px solid rgb(var(--soj-accent) / 0.42);
-  border-radius: var(--radius-soj-md);
-  background: rgb(var(--soj-accent) / 0.13);
-  color: rgb(var(--soj-accent));
-  font-family: var(--font-soj-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-}
-
-.soj-contest-mark-start {
-  top: calc(42% - 14px);
-  left: 9%;
-}
-
-.soj-contest-mark-freeze {
-  top: calc(66% - 14px);
-  left: 44%;
-  border-color: rgb(var(--soj-warning) / 0.4);
-  background: rgb(var(--soj-warning) / 0.12);
-  color: rgb(var(--soj-warning));
-}
-
-.soj-contest-mark-end {
-  top: calc(42% - 14px);
-  right: 10%;
-}
-
-.soj-scoreboard-stage {
+.soj-contest-row,
+.soj-contest-problem-row,
+.soj-submission-row,
+.soj-score-row {
   position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 8px 28px 8px 22px;
-  background:
-    linear-gradient(118deg, rgb(var(--soj-accent) / 0.058), transparent 34%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.058), rgb(255 255 255 / 0.014)),
-    rgb(var(--soj-bg-raised) / 0.76);
-  box-shadow:
-    0 26px 86px rgb(0 0 0 / 0.22),
-    inset 0 1px 0 rgb(255 255 255 / 0.065);
-  backdrop-filter: blur(20px);
+  transition: background-color 0.16s ease;
 }
 
-.soj-scoreboard-stage::before {
-  position: absolute;
-  top: 0;
-  right: 20px;
-  left: 20px;
-  height: 1px;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.64), transparent);
-}
-
-.soj-scoreboard-stage::after {
-  position: absolute;
-  inset: -18% 10% -46% auto;
-  width: 38%;
-  pointer-events: none;
-  content: "";
-  background:
-    linear-gradient(104deg, transparent, rgb(var(--soj-accent) / 0.05), transparent),
-    linear-gradient(90deg, rgb(255 255 255 / 0.036) 1px, transparent 1px);
-  background-size: auto, 34px 34px;
-  transform: skew(-18deg);
-}
-
-.soj-scoreboard-leader,
-.soj-scoreboard-board {
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0.012)),
-    rgb(var(--soj-bg-raised) / 0.72);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.052);
-  backdrop-filter: blur(18px);
-}
-
-.soj-scoreboard-leader {
-  border-radius: 18px 6px 16px 6px;
-}
-
-.soj-scoreboard-board {
-  border-radius: 20px 6px 18px 6px;
+.soj-contest-row:hover,
+.soj-contest-problem-row:hover,
+.soj-submission-row:hover,
+.soj-score-row:hover {
+  background-color: rgb(var(--soj-surface) / 0.55);
 }
 
 .soj-score-row {
-  background:
-    linear-gradient(90deg, rgb(var(--soj-accent) / 0.03), transparent 34%),
-    rgb(var(--soj-bg) / 0.1);
-  transition: background-color 0.2s ease, filter 0.2s ease;
+  background: transparent;
 }
 
-.soj-score-row:hover {
-  background-color: rgb(var(--soj-surface) / 0.52);
-}
+/* ==========================================================================
+   计分板单元
+   ========================================================================== */
 
 .soj-score-cell {
   display: inline-grid;
-  min-width: 76px;
-  min-height: 34px;
+  min-width: 68px;
+  min-height: 30px;
   place-items: center;
-  border: 1px solid rgb(var(--soj-line) / 0.66);
-  border-radius: 14px 4px 12px 4px;
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.038), transparent),
-    rgb(var(--soj-bg) / 0.42);
+  border: 1px solid rgb(var(--soj-line));
+  border-radius: var(--radius-soj-md);
+  background: rgb(var(--soj-bg) / 0.6);
   color: rgb(var(--soj-text-muted));
   font-family: var(--font-soj-mono), ui-monospace, monospace;
   font-size: 12px;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.055);
+  font-variant-numeric: tabular-nums;
 }
 
 .soj-score-cell-accepted,
 .soj-score-cell-first_blood {
-  border-color: rgb(var(--soj-accent) / 0.58);
-  background:
-    linear-gradient(135deg, rgb(var(--soj-accent) / 0.18), rgb(var(--soj-accent) / 0.07)),
-    rgb(var(--soj-bg) / 0.42);
-  color: rgb(var(--soj-accent));
+  border-color: rgb(var(--soj-success) / 0.5);
+  background: rgb(var(--soj-success) / 0.1);
+  color: rgb(var(--soj-success));
 }
 
 .soj-score-cell-first_blood {
-  box-shadow: 0 0 24px rgb(var(--soj-accent) / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  box-shadow: 0 0 20px rgb(var(--soj-success) / 0.14);
 }
 
 .soj-score-cell-wrong_answer {
-  border-color: rgb(var(--soj-danger) / 0.52);
-  background:
-    linear-gradient(135deg, rgb(var(--soj-danger) / 0.16), rgb(var(--soj-danger) / 0.06)),
-    rgb(var(--soj-bg) / 0.42);
+  border-color: rgb(var(--soj-danger) / 0.42);
+  background: rgb(var(--soj-danger) / 0.09);
   color: rgb(var(--soj-danger));
 }
 
 .soj-score-cell-pending,
 .soj-score-cell-partial {
-  border-color: rgb(var(--soj-warning) / 0.52);
-  background:
-    linear-gradient(135deg, rgb(var(--soj-warning) / 0.16), rgb(var(--soj-warning) / 0.06)),
-    rgb(var(--soj-bg) / 0.42);
+  border-color: rgb(var(--soj-warning) / 0.42);
+  background: rgb(var(--soj-warning) / 0.09);
   color: rgb(var(--soj-warning));
 }
 
-.soj-arena-stage {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 28px 8px 8px 22px;
-  background:
-    linear-gradient(122deg, rgb(var(--soj-accent) / 0.065), transparent 34%),
-    radial-gradient(ellipse at 72% 28%, rgb(var(--soj-accent) / 0.16), transparent 44%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.064), rgb(255 255 255 / 0.014)),
-    rgb(var(--soj-bg-raised) / 0.76);
-  box-shadow:
-    0 34px 110px rgb(0 0 0 / 0.28),
-    inset 0 1px 0 rgb(255 255 255 / 0.075);
-  backdrop-filter: blur(22px);
-}
+/* ==========================================================================
+   网格容器
+   ========================================================================== */
 
-.soj-arena-stage::before {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  content: "";
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(255 255 255 / 0.025) 1px, transparent 1px),
-    linear-gradient(108deg, transparent 0 58%, rgb(var(--soj-accent) / 0.08) 58% 66%, transparent 66% 100%);
-  background-size: 44px 44px, 44px 44px, auto;
-  mask-image: linear-gradient(180deg, black, transparent 88%);
-}
-
-.soj-arena-stage::after {
-  position: absolute;
-  top: 0;
-  right: 24px;
-  left: 24px;
-  height: 1px;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, rgb(var(--soj-accent) / 0.72), transparent 68%);
-}
-
-.soj-arena-leader,
-.soj-arena-clock,
-.soj-arena-ticker,
-.soj-arena-panel {
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0.012)),
-    rgb(var(--soj-bg-raised) / 0.72);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.052);
-  backdrop-filter: blur(18px);
-}
-
-.soj-arena-leader {
-  border-radius: 22px 6px 18px 6px;
-}
-
-.soj-arena-clock,
-.soj-arena-ticker {
-  border-radius: 18px 6px 16px 6px;
-}
-
-.soj-arena-panel {
-  border-radius: 20px 6px 18px 6px;
-}
-
-.soj-arena-track {
-  display: grid;
-  gap: 10px;
-}
-
-.soj-arena-rank-lane {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  gap: 14px;
-  align-items: center;
-  min-height: 76px;
-  padding: 12px;
-  border: 1px solid rgb(var(--soj-line) / 0.68);
-  border-radius: 18px 6px 14px 6px;
-  background:
-    linear-gradient(90deg, rgb(var(--soj-accent) / 0.072), transparent 46%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.035), transparent),
-    rgb(var(--soj-bg) / 0.38);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.06),
-    0 14px 34px rgb(0 0 0 / 0.12);
-}
-
-@media (max-width: 767px) {
-  .soj-arena-rank-lane {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-  }
-
-  .soj-arena-rank-lane > :last-child {
-    grid-column: 2 / 4;
-    justify-self: end;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .soj-arena-rank-lane {
-    animation: soj-arena-lane 6.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  }
-
-  .soj-arena-rank-lane:nth-child(2n) {
-    animation-delay: -2.2s;
-  }
-
-  .soj-judge-segment::after {
-    animation: soj-judge-sweep 5.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  }
-
-  .soj-judge-segment:nth-child(2n)::after {
-    animation-delay: -1.9s;
-  }
-}
-
-@keyframes soj-arena-lane {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  50% {
-    transform: translateX(8px);
-  }
-}
-
-@keyframes soj-judge-sweep {
-  0%,
-  38% {
-    transform: translateX(0) skew(-18deg);
-  }
-  78%,
-  100% {
-    transform: translateX(560%) skew(-18deg);
-  }
-}
-
-.soj-submission-stage {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 10px 28px 10px 22px;
-  background:
-    linear-gradient(112deg, transparent 0 58%, rgb(var(--soj-accent) / 0.05) 58% 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.058), rgb(255 255 255 / 0.014)),
-    rgb(var(--soj-bg-raised) / 0.74);
-  box-shadow:
-    0 26px 86px rgb(0 0 0 / 0.22),
-    inset 0 1px 0 rgb(255 255 255 / 0.065);
-  backdrop-filter: blur(20px);
-}
-
-.soj-submission-stage::before {
-  position: absolute;
-  top: 0;
-  right: 20px;
-  left: 20px;
-  height: 1px;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.64), transparent);
-}
-
-.soj-submission-stage::after {
-  position: absolute;
-  inset: auto -12% -46% 10%;
-  height: 82%;
-  pointer-events: none;
-  content: "";
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(255 255 255 / 0.03) 1px, transparent 1px),
-    linear-gradient(104deg, transparent 0 36%, rgb(var(--soj-accent) / 0.058) 36% 48%, transparent 48% 100%);
-  background-size: 32px 32px, 32px 32px, auto;
-  transform: skew(-18deg);
-}
-
-.soj-submission-metric {
-  position: relative;
-  overflow: hidden;
-  min-height: 82px;
-  padding: 14px 16px;
-  border: 1px solid rgb(var(--soj-line) / 0.54);
-  border-radius: 16px 6px 14px 6px;
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.044), rgb(255 255 255 / 0.012)),
-    rgb(var(--soj-bg) / 0.24);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
-}
-
-.soj-submission-metric::before {
-  position: absolute;
-  top: 12px;
-  bottom: 12px;
-  left: 0;
-  width: 2px;
-  content: "";
-  background: linear-gradient(180deg, transparent, rgb(var(--soj-accent) / 0.62), transparent);
-}
-
-.soj-submission-latest {
-  position: relative;
-  min-height: 252px;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 22px 6px 18px 6px;
-  background:
-    radial-gradient(ellipse at 80% 0%, rgb(var(--soj-accent) / 0.12), transparent 44%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.052), rgb(255 255 255 / 0.012)),
-    rgb(var(--soj-bg) / 0.34);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
-}
-
-.soj-submission-latest > * {
-  position: relative;
-  z-index: 1;
-}
-
-.soj-submission-latest::before,
-.soj-submission-latest::after {
-  position: absolute;
-  right: 18px;
-  left: 18px;
-  height: 1px;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.7), transparent);
-}
-
-.soj-submission-latest::before {
-  top: 43%;
-}
-
-.soj-submission-latest::after {
-  top: 68%;
-  opacity: 0.42;
-}
-
-.soj-submission-chip {
-  display: grid;
-  gap: 4px;
-  padding: 10px;
-  border: 1px solid rgb(var(--soj-line) / 0.5);
-  border-radius: 12px 4px 10px 4px;
-  background: rgb(var(--soj-bg) / 0.26);
-}
-
-.soj-submission-chip span {
-  font-family: var(--font-soj-mono), ui-monospace, monospace;
-  font-size: 10px;
-  color: rgb(var(--soj-text-muted));
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-}
-
-.soj-submission-chip strong {
-  font-family: var(--font-soj-mono), ui-monospace, monospace;
-  font-size: 12px;
-  font-weight: 650;
-  color: rgb(var(--soj-text));
-}
-
-.soj-judge-track {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.soj-judge-segment {
-  position: relative;
-  display: grid;
-  min-height: 84px;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  padding: 14px;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.56);
-  border-radius: 18px 6px 16px 6px;
-  background:
-    linear-gradient(90deg, rgb(var(--soj-accent) / 0.055), transparent 42%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.04), transparent),
-    rgb(var(--soj-bg-raised) / 0.6);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.05),
-    0 16px 42px rgb(0 0 0 / 0.12);
-}
-
-.soj-judge-segment::after {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -28%;
-  width: 26%;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.12), transparent);
-  transform: skew(-18deg);
-}
-
-.soj-submission-board {
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 8px 24px 8px 20px;
-  background:
-    linear-gradient(116deg, transparent 0 68%, rgb(var(--soj-accent) / 0.034) 68% 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.042), transparent 22%),
-    rgb(var(--soj-bg-raised) / 0.72);
-  box-shadow:
-    0 26px 80px rgb(0 0 0 / 0.18),
-    inset 0 1px 0 rgb(255 255 255 / 0.055);
-  backdrop-filter: blur(18px);
-}
-
-.soj-submission-row {
-  position: relative;
-  background:
-    linear-gradient(90deg, rgb(var(--soj-accent) / 0.026), transparent 30%),
-    rgb(var(--soj-bg) / 0.1);
-}
-
-.soj-submission-row::before {
-  position: absolute;
-  top: 16px;
-  bottom: 16px;
-  left: 0;
-  width: 2px;
-  content: "";
-  background: linear-gradient(180deg, transparent, rgb(var(--soj-line) / 0.78), transparent);
-}
-
-.soj-submission-row-live::before {
-  background: linear-gradient(180deg, transparent, rgb(var(--soj-accent) / 0.76), transparent);
-}
-
-.soj-submission-row-terminal {
-  opacity: 0.92;
-}
-
-.soj-submission-detail-stage {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 26px 8px 22px 8px;
-  background:
-    linear-gradient(122deg, rgb(var(--soj-accent) / 0.07), transparent 34%),
-    linear-gradient(112deg, transparent 0 62%, rgb(var(--soj-accent) / 0.045) 62% 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.014)),
-    rgb(var(--soj-bg-raised) / 0.74);
-  box-shadow:
-    0 26px 86px rgb(0 0 0 / 0.22),
-    inset 0 1px 0 rgb(255 255 255 / 0.065);
-  backdrop-filter: blur(20px);
-}
-
-.soj-submission-detail-stage::before {
-  position: absolute;
-  top: 0;
-  right: 20px;
-  left: 20px;
-  height: 1px;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.64), transparent);
-}
-
-.soj-submission-detail-stage::after {
-  position: absolute;
-  inset: auto -16% -52% 8%;
-  height: 88%;
-  pointer-events: none;
-  content: "";
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.038) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(255 255 255 / 0.027) 1px, transparent 1px),
-    linear-gradient(104deg, transparent 0 36%, rgb(var(--soj-accent) / 0.055) 36% 48%, transparent 48% 100%);
-  background-size: 32px 32px, 32px 32px, auto;
-  transform: skew(-18deg);
-}
-
-.soj-submission-result-panel {
-  position: relative;
-  overflow: hidden;
-  min-height: 270px;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 22px 6px 18px 6px;
-  background:
-    radial-gradient(ellipse at 80% 0%, rgb(var(--soj-accent) / 0.13), transparent 44%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.052), rgb(255 255 255 / 0.012)),
-    rgb(var(--soj-bg) / 0.34);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
-}
-
-.soj-submission-result-panel > * {
-  position: relative;
-  z-index: 1;
-}
-
-.soj-submission-result-line {
-  position: relative;
-  min-height: 54px;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.5);
-  border-radius: 16px 4px 12px 4px;
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(255 255 255 / 0.03) 1px, transparent 1px),
-    rgb(var(--soj-bg) / 0.24);
-  background-size: 22px 22px, 22px 22px, auto;
-}
-
-.soj-submission-result-line::before,
-.soj-submission-result-line::after,
-.soj-submission-result-line span {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  height: 1px;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.68), transparent);
-}
-
-.soj-submission-result-line::before {
-  top: 35%;
-}
-
-.soj-submission-result-line::after {
-  top: 66%;
-  opacity: 0.38;
-}
-
-.soj-submission-result-line span {
-  top: 49%;
-  right: auto;
-  width: 64px;
-  border: 1px solid rgb(var(--soj-accent) / 0.38);
-  border-radius: var(--radius-soj-sm);
-  background: rgb(var(--soj-accent) / 0.18);
-  box-shadow: 0 0 20px rgb(var(--soj-accent) / 0.12);
-}
-
-.soj-submission-result-line span:nth-child(2) {
-  left: 43%;
-  width: 46px;
-  opacity: 0.72;
-}
-
-.soj-submission-result-line span:nth-child(3) {
-  left: 70%;
-  width: 34px;
-  opacity: 0.46;
-}
-
-.soj-submission-detail-panel {
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 8px 22px 8px 18px;
-  background:
-    linear-gradient(116deg, transparent 0 68%, rgb(var(--soj-accent) / 0.034) 68% 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.042), transparent 22%),
-    rgb(var(--soj-bg-raised) / 0.72);
-  box-shadow:
-    0 22px 62px rgb(0 0 0 / 0.16),
-    inset 0 1px 0 rgb(255 255 255 / 0.055);
-  backdrop-filter: blur(18px);
-}
-
+.soj-arena-track,
+.soj-judge-track,
 .soj-submission-timeline {
   display: grid;
   gap: 10px;
 }
 
+.soj-arena-rank-lane,
+.soj-judge-segment,
 .soj-submission-timeline-item {
   position: relative;
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  min-height: 66px;
-  padding: 12px;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.55);
-  border-radius: 16px 6px 14px 6px;
-  background:
-    linear-gradient(90deg, rgb(var(--soj-accent) / 0.044), transparent 42%),
-    rgb(var(--soj-bg) / 0.22);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.045);
+  padding: 12px 14px;
+  border: 1px solid rgb(var(--soj-line));
+  border-radius: var(--radius-soj-lg);
+  background-color: rgb(var(--soj-bg-raised));
 }
 
-.soj-submission-timeline-item::before {
-  position: absolute;
-  top: 15px;
-  bottom: 15px;
-  left: 0;
-  width: 2px;
-  content: "";
-  background: linear-gradient(180deg, transparent, rgb(var(--soj-accent) / 0.62), transparent);
+.soj-arena-rank-lane {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  min-height: 68px;
+}
+
+.soj-judge-track {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.soj-judge-segment {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 76px;
+}
+
+.soj-submission-timeline-item {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  min-height: 60px;
 }
 
 .soj-submission-timeline-item time {
   justify-self: end;
 }
 
-.soj-signal-feed {
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.55);
-  border-radius: 16px 6px 14px 6px;
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.036), transparent 34%),
-    rgb(var(--soj-bg) / 0.18);
-}
-
-.soj-signal-feed-row {
+/* 键值指标流（MetricFeed）。 */
+.soj-feed-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
   align-items: center;
-  min-height: 48px;
-  padding: 12px 14px;
+  min-height: 44px;
+  padding: 10px 14px;
 }
 
-.soj-signal-feed-row + .soj-signal-feed-row {
-  border-top: 1px solid rgb(var(--soj-line) / 0.55);
+.soj-feed-row + .soj-feed-row {
+  border-top: 1px solid rgb(var(--soj-line));
 }
 
 .soj-test-point {
   position: relative;
   overflow: hidden;
-  border-radius: 14px 4px 12px 4px;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  border-radius: var(--radius-soj-md);
 }
 
-.soj-test-point::after {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(135deg, transparent 0 62%, rgb(255 255 255 / 0.06) 62% 100%);
+.soj-submission-chip {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgb(var(--soj-line));
+  border-radius: var(--radius-sm);
+  background: rgb(var(--soj-surface) / 0.5);
 }
+
+.soj-submission-chip span {
+  font-family: var(--font-soj-mono), ui-monospace, monospace;
+  font-size: 10px;
+  color: rgb(var(--soj-text-faint));
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.soj-submission-chip strong {
+  font-family: var(--font-soj-mono), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(var(--soj-text));
+}
+
+/* ==========================================================================
+   表单控件（历史遗留，逐步由 components/ui 取代）
+   ========================================================================== */
 
 .soj-language-select {
-  min-height: 32px;
+  min-height: 34px;
   appearance: none;
-  border: 1px solid rgb(var(--soj-line) / 0.66);
+  border: 1px solid rgb(var(--soj-line));
   border-radius: var(--radius-soj-md);
-  background:
-    linear-gradient(135deg, transparent 0 68%, rgb(var(--soj-accent) / 0.08) 68% 100%),
-    rgb(var(--soj-bg) / 0.36);
+  background: rgb(var(--soj-surface) / 0.6);
   color: rgb(var(--soj-text));
-  padding: 0 34px 0 12px;
+  padding: 0 32px 0 12px;
   font-family: var(--font-soj-mono), ui-monospace, monospace;
   font-size: 12px;
   line-height: 1;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
 }
 
 .soj-language-select:focus {
-  border-color: rgb(var(--soj-accent) / 0.8);
+  border-color: rgb(var(--soj-accent) / 0.6);
   outline: none;
-  box-shadow: 0 0 0 1px rgb(var(--soj-accent) / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.05);
-}
-
-.soj-workspace-stage {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.68);
-  border-radius: 8px 28px 8px 22px;
-  background:
-    radial-gradient(ellipse at 82% 16%, rgb(var(--soj-accent) / 0.09), transparent 40%),
-    linear-gradient(118deg, rgb(var(--soj-accent) / 0.082), transparent 32%),
-    linear-gradient(112deg, transparent 0 62%, rgb(var(--soj-accent) / 0.06) 62% 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.018)),
-    rgb(var(--soj-bg-raised) / 0.84);
-  box-shadow:
-    0 26px 86px rgb(0 0 0 / 0.22),
-    inset 0 1px 0 rgb(255 255 255 / 0.065);
-  backdrop-filter: blur(20px);
-}
-
-.soj-workspace-stage::before {
-  position: absolute;
-  top: 0;
-  right: 20px;
-  left: 20px;
-  height: 1px;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.64), transparent);
-}
-
-.soj-workspace-stage::after {
-  position: absolute;
-  inset: auto -18% -54% 10%;
-  height: 92%;
-  pointer-events: none;
-  content: "";
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.038) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(255 255 255 / 0.027) 1px, transparent 1px),
-    linear-gradient(104deg, transparent 0 36%, rgb(var(--soj-accent) / 0.055) 36% 48%, transparent 48% 100%);
-  background-size: 32px 32px, 32px 32px, auto;
-  transform: skew(-18deg);
-}
-
-.soj-workspace-console,
-.soj-workspace-paper,
-.soj-workspace-editor,
-.soj-workspace-panel {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.66);
-  background:
-    radial-gradient(ellipse at 88% 10%, rgb(var(--soj-accent) / 0.048), transparent 38%),
-    linear-gradient(116deg, transparent 0 68%, rgb(var(--soj-accent) / 0.048) 68% 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.058), transparent 28%),
-    rgb(var(--soj-bg-raised) / 0.84);
-  box-shadow:
-    0 24px 70px rgb(0 0 0 / 0.2),
-    inset 0 1px 0 rgb(255 255 255 / 0.065);
-  backdrop-filter: blur(18px);
-}
-
-.soj-workspace-console {
-  border-radius: 22px 6px 18px 6px;
-}
-
-.soj-workspace-paper {
-  border-radius: 8px 24px 8px 20px;
-}
-
-.soj-workspace-editor {
-  border-radius: 24px 8px 20px 8px;
-}
-
-.soj-workspace-panel {
-  border-radius: 8px 22px 8px 18px;
-}
-
-.soj-workspace-paper::before,
-.soj-workspace-editor::before,
-.soj-workspace-panel::before {
-  position: absolute;
-  top: 0;
-  right: 18px;
-  left: 24%;
-  height: 1px;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.42), transparent);
-}
-
-.soj-workspace-paper > *,
-.soj-workspace-editor > *,
-.soj-workspace-panel > *,
-.soj-workspace-console > * {
-  position: relative;
-  z-index: 1;
-}
-
-.soj-workspace-note {
-  position: relative;
-  padding: 16px;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.58);
-  border-radius: 16px 6px 14px 6px;
-  background:
-    linear-gradient(90deg, rgb(var(--soj-accent) / 0.045), transparent 42%),
-    rgb(var(--soj-bg) / 0.3);
-}
-
-.soj-workspace-note::before {
-  position: absolute;
-  top: 16px;
-  bottom: 16px;
-  left: 0;
-  width: 2px;
-  content: "";
-  background: linear-gradient(180deg, transparent, rgb(var(--soj-accent) / 0.58), transparent);
+  box-shadow: 0 0 0 3px rgb(var(--soj-accent) / 0.14);
 }
 
 .soj-workspace-sample {
   min-height: 112px;
   overflow: auto;
-  border: 1px solid rgb(var(--soj-line) / 0.62);
-  border-radius: 16px 6px 14px 6px;
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.038) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(255 255 255 / 0.026) 1px, transparent 1px),
-    rgb(var(--soj-bg) / 0.36);
-  background-size: 26px 26px, 26px 26px, auto;
   padding: 14px;
   color: rgb(var(--soj-text-muted));
   font-family: var(--font-soj-mono), ui-monospace, monospace;
@@ -1358,90 +726,113 @@ body::after {
   line-height: 1.65;
 }
 
-.soj-account-stage {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.66);
-  border-radius: 22px 8px 26px 8px;
-  background:
-    radial-gradient(ellipse at 82% 12%, rgb(var(--soj-accent) / 0.095), transparent 42%),
-    linear-gradient(118deg, rgb(var(--soj-accent) / 0.072), transparent 32%),
-    linear-gradient(112deg, transparent 0 62%, rgb(var(--soj-accent) / 0.052) 62% 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.064), rgb(255 255 255 / 0.016)),
-    rgb(var(--soj-bg-raised) / 0.82);
-  box-shadow:
-    0 26px 86px rgb(0 0 0 / 0.22),
-    inset 0 1px 0 rgb(255 255 255 / 0.065);
-  backdrop-filter: blur(20px);
+/* ==========================================================================
+   动效
+   --------------------------------------------------------------------------
+   两组：进入类（页面首次出现）与滚动揭示类（进入视口时触发）。
+   滚动揭示默认不隐藏任何内容——只有 JS 就绪后才会「上膛」，
+   所以禁用脚本或脚本报错时，页面是完全可见的，不会白屏。
+   ========================================================================== */
+
+.soj-enter {
+  animation: soj-enter 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.soj-account-stage::before {
-  position: absolute;
-  top: 0;
-  right: 20px;
-  left: 20px;
-  height: 1px;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.64), transparent);
+@keyframes soj-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-.soj-account-stage::after {
-  position: absolute;
-  inset: auto -16% -54% 12%;
-  height: 92%;
-  pointer-events: none;
-  content: "";
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.038) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(255 255 255 / 0.027) 1px, transparent 1px),
-    linear-gradient(104deg, transparent 0 36%, rgb(var(--soj-accent) / 0.055) 36% 48%, transparent 48% 100%);
-  background-size: 32px 32px, 32px 32px, auto;
-  transform: skew(-18deg);
+[data-reveal="armed"] {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
 }
 
-.soj-account-signal,
-.soj-account-panel {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.74);
-  background:
-    radial-gradient(ellipse at 88% 10%, rgb(var(--soj-accent) / 0.068), transparent 40%),
-    linear-gradient(116deg, transparent 0 68%, rgb(var(--soj-accent) / 0.052) 68% 100%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.064), transparent 30%),
-    rgb(var(--soj-bg-raised) / 0.92);
-  box-shadow:
-    0 24px 70px rgb(0 0 0 / 0.22),
-    inset 0 1px 0 rgb(255 255 255 / 0.07),
-    inset 0 -1px 0 rgb(255 255 255 / 0.025);
-  backdrop-filter: blur(18px);
+[data-reveal="armed"].is-revealed {
+  opacity: 1;
+  transform: none;
 }
 
-.soj-account-signal {
-  min-height: 220px;
-  border-radius: 22px 6px 18px 6px;
+/* 实时态的呼吸点。 */
+.soj-live-pulse {
+  animation: soj-live-pulse 2.2s ease-in-out infinite;
 }
 
-.soj-account-panel {
-  border-radius: 8px 22px 8px 18px;
+@keyframes soj-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgb(var(--soj-accent) / 0.5);
+  }
+  70% {
+    opacity: 0.75;
+    box-shadow: 0 0 0 6px rgb(var(--soj-accent) / 0);
+  }
 }
 
-.soj-account-signal > *,
-.soj-account-panel > * {
-  position: relative;
-  z-index: 1;
+/* 数据条生长：榜单条、分布条、热力图进入时用。 */
+.soj-grow-x {
+  transform-origin: left center;
+  animation: soj-grow-x 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--grow-delay, 0ms);
 }
 
-.soj-account-panel::before {
-  position: absolute;
-  top: 0;
-  right: 18px;
-  left: 24%;
-  height: 1px;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.42), transparent);
+@keyframes soj-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
+
+/* 描线：SVG 折线的一次性绘制。 */
+.soj-draw {
+  stroke-dasharray: var(--draw-length, 1200);
+  stroke-dashoffset: var(--draw-length, 1200);
+  animation: soj-draw 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--draw-delay, 120ms);
+}
+
+@keyframes soj-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  [data-reveal="armed"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  .soj-draw {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ==========================================================================
+   响应式
+   ========================================================================== */
 
 @media (max-width: 900px) {
   .soj-judge-track {
@@ -1449,7 +840,15 @@ body::after {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
+  body::after {
+    opacity: 0.03;
+  }
+
+  .soj-arena-rank-lane {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
   .soj-judge-track {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1462,196 +861,5 @@ body::after {
     grid-column: 3;
     grid-row: 2;
     justify-self: start;
-  }
-}
-
-.soj-hairline {
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.72), transparent);
-}
-
-.soj-scanline {
-  position: relative;
-  overflow: hidden;
-}
-
-.soj-scanline::after {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.13), transparent);
-  transform: translateX(-120%);
-}
-
-.soj-runway {
-  position: relative;
-  min-height: 178px;
-  overflow: hidden;
-  border: 1px solid rgb(var(--soj-line) / 0.56);
-  border-radius: 22px 8px 14px 8px;
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.045) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(255 255 255 / 0.032) 1px, transparent 1px),
-    radial-gradient(ellipse at 70% 20%, rgb(var(--soj-accent) / 0.12), transparent 48%),
-    rgb(var(--soj-bg) / 0.36);
-  background-size: 34px 34px, 34px 34px, auto, auto;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
-}
-
-.soj-runway-crop {
-  position: absolute;
-  top: -1px;
-  right: -1px;
-  width: 46px;
-  height: 46px;
-  border-bottom: 1px solid rgb(var(--soj-line) / 0.5);
-  border-left: 1px solid rgb(var(--soj-line) / 0.5);
-  background: rgb(var(--soj-bg-raised) / 0.76);
-  transform: skew(-20deg) translateX(22px);
-}
-
-.soj-runway::before,
-.soj-runway::after {
-  position: absolute;
-  left: 22px;
-  right: 22px;
-  height: 1px;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgb(var(--soj-accent) / 0.72), transparent);
-}
-
-.soj-runway::before {
-  top: 44%;
-}
-
-.soj-runway::after {
-  top: 62%;
-  opacity: 0.42;
-}
-
-.soj-packet {
-  position: absolute;
-  top: calc(44% - 14px);
-  left: 10%;
-  display: inline-flex;
-  height: 28px;
-  min-width: 78px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgb(var(--soj-accent) / 0.44);
-  border-radius: var(--radius-soj-md);
-  background: rgb(var(--soj-accent) / 0.14);
-  color: rgb(var(--soj-accent));
-  font-family: var(--font-soj-mono), ui-monospace, monospace;
-  font-size: 11px;
-  font-weight: 760;
-  letter-spacing: 0.12em;
-  box-shadow: 0 0 22px rgb(var(--soj-accent) / 0.16), inset 0 1px 0 rgb(255 255 255 / 0.08);
-}
-
-.soj-packet-secondary {
-  top: calc(62% - 14px);
-  left: 54%;
-  border-color: rgb(var(--soj-warning) / 0.38);
-  background: rgb(var(--soj-warning) / 0.13);
-  color: rgb(var(--soj-warning));
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .soj-scanline::after {
-    animation: soj-scan 5.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  }
-
-  .soj-enter {
-    animation: soj-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-
-  .soj-packet {
-    animation: soj-packet 6.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  }
-
-  .soj-packet-secondary {
-    animation-delay: -2.3s;
-  }
-
-  .soj-contest-sweep {
-    animation: soj-contest-sweep 7.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  }
-
-  .soj-contest-node-live,
-  .soj-contest-node-rank {
-    animation: soj-node-breathe 4.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  }
-
-  .soj-contest-node-rank {
-    animation-delay: -1.8s;
-  }
-}
-
-@keyframes soj-scan {
-  0%,
-  42% {
-    transform: translateX(-120%);
-  }
-  72%,
-  100% {
-    transform: translateX(120%);
-  }
-}
-
-@keyframes soj-enter {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes soj-packet {
-  0%,
-  100% {
-    transform: translateX(0) scale(0.98);
-    opacity: 0.78;
-  }
-  50% {
-    transform: translateX(32px) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes soj-contest-sweep {
-  0%,
-  34% {
-    transform: translateX(-120%) skew(-18deg);
-  }
-  72%,
-  100% {
-    transform: translateX(330%) skew(-18deg);
-  }
-}
-
-@keyframes soj-node-breathe {
-  0%,
-  100% {
-    transform: translateY(0);
-    opacity: 0.78;
-  }
-  50% {
-    transform: translateY(-3px);
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
   }
 }

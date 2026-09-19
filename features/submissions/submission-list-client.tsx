@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Inbox, Loader } from "lucide-react";
 import { LocalizedLink } from "@/components/i18n/localized-link";
-import { TopNav } from "@/components/layout/top-nav";
+import { PageShell } from "@/components/layout/page-shell";
 import { useI18n } from "@/components/providers/i18n-provider";
-import { VerdictBadge } from "@/components/soj/verdict-badge";
+import { buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { Panel } from "@/components/ui/panel";
+import { Stat, StatDivider, StatGroup } from "@/components/ui/stat";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { listSubmissions } from "./api";
 import { SubmissionList } from "./submission-list";
@@ -17,6 +22,23 @@ type SubmissionListState =
   | { status: "auth" }
   | { status: "error"; message: string };
 
+/**
+ * 提交记录页。
+ *
+ * 这一页原先在表格之前堆了三块东西：一个「N 次运行已进入 SOJ」的徽标、
+ * 一排四个指标（运行总数 / 通过 / 处理中 / 已结束）、一张「最近一次运行」卡片、
+ * 外加一条四段式评测流水线（排队 / 编译 / 运行 / 结果），每段带一个计数。
+ * 也就是说：打开页面先读完一屏统计，才看到自己要找的那条提交。
+ *
+ * 砍掉它们依据的是同一个判断——**这些数字要么表格里已经有了，要么不负责任何决定**：
+ *   · 「最近一次运行」就是表格的第一行，单独做一张卡片只是把同一行放大一遍；
+ *   · 四段流水线的计数，逐行看表格的「结果」列本来就能得到，
+ *     而且待判的提交会直接显示它卡在哪一步；
+ *   · 「已结束」= 总数 − 处理中，一个减法不需要占一格。
+ *
+ * 留下的三个数字回答了三个真问题：我一共交过多少次、过了多少、还有多少在跑。
+ * 页头之后就是表格，中间不再夹任何东西。
+ */
 export function SubmissionListClient() {
   const { t } = useI18n();
   const [state, setState] = useState<SubmissionListState>({ status: "loading" });
@@ -35,131 +57,50 @@ export function SubmissionListClient() {
   }, [t]);
 
   const submissions = state.status === "ready" ? state.submissions : { items: [], total: 0 };
-  const latest = submissions.items[0];
   const acceptedCount = submissions.items.filter((item) => item.status === "accepted").length;
   const inFlightCount = submissions.items.filter((item) => !item.displayState.terminal).length;
-  const terminalCount = submissions.items.filter((item) => item.displayState.terminal).length;
-  const metrics = [
-    { label: t("submissions.metric.totalRuns"), value: submissions.total, tone: "text-soj-text" },
-    { label: t("submissions.metric.accepted"), value: acceptedCount, tone: "text-soj-success" },
-    { label: t("submissions.metric.inFlight"), value: inFlightCount, tone: "text-soj-accent" },
-    { label: t("submissions.metric.terminal"), value: terminalCount, tone: "text-soj-muted" },
-  ];
-  const judgeTrack = [
-    { label: t("submissions.track.queue"), caption: t("submissions.track.intake"), value: submissions.items.filter((item) => item.status === "queued").length },
-    { label: t("submissions.track.compile"), caption: t("submissions.track.build"), value: submissions.items.filter((item) => item.status === "compiling").length },
-    { label: t("submissions.track.run"), caption: t("submissions.track.sandbox"), value: submissions.items.filter((item) => item.status === "running").length },
-    { label: t("submissions.track.verdict"), caption: t("submissions.track.sealed"), value: terminalCount },
-  ];
 
   return (
-    <div className="min-h-dvh text-soj-text">
-      <TopNav />
-      <main className="mx-auto grid max-w-[1440px] gap-6 px-4 py-8 sm:px-6 lg:px-8" id="main-content">
-        <section className="soj-submission-stage soj-scanline soj-enter p-5 md:p-7">
-          <div className="relative z-[1] grid gap-7 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-stretch">
-            <div className="grid content-between gap-7">
-              <div className="grid gap-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="rounded-full border border-soj-accent/50 bg-soj-accent/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-soj-accent">
-                    {t("submissions.page.badge")}
-                  </span>
-                  <span className="font-mono text-xs text-soj-muted">{t("submissions.page.runsThrough", { count: submissions.total })}</span>
-                </div>
-                <div className="grid gap-3">
-                  <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-soj-text md:text-6xl">{t("submissions.page.title")}</h1>
-                  <p className="max-w-2xl text-base leading-7 text-soj-muted">
-                    {t("submissions.page.description")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                {metrics.map(({ label, value, tone }) => (
-                  <div key={label} className="soj-submission-metric">
-                    <p className="text-xs text-soj-muted">{label}</p>
-                    <p className={`mt-1 font-mono text-2xl ${tone}`}>{value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {latest ? <LatestSubmissionCard latest={latest} /> : <SubmissionEmptyCard state={state} />}
-          </div>
-        </section>
-
-        <section className="soj-judge-track" aria-label={t("submissions.track.verdict")}>
-          {judgeTrack.map(({ label, caption, value }, index) => (
-            <div key={label} className="soj-judge-segment">
-              <span className="font-mono text-[11px] text-soj-muted">0{index + 1}</span>
-              <div>
-                <p className="text-sm font-semibold text-soj-text">{label}</p>
-                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-soj-muted">{caption}</p>
-              </div>
-              <strong className="font-mono text-lg text-soj-accent">{value}</strong>
-            </div>
-          ))}
-        </section>
+    <PageShell>
+      <div className="grid gap-6">
+        <PageHeader
+          eyebrow={t("submissions.page.badge")}
+          title={t("submissions.page.title")}
+          description={t("submissions.page.description")}
+          actions={
+            state.status === "auth" ? (
+              <LocalizedLink className={buttonVariants({ variant: "primary", size: "sm" })} href="/auth/login">
+                {t("submissions.action.login")}
+              </LocalizedLink>
+            ) : null
+          }
+          meta={
+            state.status === "ready" ? (
+              <StatGroup>
+                <Stat label={t("submissions.metric.totalRuns")} value={submissions.total} />
+                <StatDivider />
+                <Stat label={t("submissions.metric.accepted")} value={acceptedCount} tone="success" />
+                <StatDivider />
+                <Stat label={t("submissions.metric.inFlight")} value={inFlightCount} tone="accent" />
+              </StatGroup>
+            ) : null
+          }
+        />
 
         {state.status === "ready" ? <SubmissionList submissions={submissions.items} /> : <SubmissionLoadState state={state} />}
-      </main>
-    </div>
-  );
-}
-
-function LatestSubmissionCard({ latest }: { latest: SubmissionListResult["items"][number] }) {
-  const { t } = useI18n();
-
-  return (
-    <aside className="soj-submission-latest grid content-start gap-5 p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="font-mono text-xs uppercase tracking-[0.16em] text-soj-muted">{t("submissions.page.latestRun")}</p>
-          <p className="mt-2 font-mono text-4xl text-soj-text">#{latest.id}</p>
-        </div>
-        <VerdictBadge status={latest.status} />
       </div>
-      <div className="grid gap-2">
-        <p className="text-lg font-semibold text-soj-text">{latest.problemTitle}</p>
-        <div className="flex items-center justify-between border-t border-soj-line/60 pt-3 font-mono text-xs text-soj-muted">
-          <span>P{latest.problemId}</span>
-          <span>{t("submissions.page.points", { score: latest.score })}</span>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="soj-submission-chip">
-          <span>{t("submissions.page.route")}</span>
-          <strong>{latest.contestId ? t("submissions.page.contest") : t("submissions.page.practice")}</strong>
-        </div>
-        <div className="soj-submission-chip">
-          <span>{t("submissions.page.state")}</span>
-          <strong>{latest.displayState.terminal ? t("submissions.page.sealed") : t("submissions.page.live")}</strong>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
-function SubmissionEmptyCard({ state }: { state: SubmissionListState }) {
-  const { t } = useI18n();
-  const label = state.status === "loading" ? t("submissions.empty.loadingRuns") : state.status === "auth" ? t("submissions.empty.signInRequired") : t("submissions.empty.noVisibleRuns");
-  return (
-    <aside className="soj-submission-latest grid content-start gap-5 p-5">
-      <div>
-        <p className="font-mono text-xs uppercase tracking-[0.16em] text-soj-muted">{t("submissions.page.latestRun")}</p>
-        <p className="mt-2 text-2xl font-semibold text-soj-text">{label}</p>
-      </div>
-      <p className="text-sm leading-6 text-soj-muted">{t("submissions.empty.description")}</p>
-      {state.status === "auth" ? (
-        <LoginLink />
-      ) : null}
-    </aside>
+    </PageShell>
   );
 }
 
 function SubmissionLoadState({ state }: { state: SubmissionListState }) {
   const { t } = useI18n();
-  const title = state.status === "loading" ? t("submissions.loading.queue") : state.status === "auth" ? t("submissions.loading.loginRequired") : t("submissions.loading.unable");
+  const title =
+    state.status === "loading"
+      ? t("submissions.loading.queue")
+      : state.status === "auth"
+        ? t("submissions.loading.loginRequired")
+        : t("submissions.loading.unable");
   const message =
     state.status === "loading"
       ? t("submissions.loading.reading")
@@ -169,30 +110,34 @@ function SubmissionLoadState({ state }: { state: SubmissionListState }) {
           ? state.message
           : t("submissions.loading.ready");
 
-  return (
-    <section className="soj-submission-board p-6">
-      <div className="grid gap-3">
-        <h2 className="text-lg font-semibold text-soj-text">{title}</h2>
-        <p className="max-w-2xl text-sm leading-6 text-soj-muted">{message}</p>
-        {state.status === "auth" ? (
-          <div>
-            <LoginLink />
-          </div>
-        ) : null}
-      </div>
-    </section>
-  );
-}
+  if (state.status === "loading") {
+    return (
+      <Panel variant="flush">
+        <EmptyState icon={Loader} title={title} description={message} />
+      </Panel>
+    );
+  }
 
-function LoginLink() {
-  const { t } = useI18n();
+  if (state.status === "auth") {
+    return (
+      <Panel variant="flush">
+        <EmptyState
+          icon={Inbox}
+          title={title}
+          description={message}
+          action={
+            <LocalizedLink className={buttonVariants({ variant: "primary", size: "sm" })} href="/auth/login">
+              {t("submissions.action.login")}
+            </LocalizedLink>
+          }
+        />
+      </Panel>
+    );
+  }
 
   return (
-    <LocalizedLink
-      className="inline-flex h-8 shrink-0 items-center justify-center rounded-soj-md border border-soj-accent/80 bg-soj-accent px-3 text-xs font-medium text-soj-bg shadow-[0_10px_30px_rgb(var(--soj-accent)/0.18),inset_0_1px_0_rgb(255_255_255/0.26)] transition duration-200 ease-out hover:bg-soj-accent/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent active:translate-y-px"
-      href="/auth/login"
-    >
-      {t("submissions.action.login")}
-    </LocalizedLink>
+    <Panel variant="flush">
+      <EmptyState icon={Inbox} title={title} description={message} />
+    </Panel>
   );
 }

@@ -2,7 +2,7 @@
 
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { StatusPill } from "@/components/soj/status-pill";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { getApiMode } from "@/lib/api/mode";
@@ -87,7 +87,7 @@ export function ContestRegistration({ contest }: ContestRegistrationProps) {
 
       {canEnter && firstProblemId ? (
         <LocalizedLink
-          className="inline-flex h-12 shrink-0 items-center justify-center rounded-soj-md border border-soj-accent/80 bg-soj-accent px-5 text-base font-medium text-soj-bg shadow-[0_10px_30px_rgb(var(--soj-accent)/0.18),inset_0_1px_0_rgb(255_255_255/0.26)] transition hover:bg-soj-accent/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
+          className={buttonVariants({ size: "lg" })}
           href={`/contests/${contest.id}/problems/${firstProblemId}`}
         >
           {t("contests.registration.enter")}

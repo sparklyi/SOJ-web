@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { CodeWorkspace } from "@/components/soj/code-workspace";
 import { ContestClock } from "@/components/soj/contest-clock";
-import { SignalFeed } from "@/components/soj/signal-feed";
+import { MetricFeed } from "@/components/soj/metric-feed";
 import { StatusPill } from "@/components/soj/status-pill";
 import { SubmissionTimeline } from "@/components/soj/submission-timeline";
 import { TestPointMatrix } from "@/components/soj/test-point-matrix";
@@ -253,7 +253,7 @@ int main() {
   ios::sync_with_stdio(false);
   cin.tie(nullptr);
 
-  // Build the signal graph and keep the shortest confirmed route.
+  // 由题面构建图结构，并保留当前最短的可行路线。
   return 0;
 }`}
             />
@@ -298,7 +298,7 @@ int main() {
             <TestPointMatrix points={testPoints} />
           </section>
 
-          <SignalFeed
+          <MetricFeed
             items={[
               { id: "rank", label: t("contests.workspace.rankImpact"), value: t("contests.workspace.rankImpactValue"), tone: "accent" },
               { id: "penalty", label: t("contests.workspace.currentPenalty"), value: "312", tone: "neutral" },

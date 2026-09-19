@@ -13,7 +13,7 @@ export default async function LoginPage() {
       title={t("auth.login.title")}
       description={t("auth.login.description")}
       meta={t("auth.login.meta")}
-      signal={
+      aside={
         <>
           <div className="flex items-start justify-between gap-4">
             <div>

@@ -75,9 +75,11 @@ export function CodeWorkspace({ languages, initialLanguageId, value = "", onChan
   }, [effectiveSourceCode, onChange, selectedLanguage]);
 
   return (
-    <section className="overflow-hidden rounded-[18px_6px_14px_6px] border border-soj-line/58 bg-soj-bg-raised/78 shadow-[inset_0_1px_0_rgb(255_255_255/0.05)]">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-soj-line/55 px-4 py-2">
-        <h2 className="text-sm font-medium text-soj-text">{t("problems.codeWorkspace")}</h2>
+    <section className="soj-panel overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-soj-line px-4 py-2">
+        <h2 className="font-mono text-[11px] uppercase tracking-[0.14em] text-soj-muted">
+          {t("problems.codeWorkspace")}
+        </h2>
         <label className="grid gap-1">
           <span className="sr-only">{t("problems.language")}</span>
           <select
@@ -99,9 +101,10 @@ export function CodeWorkspace({ languages, initialLanguageId, value = "", onChan
           </select>
         </label>
       </div>
+      {/* 编辑区用页面底色做出「凹陷井」，让代码区成为侧栏里最暗、最聚焦的一块。 */}
       <textarea
         aria-label={t("problems.sourceCode")}
-        className="min-h-64 w-full resize-y border-0 bg-soj-bg/24 p-4 font-mono text-sm leading-6 text-soj-muted outline-none ring-0 transition placeholder:text-soj-muted/60 focus:bg-soj-bg/32 focus:text-soj-text"
+        className="min-h-64 w-full resize-y border-0 bg-soj-bg p-4 font-mono text-[13px] leading-6 text-soj-text outline-none ring-0 placeholder:text-soj-faint focus:bg-soj-surface/60"
         disabled={languages.length === 0}
         spellCheck={false}
         value={effectiveSourceCode}

@@ -4,7 +4,7 @@
 
 English | [简体中文](README.zh-CN.md)
 
-SOJ-web is the v2 frontend for SOJ, an online judge product for practice, contests, submissions, scoreboards, and live contest broadcast views. The current application is a Next.js rewrite with the Signal Arena design system, a mockable API boundary, and page-level experiences for both regular users and contest participants.
+SOJ-web is the v2 frontend for SOJ, an online judge product for practice, contests, submissions, scoreboards, and live contest broadcast views. The current application is a Next.js rewrite with the SOJ visual language, a mockable API boundary, and page-level experiences for both regular users and contest participants.
 
 > The legacy Vue application is preserved on the `archive/vue-v1` branch. Active development happens in the Next.js v2 app at the repository root.
 
@@ -25,7 +25,7 @@ SOJ-web is the v2 frontend for SOJ, an online judge product for practice, contes
 ## Features
 
 - Next.js v2 product shell with a single top navigation model.
-- Signal Arena visual system for a dark, technical contest cockpit.
+- SOJ visual language: cold silver plus obsidian blue, material surfaces, and a motion layer that only explains state.
 - Problem set, problem detail, and code workspace surfaces.
 - Contest lobby, contest detail, contest workspace, scoreboard, and Arena broadcast views.
 - Submission queue and submission detail lifecycle views.
@@ -180,6 +180,6 @@ SOJ-web v2 is under active development. The current frontend can run independent
 
 ## Documentation
 
-- Signal Arena design system: [`docs/design-system/signal-arena.md`](docs/design-system/signal-arena.md)
+- SOJ visual language: [`docs/design-system/soj-visual-language.md`](docs/design-system/soj-visual-language.md)
 - OpenAPI inventory: [`docs/development/openapi-inventory.md`](docs/development/openapi-inventory.md)
 - Legacy Vue archive branch: [`archive/vue-v1`](https://github.com/sparklyi/SOJ-web/tree/archive/vue-v1)

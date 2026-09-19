@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { JudgeLanguage, ProblemDetail } from "@/lib/api/types";
-import { getAcceptanceRate } from "@/lib/domain/problem";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { CodeWorkspace } from "@/components/soj/code-workspace";
-import { StatusPill } from "@/components/soj/status-pill";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { getApiMode } from "@/lib/api/mode";
@@ -17,9 +16,16 @@ type ProblemSubmitPanelProps = {
   languages: JudgeLanguage[];
 };
 
+/**
+ * 提交侧栏。
+ *
+ * 旧实现在这里放了四个带边框的指标格（通过率 / 提交次数 / 时限 / 内存），
+ * 与页头重复，且一排小方框把侧栏最宝贵的位置占满。
+ * 指标归页头，侧栏只回答「我现在能做什么」：
+ * 交互状态、标签、代码、提交。
+ */
 export function ProblemSubmitPanel({ problem, languages }: ProblemSubmitPanelProps) {
   const { t } = useI18n();
-  const acceptance = getAcceptanceRate(problem);
   const [workspace, setWorkspace] = useState<{ languageId?: number; sourceCode: string }>({
     languageId: languages[0]?.id,
     sourceCode: "",
@@ -55,42 +61,26 @@ export function ProblemSubmitPanel({ problem, languages }: ProblemSubmitPanelPro
 
   return (
     <aside className="grid gap-4 lg:sticky lg:top-24 lg:self-start">
-      <section className="soj-submit-console p-4">
-        <div className="relative z-[1] flex items-start justify-between gap-3 border-b border-soj-line/55 pb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-soj-text">{t("problems.submitTitle")}</h2>
-            <p className="mt-1 text-sm leading-6 text-soj-muted">{t("problems.submitDescription")}</p>
-          </div>
-          <StatusPill tone={problem.status === "accepted" ? "success" : problem.status === "attempted" ? "warning" : "neutral"}>
-            {t(problem.status === "accepted" ? "status.solved" : problem.status === "attempted" ? "status.attempted" : "status.todo")}
-          </StatusPill>
+      {/* 标题块不套面板：侧栏里只留编辑器一个「面」，代码才是焦点。
+          状态徽标不再放这里——页头已经写过一次，同一屏出现两枚同样的徽标
+          只会稀释它的份量。标签保留：它是「这道题考什么」，属于侧栏的信息。 */}
+      <div className="grid gap-3">
+        <div className="grid min-w-0 gap-1">
+          <h2 className="text-sm font-semibold text-soj-text">{t("problems.submitTitle")}</h2>
+          <p className="text-xs leading-5 text-soj-muted">{t("problems.submitDescription")}</p>
         </div>
-        <dl className="relative z-[1] mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-soj-md border border-soj-line/45 bg-soj-bg/24 p-3">
-            <dt className="text-soj-muted">{t("problems.acceptance")}</dt>
-            <dd className="mt-1 font-mono text-soj-text">{acceptance.toFixed(1)}%</dd>
+        {problem.tags.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {problem.tags.map((tag) => (
+              <Badge key={tag} tone="neutral" size="sm">
+                {tag}
+              </Badge>
+            ))}
           </div>
-          <div className="rounded-soj-md border border-soj-line/45 bg-soj-bg/24 p-3">
-            <dt className="text-soj-muted">{t("problems.submissions")}</dt>
-            <dd className="mt-1 font-mono text-soj-text">{problem.submissionCount}</dd>
-          </div>
-          <div className="rounded-soj-md border border-soj-line/45 bg-soj-bg/24 p-3">
-            <dt className="text-soj-muted">{t("problems.time")}</dt>
-            <dd className="mt-1 font-mono text-soj-text">{problem.timeLimitMs} ms</dd>
-          </div>
-          <div className="rounded-soj-md border border-soj-line/45 bg-soj-bg/24 p-3">
-            <dt className="text-soj-muted">{t("problems.memory")}</dt>
-            <dd className="mt-1 font-mono text-soj-text">{Math.round(problem.memoryLimitKb / 1024)} MB</dd>
-          </div>
-        </dl>
-        <div className="relative z-[1] mt-4 flex flex-wrap gap-2">
-          {problem.tags.map((tag) => (
-            <StatusPill key={tag}>{tag}</StatusPill>
-          ))}
-        </div>
-      </section>
+        ) : null}
+      </div>
       <CodeWorkspace languages={languages} onChange={setWorkspace} />
-      <Button type="button" className="w-full" disabled={!canSubmit} onClick={handleSubmit}>
+      <Button type="button" size="lg" className="w-full" disabled={!canSubmit} onClick={handleSubmit}>
         {needsSession ? t("problems.signInToSubmit") : submitState.status === "pending" ? t("problems.submitting") : t("problems.submitSolution")}
       </Button>
       {needsSession ? (

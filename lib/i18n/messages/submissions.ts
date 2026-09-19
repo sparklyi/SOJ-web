@@ -1,7 +1,7 @@
 import type { MessageCatalog } from "../types";
 
 export const submissionMessages = {
-  "submissions.page.badge": { en: "Judge Signal", "zh-CN": "评测信号" },
+  "submissions.page.badge": { en: "Verdicts", "zh-CN": "评测记录" },
   "submissions.page.runsThrough": { en: "{count} runs routed through SOJ", "zh-CN": "{count} 次运行已进入 SOJ" },
   "submissions.page.title": { en: "Submissions", "zh-CN": "提交记录" },
   "submissions.page.description": {
@@ -49,7 +49,7 @@ export const submissionMessages = {
   "submissions.action.login": { en: "Login", "zh-CN": "登录" },
   "submissions.action.backToList": { en: "Back to submissions", "zh-CN": "返回提交记录" },
   "submissions.list.title": { en: "Judge queue", "zh-CN": "评测队列" },
-  "submissions.list.description": { en: "Latest verdicts, contest links, and runtime signals.", "zh-CN": "最近结果、比赛链接和运行时信号。" },
+  "submissions.list.description": { en: "Latest verdicts, contest links, and runtime metrics.", "zh-CN": "最近结果、比赛链接和运行时指标。" },
   "submissions.list.records": { en: "{count} records", "zh-CN": "{count} 条记录" },
   "submissions.list.ariaLabel": { en: "Submission queue", "zh-CN": "提交队列" },
   "submissions.list.run": { en: "Run", "zh-CN": "运行" },
@@ -83,7 +83,7 @@ export const submissionMessages = {
   "submissions.detail.testPointDescription": { en: "Visible sample of point states and partial scoring.", "zh-CN": "测试点状态和部分得分的可见样例。" },
   "submissions.detail.noCaseData": { en: "No case-level judge data was returned for this submission.", "zh-CN": "本次提交没有返回测试用例级别的评测数据。" },
   "submissions.detail.runtimeSystem": { en: "Runtime and system information", "zh-CN": "运行时与系统信息" },
-  "submissions.detail.runtimeSystemDescription": { en: "Compiler, sandbox, and worker signals.", "zh-CN": "编译器、沙箱和评测工作进程信号。" },
+  "submissions.detail.runtimeSystemDescription": { en: "Compiler, sandbox, and worker status.", "zh-CN": "编译器、沙箱和评测工作进程状态。" },
   "submissions.detail.score": { en: "Score", "zh-CN": "得分" },
   "submissions.detail.time": { en: "Time", "zh-CN": "时间" },
   "submissions.detail.memory": { en: "Memory", "zh-CN": "内存" },
@@ -102,8 +102,8 @@ export const submissionMessages = {
   "submissions.feedback.memoryLimit": { en: "Execution exceeded the configured memory limit.", "zh-CN": "执行超出了配置的内存限制。" },
   "submissions.feedback.canceled": { en: "Judging was canceled before completion.", "zh-CN": "评测在完成前被取消。" },
   "submissions.feedback.systemError": { en: "Judge worker reported an internal system error.", "zh-CN": "评测工作进程报告了内部系统错误。" },
-  "submissions.impact.ariaLabel": { en: "Contest impact signal", "zh-CN": "比赛影响信号" },
-  "submissions.impact.title": { en: "Contest impact signal", "zh-CN": "比赛影响信号" },
+  "submissions.impact.ariaLabel": { en: "Contest impact", "zh-CN": "比赛影响" },
+  "submissions.impact.title": { en: "Contest impact", "zh-CN": "比赛影响" },
   "submissions.impact.description": { en: "Rank, penalty, and contest state impact.", "zh-CN": "排名、罚时和比赛状态影响。" },
   "submissions.impact.scope": { en: "Scope", "zh-CN": "范围" },
   "submissions.impact.practiceRun": { en: "Practice run", "zh-CN": "练习运行" },

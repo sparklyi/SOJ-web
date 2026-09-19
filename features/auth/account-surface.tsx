@@ -6,11 +6,11 @@ type AccountSurfaceProps = {
   title: string;
   description: string;
   meta?: string;
-  signal?: ReactNode;
+  aside?: ReactNode;
   children: ReactNode;
 };
 
-export function AccountSurface({ eyebrow, title, description, meta, signal, children }: AccountSurfaceProps) {
+export function AccountSurface({ eyebrow, title, description, meta, aside, children }: AccountSurfaceProps) {
   return (
     <div className="min-h-dvh text-soj-text">
       <TopNav />
@@ -31,7 +31,7 @@ export function AccountSurface({ eyebrow, title, description, meta, signal, chil
                 </div>
               </div>
             </div>
-            {signal ? <aside className="soj-account-signal grid content-between gap-5 p-5">{signal}</aside> : null}
+            {aside ? <aside className="soj-account-aside grid content-between gap-5 p-5">{aside}</aside> : null}
           </div>
         </section>
         {children}

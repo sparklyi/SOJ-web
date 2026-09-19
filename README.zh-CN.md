@@ -4,7 +4,7 @@
 
 [English](README.md) | 简体中文
 
-SOJ-web 是 SOJ 在线评测系统的 v2 前端项目，覆盖题库、题目详情、提交、比赛、排行榜和比赛大屏等用户侧体验。当前版本已经从旧 Vue 应用重写为 Next.js 应用，并使用 Signal Arena 视觉系统、可切换的 API 适配层和可稳定复现的 Mock 数据。
+SOJ-web 是 SOJ 在线评测系统的 v2 前端项目，覆盖题库、题目详情、提交、比赛、排行榜和比赛大屏等用户侧体验。当前版本已经从旧 Vue 应用重写为 Next.js 应用，并使用 SOJ 视觉语言、可切换的 API 适配层和可稳定复现的 Mock 数据。
 
 > 旧版 Vue 应用已归档在 `archive/vue-v1` 分支。当前开发入口是仓库根目录的 Next.js v2 应用。
 
@@ -25,7 +25,7 @@ SOJ-web 是 SOJ 在线评测系统的 v2 前端项目，覆盖题库、题目详
 ## 功能
 
 - 基于 Next.js v2 的产品级应用外壳和统一顶部导航。
-- Signal Arena 暗色技术竞赛风格视觉系统。
+- SOJ 视觉语言：冷银 + 曜石蓝、实体材质表面，以及只用来解释状态的动效层。
 - 题库、题目详情和代码工作区。
 - 比赛大厅、比赛详情、比赛题目工作区、排行榜和 Arena 大屏。
 - 提交列表和提交详情生命周期视图。
@@ -180,6 +180,6 @@ SOJ-web v2 正在持续开发中。当前前端可以在 Mock 模式下独立运
 
 ## 相关文档
 
-- Signal Arena 设计系统：[`docs/design-system/signal-arena.md`](docs/design-system/signal-arena.md)
+- SOJ 视觉语言：[`docs/design-system/soj-visual-language.md`](docs/design-system/soj-visual-language.md)
 - OpenAPI 盘点：[`docs/development/openapi-inventory.md`](docs/development/openapi-inventory.md)
 - 旧版 Vue 归档分支：[`archive/vue-v1`](https://github.com/sparklyi/SOJ-web/tree/archive/vue-v1)

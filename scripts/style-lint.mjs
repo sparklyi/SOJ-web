@@ -45,10 +45,14 @@ function checkFile(path) {
   const relative = path.replace(`${cwd()}/`, "");
 
   if (/#[0-9a-fA-F]{3,8}\b/.test(source)) {
-    issues.push(`${relative}: raw hex color found. Use Signal Arena tokens.`);
+    issues.push(`${relative}: raw hex color found. Use SOJ design tokens.`);
   }
-  if (/\brgba?\(/.test(source)) {
-    issues.push(`${relative}: raw rgb/rgba color found. Use Signal Arena tokens.`);
+  // 不能写成 /\brgb\(/：Tailwind 的任意值语法用下划线代替空格，
+  // 于是 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)] 里 rgb 前面是下划线，
+  // 而 \b 不认为 `_` 与 `r` 之间存在词边界 —— 这条规则被整批绕过。
+  // 改成「前面不是字母」，下划线/空格/引号都能命中，而 rgbxxx( 这种标识符不会误报。
+  if (/(?<![A-Za-z])rgba?\(/.test(source)) {
+    issues.push(`${relative}: raw rgb/rgba color found. Use SOJ design tokens.`);
   }
   for (const item of forbiddenImports) {
     const pattern = new RegExp(`from ["']${item}["']|import\\(["']${item}["']\\)`);
@@ -74,7 +78,7 @@ for (const root of roots) {
 }
 
 if (issues.length > 0) {
-  console.error("Signal Arena style lint failed:");
+  console.error("SOJ style lint failed:");
   for (const issue of issues) {
     console.error(`- ${issue}`);
   }

@@ -2,7 +2,7 @@
 
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useI18n } from "@/components/providers/i18n-provider";
-import { SignalFeed, type SignalFeedItem } from "@/components/soj/signal-feed";
+import { MetricFeed, type MetricFeedItem } from "@/components/soj/metric-feed";
 import { SubmissionTimeline } from "@/components/soj/submission-timeline";
 import { TestPointMatrix } from "@/components/soj/test-point-matrix";
 import { VerdictBadge } from "@/components/soj/verdict-badge";
@@ -55,7 +55,7 @@ function contestLabel(submission: SubmissionSummary, t: Translator) {
   return submission.contestTitle ?? `Contest #${submission.contestId}`;
 }
 
-function signalTone(tone: SubmissionTone): SignalFeedItem["tone"] {
+function verdictTone(tone: SubmissionTone): MetricFeedItem["tone"] {
   return tone === "info" ? "neutral" : tone;
 }
 
@@ -99,10 +99,10 @@ function feedbackLine(submission: SubmissionSummary, t: Translator) {
   return t(lines[submission.status]);
 }
 
-function runtimeItems(submission: SubmissionDetailProps["submission"], t: Translator): SignalFeedItem[] {
+function runtimeItems(submission: SubmissionDetailProps["submission"], t: Translator): MetricFeedItem[] {
   const diagnostics = submission.adminDiagnostics;
   return [
-    { id: "score", label: t("submissions.detail.score"), value: String(submission.score), tone: signalTone(submission.displayState.tone) },
+    { id: "score", label: t("submissions.detail.score"), value: String(submission.score), tone: verdictTone(submission.displayState.tone) },
     { id: "time", label: t("submissions.detail.time"), value: formatRuntime(submission.timeMs, t), tone: "neutral" },
     { id: "memory", label: t("submissions.detail.memory"), value: formatMemory(submission.memoryKb, t), tone: "neutral" },
     {
@@ -223,7 +223,7 @@ export function SubmissionDetail({ submission }: SubmissionDetailProps) {
             <h2 className="text-xl font-semibold">{t("submissions.detail.runtimeSystem")}</h2>
             <p className="mt-1 text-sm text-soj-muted">{t("submissions.detail.runtimeSystemDescription")}</p>
           </div>
-          <SignalFeed items={runtimeItems(submission, t)} />
+          <MetricFeed items={runtimeItems(submission, t)} />
         </section>
         <SubmissionImpact submission={submission} />
       </div>

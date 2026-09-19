@@ -1,6 +1,18 @@
 import type { JudgeLanguage, ProblemDetail } from "@/lib/api/types";
+import {
+  getAcceptanceRate,
+  problemDifficultyLabelKey,
+  problemDifficultyTone,
+  problemStatusLabelKey,
+  problemStatusTone,
+} from "@/lib/domain/problem";
+import { AcceptanceAxis } from "@/components/soj/acceptance-axis";
 import { ProblemStatement } from "@/components/soj/problem-statement";
-import { getServerTranslator } from "@/lib/i18n/server";
+import { StatusPill } from "@/components/soj/status-pill";
+import { PageHeader } from "@/components/ui/page-header";
+import { Stat, StatDivider, StatGroup } from "@/components/ui/stat";
+import { getServerLocale, getServerTranslator } from "@/lib/i18n/server";
+import { formatDuration, formatMemory, formatNumber } from "@/lib/ui/number";
 import { ProblemSubmitPanelLoader } from "./problem-submit-panel-loader";
 
 type ProblemDetailViewProps = {
@@ -8,52 +20,57 @@ type ProblemDetailViewProps = {
   languages?: JudgeLanguage[];
 };
 
+/**
+ * 题目详情。
+ *
+ * 版式分两层：页头承担「这道题是什么」（编号、标题、难度、限制与统计），
+ * 下面才是工作区——左阅读右提交。
+ *
+ * 旧实现把 `text-6xl` 的大标题、时限胶囊、四个带边框的指标格全塞进
+ * 阅读面板里，同一个面板既当页头又当正文，于是标题和表格抢地方；
+ * 指标也重复出现在提交侧栏。现在指标只在页头出现一次，
+ * 提交侧栏只保留「你要做什么」。
+ *
+ * 页头右侧的通过率标尺与题库页头的难度构成条是同一套思路：
+ * 每个页头带且只带一个数据图形。它让页面在「一堆文字行」之外有一个
+ * 能被视觉记住的锚点，也让抽象百分比有了位置感。
+ */
 export async function ProblemDetailView({ problem, languages = [] }: ProblemDetailViewProps) {
-  const t = await getServerTranslator();
+  const [t, locale] = await Promise.all([getServerTranslator(), getServerLocale()]);
+  const acceptance = getAcceptanceRate(problem);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-      <div className="soj-reading-stage min-w-0 p-5 md:p-7">
+    <div className="grid gap-6">
+      <PageHeader
+        eyebrow={`#${problem.id} · ${problem.slug}`}
+        title={problem.title}
+        actions={
+          <>
+            <StatusPill tone={problemStatusTone[problem.status]}>
+              {t(problemStatusLabelKey[problem.status])}
+            </StatusPill>
+            <StatusPill tone={problemDifficultyTone[problem.difficulty]}>
+              {t(problemDifficultyLabelKey[problem.difficulty])}
+            </StatusPill>
+          </>
+        }
+        meta={
+          <div className="grid w-full gap-5 lg:grid-cols-[auto_minmax(0,22rem)] lg:items-center lg:justify-between">
+            <StatGroup>
+              <Stat label={t("problems.time")} value={formatDuration(problem.timeLimitMs, locale)} />
+              <StatDivider />
+              <Stat label={t("problems.memory")} value={formatMemory(problem.memoryLimitKb, locale)} />
+              <StatDivider />
+              <Stat label={t("problems.submissions")} value={formatNumber(problem.submissionCount, { locale })} tone="faint" />
+            </StatGroup>
+            <AcceptanceAxis value={acceptance} label={t("problems.acceptance")} locale={locale} />
+          </div>
+        }
+      />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         <ProblemStatement problem={problem} t={t} />
-        <section className="mt-8 border-t border-soj-line/55 pt-6">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-soj-text">{t("problems.examples")}</h2>
-            <span className="h-px w-28 soj-hairline" />
-          </div>
-          <div className="mt-4 grid gap-4">
-            {problem.examples.map((example, index) => (
-              <div key={`${example.input}-${index}`} className="soj-io-cassette grid gap-3 p-4">
-                <div className="font-mono text-xs text-soj-muted">{t("problems.example", { number: index + 1 })}</div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-medium text-soj-text">{t("problem.input")}</h3>
-                    <pre className="mt-2 overflow-auto rounded-soj-sm border border-soj-line/35 bg-soj-bg/45 p-3 font-mono text-sm leading-6 text-soj-muted">
-                      <code>{example.input}</code>
-                    </pre>
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-medium text-soj-text">{t("problem.output")}</h3>
-                    <pre className="mt-2 overflow-auto rounded-soj-sm border border-soj-line/35 bg-soj-bg/45 p-3 font-mono text-sm leading-6 text-soj-muted">
-                      <code>{example.output}</code>
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-        <section className="mt-8 border-t border-soj-line/55 pt-6">
-          <h2 className="text-lg font-semibold text-soj-text">{t("problems.constraints")}</h2>
-          <ul className="mt-3 grid gap-2">
-            {problem.constraints.map((constraint) => (
-              <li key={constraint} className="border-l border-soj-accent/35 pl-3 font-mono text-sm leading-6 text-soj-muted">
-                {constraint}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <ProblemSubmitPanelLoader initialLanguages={languages} problem={problem} />
       </div>
-      <ProblemSubmitPanelLoader initialLanguages={languages} problem={problem} />
     </div>
   );
 }

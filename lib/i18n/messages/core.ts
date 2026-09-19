@@ -3,15 +3,14 @@ import type { MessageCatalog } from "../types";
 export const coreMessages = {
   "meta.title": { en: "SOJ", "zh-CN": "SOJ" },
   "meta.description": {
-    en: "Signal Arena for problem solving and programming contests.",
-    "zh-CN": "面向解题与编程竞赛的 Signal Arena。",
+    en: "Online judge for practice, contests, submissions, and live scoreboards.",
+    "zh-CN": "面向练习、竞赛、提交与实时榜单的在线评测系统。",
   },
   "nav.home": { en: "Home", "zh-CN": "首页" },
   "nav.problems": { en: "Problems", "zh-CN": "题目" },
   "nav.contests": { en: "Contests", "zh-CN": "比赛" },
-  "nav.submissions": { en: "Submissions", "zh-CN": "提交记录" },
   "nav.author": { en: "Author", "zh-CN": "出题" },
-  "nav.signalOnlineJudge": { en: "Signal Online Judge", "zh-CN": "Signal 在线评测" },
+  "nav.brandTagline": { en: "Online Judge", "zh-CN": "在线评测" },
   "nav.searchPublicProblems": { en: "Search public problems", "zh-CN": "搜索公开题目" },
   "nav.primary": { en: "Primary navigation", "zh-CN": "主导航" },
   "nav.account.openAuthenticated": {
@@ -22,6 +21,7 @@ export const coreMessages = {
   "nav.account.guest": { en: "Guest", "zh-CN": "访客" },
   "nav.account.notSignedIn": { en: "Not signed in", "zh-CN": "未登录" },
   "nav.account.me": { en: "Me", "zh-CN": "我的账户" },
+  "nav.account.submissions": { en: "My submissions", "zh-CN": "我的提交" },
   "nav.account.settings": { en: "Settings", "zh-CN": "设置" },
   "nav.account.authorProblems": { en: "Author problems", "zh-CN": "管理题目" },
   "nav.account.login": { en: "Login", "zh-CN": "登录" },

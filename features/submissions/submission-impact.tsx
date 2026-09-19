@@ -1,4 +1,4 @@
-import { SignalFeed, type SignalFeedItem } from "@/components/soj/signal-feed";
+import { MetricFeed, type MetricFeedItem } from "@/components/soj/metric-feed";
 import { useI18n } from "@/components/providers/i18n-provider";
 import type { SubmissionSummary } from "@/lib/api/types";
 import type { SubmissionTone } from "@/lib/domain/submission";
@@ -11,7 +11,7 @@ type SubmissionWithState = SubmissionSummary & {
   };
 };
 
-function buildImpactItems(submission: SubmissionWithState, t: Translator): SignalFeedItem[] {
+function buildImpactItems(submission: SubmissionWithState, t: Translator): MetricFeedItem[] {
   if (!submission.contestId) {
     return [
       { id: "scope", label: t("submissions.impact.scope"), value: t("submissions.impact.practiceRun"), tone: "neutral" },
@@ -43,7 +43,7 @@ export function SubmissionImpact({ submission }: { submission: SubmissionWithSta
         <h2 className="text-xl font-semibold">{t("submissions.impact.title")}</h2>
         <p className="mt-1 text-sm text-soj-muted">{t("submissions.impact.description")}</p>
       </div>
-      <SignalFeed items={buildImpactItems(submission, t)} />
+      <MetricFeed items={buildImpactItems(submission, t)} />
     </section>
   );
 }

@@ -1,11 +1,13 @@
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { ContestClock } from "@/components/soj/contest-clock";
 import { StatusPill } from "@/components/soj/status-pill";
+import { buttonVariants } from "@/components/ui/button";
 import { getContestDurationMinutes } from "@/lib/domain/contest";
 import type { ContestStatus, ContestSummary, ContestType } from "@/lib/api/types";
 import { getServerLocale, getServerTranslator } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translator } from "@/lib/i18n/translate";
+import { cn } from "@/lib/ui/cn";
 import { ContestProblemTable } from "./contest-problem-table";
 import { ContestRegistration } from "./contest-registration";
 import { ContestManageEntries } from "./contest-manage-entries";
@@ -122,7 +124,7 @@ function ContestMetric({ label, value, tone = "text" }: { label: string; value: 
   }[tone];
 
   return (
-    <div className="rounded-soj-md border border-soj-line/50 bg-soj-bg/24 p-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+    <div className="soj-chip p-3">
       <dt className="text-xs text-soj-muted">{label}</dt>
       <dd className={`mt-1 font-mono text-lg ${toneClass}`}>{value}</dd>
     </div>
@@ -138,15 +140,18 @@ function SchedulePoint({ label, value }: { label: string; value: string }) {
   );
 }
 
+/**
+ * 赛事内的路由入口。
+ *
+ * 此前 primary 用的是「实心曜石蓝 + 蓝色外发光」：外发光在深色界面上只会显得廉价，
+ * 而实心蓝又抢走了「实时状态」这个唯一被允许的用途。现在复用 buttonVariants，
+ * 主操作是一块金属银——它天然是整个页面上最亮的东西，层级不需要靠饱和度建立。
+ */
 function RouteAction({ href, label, primary = false }: { href: string; label: string; primary?: boolean }) {
   return (
     <LocalizedLink
       href={href}
-      className={
-        primary
-          ? "col-span-2 inline-flex min-h-10 items-center justify-center rounded-soj-md bg-soj-accent px-3 py-2 text-sm font-semibold text-black shadow-[0_14px_34px_rgb(var(--soj-accent)/0.16)] transition hover:brightness-110 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
-          : "inline-flex min-h-10 items-center justify-center rounded-soj-md border border-soj-line/55 bg-soj-bg/28 px-3 py-2 text-sm font-medium text-soj-muted transition hover:border-soj-accent/45 hover:text-soj-text active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
-      }
+      className={cn(buttonVariants({ variant: primary ? "primary" : "secondary", size: "md" }), primary && "col-span-2")}
     >
       {label}
     </LocalizedLink>

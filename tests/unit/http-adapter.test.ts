@@ -574,7 +574,7 @@ describe("http adapter", () => {
             items: [
               contestResponse({
                 id: 11,
-                title: "Signal Cup",
+                title: "SOJ Weekly Contest",
                 status: "published",
                 registered: true,
                 startAt: "2999-07-08T11:00:00Z",
@@ -592,7 +592,7 @@ describe("http adapter", () => {
         return Response.json({
           data: contestResponse({
             id: 11,
-            title: "Signal Cup",
+            title: "SOJ Weekly Contest",
             status: "running",
             endAt: "2999-07-08T12:00:00Z",
             freezeAt: "2000-07-08T09:00:00Z",
@@ -619,7 +619,7 @@ describe("http adapter", () => {
     });
     expect(contests.items[0]).toMatchObject({
       id: 11,
-      title: "Signal Cup",
+      title: "SOJ Weekly Contest",
       type: "acm",
       status: "scheduled",
       registered: true,

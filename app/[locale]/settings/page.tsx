@@ -22,7 +22,7 @@ export default function SettingsPage() {
       title={t("auth.settings.title")}
       description={t("auth.settings.description")}
       meta={user ? "@" + user.handle : t("auth.settings.guest")}
-      signal={
+      aside={
         <>
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -34,7 +34,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-2 gap-2">
             <div className="soj-submission-chip">
               <span>{t("auth.settings.theme")}</span>
-              <strong>{t("auth.settings.signal")}</strong>
+              <strong>{t("auth.settings.themeName")}</strong>
             </div>
             <div className="soj-submission-chip">
               <span>{t("auth.settings.editor")}</span>

@@ -18,7 +18,7 @@ export function AccountOverview() {
       title={t("auth.me.title")}
       description={t("auth.me.description")}
       meta={user ? "@" + user.handle : t("auth.me.guest")}
-      signal={
+      aside={
         <>
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -53,7 +53,7 @@ export function AccountOverview() {
           <section className="soj-account-panel grid grid-cols-[minmax(0,1fr)] content-start gap-3 p-5">
             <h2 className="text-xl font-semibold">{t("auth.me.progress")}</h2>
             <div className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-soj-line pb-3 text-sm">
-              <span className="text-soj-muted">{t("auth.me.signalPath")}</span>
+              <span className="text-soj-muted">{t("auth.me.shortestPath")}</span>
               <StatusPill tone="success">{t("status.solved")}</StatusPill>
             </div>
             <div className="grid grid-cols-[1fr_auto] items-center gap-3 text-sm">

@@ -127,7 +127,7 @@ function ScoreMetric({ label, value, tone = "text" }: { label: string; value: st
   }[tone];
 
   return (
-    <div className="rounded-soj-md border border-soj-line/50 bg-soj-bg/24 p-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+    <div className="soj-chip p-3">
       <div className="text-xs text-soj-muted">{label}</div>
       <div className={`mt-1 font-mono text-xl ${toneClass}`}>{value}</div>
     </div>

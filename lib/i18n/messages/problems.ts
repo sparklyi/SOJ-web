@@ -1,7 +1,7 @@
 import type { MessageCatalog } from "../types";
 
 export const problemMessages = {
-  "problems.practiceControl": { en: "Practice Control", "zh-CN": "练习控制台" },
+  "problems.practiceControl": { en: "Practice", "zh-CN": "练习" },
   "problems.visibleTotal": { en: "{visible} visible / {total} total", "zh-CN": "显示 {visible} / 共 {total}" },
   "problems.pageTitle": { en: "Problem set", "zh-CN": "题目集" },
   "problems.pageDescription": {
@@ -21,6 +21,7 @@ export const problemMessages = {
   "problems.pressure": { en: "Pressure", "zh-CN": "挑战" },
   "problems.hard": { en: "{count} hard", "zh-CN": "{count} 道困难题" },
   "problems.review": { en: "Review", "zh-CN": "复习" },
+  "problems.todo": { en: "Not started", "zh-CN": "未开始" },
   "problems.pendingCount": { en: "{count} pending", "zh-CN": "{count} 道待处理" },
   "problems.tagLanes": { en: "Tag lanes", "zh-CN": "标签分区" },
   "problems.findNext": { en: "Find the next problem", "zh-CN": "寻找下一道题" },
@@ -41,6 +42,8 @@ export const problemMessages = {
   "problems.allTags": { en: "All tags", "zh-CN": "全部标签" },
   "problems.apply": { en: "Apply", "zh-CN": "应用" },
   "problems.reset": { en: "Reset", "zh-CN": "重置" },
+  "problems.activeFilters": { en: "Active filters", "zh-CN": "已应用筛选" },
+  "problems.removeFilter": { en: "Remove this filter", "zh-CN": "移除该筛选条件" },
   "problems.noMatching": { en: "No matching problems", "zh-CN": "没有匹配的题目" },
   "problems.noMatchingDescription": {
     en: "Adjust the search text, difficulty, status, or tag filters to reopen the training set.",

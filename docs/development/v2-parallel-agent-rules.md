@@ -7,7 +7,7 @@ Use these rules when assigning page work after the foundation gates are complete
 Page workers must not start until these chunks are complete:
 
 - Foundation app and CI.
-- Signal Arena tokens, fonts, primitives, product components, style guide, and style lint.
+- SOJ visual language tokens, fonts, material primitives, data visuals, product components, style guide, and style lint.
 - Domain models and mock fixtures.
 - App shell and auth boundary.
 
@@ -23,7 +23,7 @@ Workers own only their assigned route and feature folder.
 - Scoreboard: `app/contests/[id]/scoreboard/**`, `features/contests/scoreboard/**`
 - Arena: `app/contests/[id]/arena/**`, `features/arena/**`
 
-Shared component edits require coordination, tests, and an update to `docs/design-system/signal-arena.md`.
+Shared component edits require coordination, tests, and an update to `docs/design-system/soj-visual-language.md`.
 
 ## Style Rules
 
