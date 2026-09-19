@@ -1,91 +1,70 @@
 import { MotionBlock } from "@/components/fx/motion-block";
 import { PageShell } from "@/components/layout/page-shell";
-import { ActiveContests } from "@/features/home/active-contests";
-import { HomeHero } from "@/features/home/home-hero";
-import { RecentJudgeFeed } from "@/features/home/recent-judge-feed";
-import { RecommendedProblems } from "@/features/home/recommended-problems";
-import { listContests } from "@/features/contests/api";
-import { listProblems } from "@/features/problems/api";
-import { listSubmissions } from "@/features/submissions/api";
-import type { ProblemDifficulty } from "@/lib/api/types";
-import { ApiError } from "@/lib/api/errors";
+import { loadHomeData } from "@/features/home/api";
+import { HomePlinth } from "@/features/home/home-plinth";
+import { JoinUs } from "@/features/home/join-us";
 import { getServerTranslator } from "@/lib/i18n/server";
-
-const difficultyRank: Record<ProblemDifficulty, number> = { easy: 0, medium: 1, hard: 2 };
 
 /**
  * 首页。
  *
- * 它只回答新访客的三个问题，一个问题一层，问完即止：
- *   这是什么、值不值得留下 —— 首屏（定位 + 两个入口 + 两条事实）
- *   现在有什么正在发生     —— 进行中的比赛（全站时效性最强的信息）
- *   我该从哪开始 / 别人在做什么 —— 推荐题目 + 最近评测
+ * 它是**展台**，不是数据入口，也不是产品说明书。这三件事的区别决定了一切：
  *
- * 上一版把「评测概览」也搬上了首页：全站提交总数、全站通过率、难度构成、
- * 提交量排行。那是**运营看板，不是入口**——新访客不关心这个站累计被提交过多少次，
- * 而关注意味着首页要在一屏里塞进五个面板，每一块只剩五分之一的注意力。
+ * ── 不做什么 ──────────────────────────────────────────────────────────────
  *
- * 这类聚合数据应该放在它能被**用来做决定**的地方：难度构成属于题库页
- * （在那里它是筛选依据），而「提交量排行」哪儿都不属于，删掉即可。
+ * · **不做目录。** 顶部导航已经在回答「去哪儿」了，首页再做一遍就是多余的。
+ *   判据：一块内容拿掉之后，用户还能从导航去到同一处，它就是导航的重复。
+ *   按这条判据，「推荐题目」「题库样张」「比赛列表」全部出局。
  *
- * 布局也不用通栏 + 两栏混排：比赛是全站唯一带倒计时、错过就没有的内容，
- * 给它整宽；剩下的「做什么」和「发生了什么」是一对，天然两栏。
+ * · **不解释常识。** 曾经有整整一段在讲「提交 → 编译 → 跑测试点 → 出判定」。
+ *   会点进一个刷题站的人不需要被告知判题是怎么跑的；对着他讲这个，是把人当外行。
+ *   同类的还有「三步开始：注册账号 → 挑一道题 → 提交」——那是产品常识，不是内容。
+ *
+ * · **不摆具体清单。** 支持哪些语言、有哪些专题标签、难度怎么分布——
+ *   这些是题库页该回答的。首页只留尺度（几个数），不留目录。
+ *   「比赛场次」也在这一条里：运营流水不进首页。
+ *
+ * ── 做什么 ────────────────────────────────────────────────────────────────
+ *
+ *   展台（HomePlinth） —— 锁定式「站名 + 品类词」+ 一句定位 + 站级数字 + 一个出口
+ *   加入我们（JoinUs）  —— 一整块可点的邀请，点开弹窗再分注册 / 登录
+ *
+ * 两块都是「陈述」，没有一块在教人。第一块回答「这是什么、有多大」，
+ * 第二块回答「我怎么进去」。答完就结束。
+ *
+ * ── 页脚 ──────────────────────────────────────────────────────────────────
+ *
+ * 这一页曾经**没有页脚**，理由是当时的候选内容全是假入口：文档、状态、关于——
+ * 这些页面并不存在，编几个链接出去就是让读者点了发现是死路。
+ * 现在页脚由根布局统一提供（版权 / 开源仓库 / 问题反馈，三样都有真实落点），
+ * 所以这里的规则改写为更准确的那一条：**不放没有落处的链接**，
+ * 而不是「不要页脚」。假入口比缺一个页脚糟得多，这条没变。
+ *
+ * 两段之间只有 <div> 的间距与 MotionBlock 的入场揭示：
+ * 页面骨架就是「展台 → 邀请」，没有第三件事要放。
+ * 动效由读者的滚动产生，再加上环境层里那层光照微尘
+ * （见 app-atmosphere.tsx 的 plinth 档与 components/fx/mote-field.tsx：
+ * 空气可以动，墙面与灯不行）。
  */
 export default async function HomePage() {
   const t = await getServerTranslator();
-  const [{ items: contests }, { items: problems }, submissionsResult] = await Promise.all([
-    listContests(),
-    listProblems(),
-    listVisibleSubmissions(),
-  ]);
-  const submissions = submissionsResult.items;
-
-  const liveContests = contests.filter((contest) => contest.status === "running" || contest.status === "frozen");
-  const upcomingContests = contests
-    .filter((contest) => contest.status === "scheduled")
-    .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
-  const shownContests = liveContests.length > 0 ? liveContests : upcomingContests;
-
-  // 「从哪开始」按难度递进排序，而不是按接口返回顺序随便切三条：
-  // 推荐位如果不解释自己为什么推荐，读者只会把它当成随机内容。
-  const recommendedProblems = problems
-    .filter((problem) => problem.status !== "accepted")
-    .sort((a, b) => difficultyRank[a.difficulty] - difficultyRank[b.difficulty])
-    .slice(0, 4);
-  const recentSubmissions = submissions.slice(0, 5);
+  const facts = await loadHomeData();
 
   return (
     <PageShell>
       <div className="grid min-w-0 gap-6">
-        <HomeHero
+        <HomePlinth
           facts={[
-            { label: t("home.problems"), value: problems.length },
-            { label: t("contest.active"), value: liveContests.length },
+            { label: t("home.facts.problems"), value: facts.problems },
+            { label: t("home.facts.submissions"), value: facts.submissions },
+            { label: t("home.facts.languages"), value: facts.languages },
           ]}
         />
 
         <MotionBlock>
-          <ActiveContests contests={shownContests} mode={liveContests.length > 0 ? "live" : "upcoming"} />
+          <JoinUs />
         </MotionBlock>
-
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(340px,1fr)] xl:items-start">
-          <MotionBlock delay={60}>
-            <RecommendedProblems problems={recommendedProblems} />
-          </MotionBlock>
-          <MotionBlock delay={120}>
-            <RecentJudgeFeed submissions={recentSubmissions} />
-          </MotionBlock>
-        </div>
       </div>
     </PageShell>
   );
-}
-
-async function listVisibleSubmissions() {
-  try {
-    return await listSubmissions();
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) return { items: [], total: 0 };
-    throw error;
-  }
 }

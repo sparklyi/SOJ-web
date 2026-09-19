@@ -42,7 +42,6 @@ export const systemMessages = {
   "contest.scoreboardFreeze": { en: "Scoreboard freeze", "zh-CN": "排行榜冻结" },
   "contest.nextFreeze": { en: "Next freeze", "zh-CN": "下次冻结" },
   "contest.notScheduled": { en: "Not scheduled", "zh-CN": "未安排" },
-  "contest.activeValue": { en: "Active", "zh-CN": "进行中" },
   "contest.active": { en: "Active contests", "zh-CN": "进行中的比赛" },
   "contest.upcoming": { en: "Starting soon", "zh-CN": "即将开始" },
   "contest.upcomingDescription": {
@@ -57,29 +56,17 @@ export const systemMessages = {
   "contest.noActive": { en: "No active contests are available.", "zh-CN": "暂无进行中的比赛。" },
   "contest.registered": { en: "registered", "zh-CN": "已报名" },
   "contest.open": { en: "open", "zh-CN": "开放" },
-  "home.recommendedProblems": { en: "Recommended problems", "zh-CN": "推荐题目" },
-  "home.recommendedProblemsDescription": {
-    en: "Ordered by difficulty, starting from what you have not solved yet.",
-    "zh-CN": "按难度递进排序，从你还没通过的题开始。",
-  },
-  "home.recentVerdicts": { en: "Recent verdicts", "zh-CN": "最近评测" },
-  "home.recentVerdictsDescription": {
-    en: "The newest runs across the whole judge.",
-    "zh-CN": "全站最新的一批评测。",
-  },
-  "home.allVerdicts": { en: "All verdicts", "zh-CN": "全部评测" },
-  "home.problems": { en: "Problems", "zh-CN": "题目" },
-  "home.contests": { en: "Contests", "zh-CN": "比赛" },
+  // 首页私有词条已迁到 lib/i18n/messages/home.ts —— 首页按「段落」组织，不按数据实体组织。
+  // 下面这几项是跨页面共用的「通用词条」：视觉契约页、审核台、重测台都在用，
+  // 因此留在本文件，避免同一个词在两处各有一份译法。
   "home.rankMovement": { en: "rank movement", "zh-CN": "排名变化" },
-  "home.score": { en: "Score", "zh-CN": "得分" },
-  "home.noVerdicts": { en: "No recent submissions are available.", "zh-CN": "暂无评测记录。" },
-  "home.pending": { en: "pending", "zh-CN": "等待中" },
-  "home.noProblems": { en: "No problems are available.", "zh-CN": "暂无题目。" },
   "home.problem": { en: "Problem", "zh-CN": "题目" },
   "home.status": { en: "Status", "zh-CN": "状态" },
   "home.difficulty": { en: "Difficulty", "zh-CN": "难度" },
+  "home.noProblems": { en: "No problems are available.", "zh-CN": "暂无题目。" },
   "home.exploreProblems": { en: "Explore problems", "zh-CN": "浏览题目" },
-  "home.enterContests": { en: "Enter contests", "zh-CN": "进入比赛" },
+  // 首页的收尾标语。它由 JoinUs 使用；放在这里是因为「以算法思考，用答案证明」是这家站的态度，
+  // 不属于任何一个页面段落。
   "home.statement": { en: "Think in algorithms. Prove every answer.", "zh-CN": "以算法思考，用答案证明。" },
   "style.designSystem": { en: "SOJ visual contract", "zh-CN": "SOJ 视觉契约" },
   "style.interfaceBaseline": { en: "SOJ interface baseline", "zh-CN": "SOJ 界面基线" },

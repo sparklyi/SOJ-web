@@ -94,7 +94,7 @@ export function TopNav() {
           </span>
           <span className="grid leading-none">
             <span className="font-display text-[15px] font-semibold tracking-[0.06em] text-soj-text">SOJ</span>
-            <span className="mt-1.5 hidden font-mono text-[9px] uppercase tracking-[0.2em] text-soj-faint sm:block">{t("nav.brandTagline")}</span>
+            <span className="mt-1.5 hidden font-mono text-[10px] uppercase tracking-[0.14em] text-soj-muted sm:block">{t("nav.brandTagline")}</span>
           </span>
         </LocalizedLink>
         <nav ref={navRef} aria-label={t("nav.primary")} className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

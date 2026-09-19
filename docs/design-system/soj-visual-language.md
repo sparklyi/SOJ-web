@@ -44,7 +44,7 @@ All colours are semantic CSS variables in `app/globals.css` and Tailwind tokens 
 | `soj.line-strong` | `46 54 68` | Edges that must survive on top of a panel. |
 | `soj.text` | `226 232 241` | Primary copy and numeric values. |
 | `soj.muted` | `146 157 174` | Secondary labels and helper copy. |
-| `soj.faint` | `96 106 122` | Eyebrows, column labels, placeholders, footnotes. |
+| `soj.faint` | `124 136 154` | Eyebrows, column labels, placeholders, footnotes. Measured 5.51:1 — see below. |
 | `soj.silver` | `205 216 231` | The material colour. Metres, bars, non-primary emphasis. |
 | `soj.accent` | `108 152 255` | Obsidian blue. See "Accent budget". |
 | `soj.success` | `74 214 158` | Accepted and successful outcomes. |
@@ -55,6 +55,15 @@ Two editorial rules that were learned the hard way:
 
 - **The background steps must lean blue, not neutral grey.** A neutral grey base makes obsidian blue look grey; a green-grey base kills it outright. The base has a deliberate blue cast for this reason — do not "clean it up" to neutral.
 - **A ladder must start brighter than its track.** The first attempt at the difficulty ladder used `soj.line-strong` for the easiest tier, which is roughly the same value as the track it sits in. The easiest tier vanished and the whole chart read as a single blue bar. Any ordered ladder needs its lowest step to be clearly lighter than its own track.
+
+And one measured rule about the label tier:
+
+- **A label needs *more* contrast than body copy, not less.** The first palette shipped `soj.faint` at `96 106 122`, which is **3.62:1** on the base — under the 4.5:1 AA line. It carried every micro-label on the site (section names, units, axis annotations), so the labels were the least readable text on the page while the numbers sitting next to them were the brightest thing on it. The verdict from the reader was 「只能看到数字」 — only the numbers are visible. A label is not "less important content"; it is the *only* thing telling the reader what the number means, and unlike body copy it has no surrounding sentence to be reconstructed from. Raising it to `124 136 154` (5.51:1) costs nothing: it is still the lightest of the three text steps.
+
+  Two habits follow from this, both now scripted:
+
+  - `.visual-check/a11y-contrast.mjs` walks every text node on a page, resolves its real computed colour **and its effective background** (walking up through translucent layers), and prints whatever falls under the line for its size. Known blind spot, deliberately reported separately rather than as a failure: it reads `background-color`, not `background-image`, so anything sitting on a gradient (the metal button) comes out as a false 1:1 — it is flagged as "cannot judge" instead of being counted as a defect.
+  - The homepage labels are locked by an e2e guard that recomputes the WCAG ratio **from computed styles** rather than asserting a token name. Renaming a token must not break the guard; genuinely dimming a colour must.
 
 Run `npm run lint:style` before every commit. It rejects raw hex and rgb literals in `app/`, `components/`, and `features/`.
 
@@ -106,6 +115,8 @@ Material primitives:
 | `.soj-well` | Recessed: code editors, example I/O blocks, logs. The only second surface allowed inside a panel. |
 | `.soj-chip` | A single standalone reading. Not a grouping device — do not build metric grids out of it. |
 | `.soj-metal` | The primary action. Vertical silver gradient + inner highlight + inner shadow. |
+| `.soj-metal-flat` | The same silver with every depth cue removed — no gradient, no inner edges. `Button` variant `solid`. Use it where a bevel would read as skeuomorphic: a screen whose only primary action sits inside a typographic composition. |
+| `.soj-sheet` | A modal sheet: surface colour + outline + shadow (outer drop + top inner highlight), set as one class. They are set together on purpose — split across utilities, a change to one half-updates the panel. |
 | `.soj-inset-light` | Top inner highlight for thin surfaces (inputs, selects, nav selection). |
 | `.soj-gridlines` | Coordinate grid. Gives dense areas a spatial reference. |
 | `.soj-hairline` | Fading divider for when a full-width 1px line would be too hard. |
@@ -140,7 +151,8 @@ Presets are set by **how much of the user's attention a page must consume**, not
 
 | Preset | Routes | Field | Grid | Bloom | Top light | Why |
 | --- | --- | --- | --- | --- | --- | --- |
-| `flow` | `/`, `/style-guide` | density 2.5, speed 1.0 | 0.8 | 1.0 | 1.0 | The only routes allowed to feel atmospheric. The homepage is the one screen where the visitor has nothing to read yet. |
+| `plinth` | `/` | motes only — dust in the light, no flow field | 0.62 | 1.0 | 1.25 | The homepage is an exhibit, so the atmosphere is carried by **material** and the motion by **the reader's scroll**. It also switches off the two self-playing animations (grid drift, bloom breathing) — see below. The one thing that does move on its own is a layer of dust in the light, which is air, not room. |
+| `flow` | `/style-guide` | density 2.5, speed 1.0 | 0.8 | 1.0 | 1.0 | Kept as the reference route for the opposite approach: atmosphere carried by a live field. It exists so the two can be compared side by side. |
 | `drift` | list and overview routes (`/problems`, `/contests`, `/submissions`, `/me`) | density 1.05, speed 0.72 | 0.5 | 0.72 | 0.7 | Present, so scanning a table never happens on a dead surface; slow enough that it is not noticed while scanning. |
 | `focus` | `/contests/*/arena`, `/contests/*/scoreboard` | density 1.4, speed 1.3 | 0.85 | 1.05 | 1.0 | Projection surfaces, viewed from a distance, so more movement is legible rather than distracting. |
 | `still` | reading and working routes (`/problems/[id]`, `/submissions/[id]`, `/contests/[id]/problems/[id]`, `/auth/*`, `/settings`, `/manage/*`, `/admin/*`) | **none** | 0.3 | 0.5 | 0.45 | No canvas at all. Reading a statement or writing code with a flow field behind it is a usability defect, not a style choice. |
@@ -148,10 +160,24 @@ Presets are set by **how much of the user's attention a page must consume**, not
 Rules:
 
 - **Route matching is by path *shape*, not prefix.** `/problems` is a list (`drift`); `/problems/12` is a reading page (`still`). Same prefix, opposite requirements. A prefix-only rule would silently give the reading page a moving background.
-- **The presets differ only in parameters.** All four share one canvas implementation, one grid layer, one bloom pair, one vignette, one top light. Four presets with their own imagery would read as four different products sharing a stylesheet.
+- **The presets differ only in parameters.** All five share one canvas implementation, one grid layer, one bloom pair, one vignette, one top light. Five presets with their own imagery would read as five different products sharing a stylesheet.
 - **`field: null` means no canvas is mounted at all** — not a paused one, not a transparent one. An idle canvas still spends frame budget for a page that gains nothing from it.
 - **The grid mask anchors to the content, not the corner.** It is a masked ground plane that fades toward the reading area; anchored to a corner it becomes wallpaper, which is the thing that looks generated.
 - On small screens the grid is dropped entirely and the secondary bloom is hidden. Two light sources plus a grid on a 380px viewport is not atmosphere, it is clutter.
+
+### Motion must come from the reader, not from the clock
+
+Three separate revisions made the same mistake with different pixels: a particle field inside the hero, then the same field for the whole app, then a grid that drifted and two blooms that breathed on their own. Every one of them was *moving while nobody was doing anything*. That is the whole defect, and it is not fixed by making the movement smaller or prettier — **an ambient animation is a decoration, and it reads as one no matter how subtle it is.**
+
+The rule that replaced it, with one deliberate exception added later:
+
+- **Self-playing ambient motion is not atmosphere — for the room.** Atmosphere comes from material: a still cold-silver grid, a single directional light, a vignette, and a top light. Those are *rendered*, not *animated*. A drifting grid or a breathing bloom means the wall is moving and the lamp is breathing, and a room that moves is exactly the cheapness this rule exists to prevent.
+- **The one exception is the air.** `plinth` mounts `MoteField` (`components/fx/mote-field.tsx`): sparse, tiny, extremely slow dust, whose brightness is modulated by its distance from the light source and whose position is tuned to sit inside the primary bloom. Dust drifting through a beam is not the room moving — it is the reason the beam reads as a beam at all, and it only appears where the lamp explains it. The line, in short: **the air may move; the wall and the lamp may not.** (The user's word for the homepage background before this layer existed was 单调. Material alone was correct but not sufficient; the exhibit needed air in the light to feel like a room rather than a render.)
+- **All other motion comes from the reader's own actions** — scrolling, revealing, pressing. If the page is idle, the wall is still.
+- `plinth` therefore stops two global animations, scoped to itself (`[data-atmo="plinth"]` in `globals.css`): the 72s grid drift and the 34s/52s bloom breathing. Other presets keep them, because on those routes the background is an *environment* rather than an *exhibit*.
+- **One light, not two.** `plinth` drops the secondary bloom. An exhibit has one lamp on it; two light sources make the picture read as a gradient wallpaper.
+- The scroll-linked motion that replaces it is deliberately **out of the reader's notice**: over one viewport of scrolling the wordmark recedes 30px and scales to 97.4%. It is written in longhand (`animation-duration: auto`) because the `animation` shorthand resets `duration` to `0s`, and a zero-duration scroll animation jumps straight to its final frame — a bug that looks like "the title is permanently shrunk".
+- It is wrapped in `@supports (animation-timeline: scroll())`. Browsers without scroll timelines get a still frame, which **is** the default state of this preset, so this is not a degraded fallback.
 
 ## Data Visuals
 
@@ -190,6 +216,11 @@ The working question is not "is this useful?" — almost everything is *useful*.
 - **"My submissions" is not a destination.** It is the current user's own data, and unauthenticated it renders as an empty page. Putting it in the top nav offers a visitor a link that leads nowhere. It lives in the account menu beside 我的主页 and 设置.
 - The test is one line: **if the link is useless before login, it is not top-nav material.**
 
+### The footer is site-wide, and carries only real destinations
+
+- `SiteFooter` (`components/layout/site-footer.tsx`) is mounted in the root layout, after `children`, for the same reason `AppAtmosphere` is mounted there: a footer each page has to remember is a footer some page will forget. Every route gets it, in the document flow, below the content — verified per-route with a hit-test probe, because the atmosphere layer is `fixed` and *paints over* ordinary flow content; "it is in the DOM" and "the reader can see it" are different claims.
+- It carries three things: copyright, the source repository, and an issue tracker. The homepage originally shipped **without** a footer because the only candidates were fake ones — 文档 / 状态 / 关于 pages that did not exist. The corrected rule is not "no footer"; it is **no link without a destination**. A fake entry is worse than a missing footer; a real footer is not an entry, it is a colophon.
+
 ### A missing feature is smaller than a fake one
 
 Every OJ's top nav has a global ranking. This one does not, and the gap is deliberate: the product has **no global rating model**. Its only leaderboard is per-contest, and the entry point for that lives inside each contest, where the data actually exists.
@@ -217,7 +248,10 @@ Building a global ranking page would mean inventing an across-the-board score. W
 | Submissions table | 8 columns | 6 | Contest and score fold into the problem cell as a meta line, shown only when they exist. |
 | Contest list | 3 buttons per row plus a standing "ACM vs OI rules" explainer panel | 1 primary action + 2 text links | The explainer repeated the same two rule sets on every visit; the three buttons gave equal visual weight to actions of very different weight. |
 | Problems header | 4 progress numbers + a difficulty stacked bar + its legend | 3 progress numbers | The distribution moved to the filter bar, where it is used to make a decision. |
-| Homepage | hero + 评测概览 (site totals, acceptance rate, difficulty mix, busiest-problem ranking) + 实时面板 + problem/verdict panels | hero + live contests + recommended problems + recent verdicts | The first two are operator dashboards. A visitor's first question is "what is this, and is anything happening", not "how many times has this site been submitted to". |
+| Homepage | hero + 评测概览 (site totals, acceptance rate, difficulty mix, busiest-problem ranking) + 实时面板 + problem/verdict panels | 展台 (wordmark + one positioning line + four site-level numbers + one exit) → 构成铭牌 → 加入我们 | The first two are operator dashboards. A visitor's first question is "what is this, and is anything happening", not "how many times has this site been submitted to". |
+| Homepage, second pass | 展台 + 核心能力 (3 explanatory rows) + 题库样张 (3 problems) + 评测流程 (4 stages) + 焦点比赛 + 三步开始 | 展台 + 构成铭牌 + 加入我们 | The middle four sections were all **either a copy of another page or a tutorial** — see below. |
+| Homepage, third pass | 展台 (wordmark + four numbers) + 构成铭牌 (three cells of tag pills) + 加入我们 (two buttons) | 展台 (wordmark fills the column, 14px labels) + 构成铭牌 (no pills) + 加入我们 (one block → dialog) | The numbers were legible and their labels were not: 3.62:1 at 10px, i.e. 「只能看到数字」. And two side-by-side buttons split a first-time visitor into "register / login" before he had decided anything. |
+| Homepage, fourth pass | 展台 (drawn wordmark filling the column + four numbers + a chrome exit button) + 构成铭牌 (difficulty mix / language list / topic list) + 加入我们 (left-aligned, dialog with tabs) | 展台 (typeset lockup + three numbers + a typographic exit) → 加入我们 (centred, uppercase, dialog with a footer switch) | Three separate judgements, all from the reader: the drawn wordmark was **ugly and 400px tall**; the plate listed *which* languages and *which* tags, which is the problem set's job; and the exit button was the **only beveled object on a flat page**. |
 
 ## Typography
 
@@ -236,7 +270,7 @@ Three classes carry all display type. Do not hand-roll `font-family` in a compon
 | Class | Role |
 | --- | --- |
 | `.soj-display` | Page titles and brand. Tight tracking (`-0.035em`), `0.95` line-height. |
-| `.soj-eyebrow` | Section names, units, axis annotations. Mono, 10px, uppercase, `0.22em`. |
+| `.soj-eyebrow` | Section names, units, axis annotations. Mono, 11px, uppercase, `0.15em`. |
 | `.soj-num` | Digits that must align column by column. |
 
 Rules:
@@ -244,9 +278,30 @@ Rules:
 - **Page titles live in `PageHeader`, outside the content container.** Do not sink a display-size title into a dense panel — it competes with the table for the same box.
 - `PageHeader`'s eyebrow carries a short accent tick before it. It is not decoration: every page header has one, and it gives the reader a consistent left baseline that says "a new page starts here".
 - Numbers use `soj-num` / mono with `font-variant-numeric: tabular-nums`, applied globally on `body`. A numeric column must never shift width between rows.
-- Micro-labels are mono, 10–11px, uppercase, `letter-spacing: 0.14em`–`0.22em`.
-- Display-size type (over 48px) needs a light-from-top gradient via `background-clip: text`. A flat large glyph reads as a placeholder. Keep an opaque fallback for browsers without `background-clip`.
+- Micro-labels are mono, 11px, uppercase, `letter-spacing: 0.15em`. 10px with `0.22em` was tried and dropped: uppercase latin at that size and tracking stops reading as one word, and it was shipped alongside the old 3.62:1 grey.
+- **Never fade display type to transparent.** The previous wordmark ended its top-light gradient at 46% alpha, which erased the lower half of every glyph. A vertical light on a large glyph has to *stay a colour* — the falloff is a shift in value, not a shift in opacity.
 - Never use em dashes in visible product copy.
+
+### The wordmark is typeset, and the hero is centred
+
+`components/soj/soj-wordmark.tsx` used to exist: an SVG of three hand-authored glyphs (cap height 100, stroke 11.5, round caps). It was deleted, and the reason matters more than the component did.
+
+It failed twice over:
+
+- **It was ugly.** Hand-authored glyph curves have no font metrics behind them, so their tension is guesswork. Compared with a real typeface at the same size, the S read as a pair of bowls with no spine and the J's hook as a stub. Design-review verdict: 太丑了.
+- **It ate the first screen.** `width: 100%` over a `272×100` viewBox means height follows column width — 400px of wordmark at 1440. The reader had to scroll past three letters to find out what the site was. A brand mark must never be bigger than the sentence that explains it.
+
+The fix is not a different font. It is to treat the station's name as **typesetting rather than as artwork**:
+
+- **A lockup, not a logotype.** `SOJ` set in Space Grotesk, followed by a category word (在线测评平台 / Online judge), baseline-aligned. Name + category is the standard company lockup, and it answers "what is this" without a scroll.
+- **Size and colour carry the hierarchy; no divider.** A rule or a dot between the two turns "name + category" into "two fields". The gap and the type scale already say they belong together.
+- **The lockup is a wrap-tolerant flex row.** On narrow viewports the category drops to its own line, centred, with no breakpoint and no hand-set type size.
+- **Display-size type still gets a vertical light — but never to transparent** (see the rule above). The gradient ends at a 72% mix with the background, not at 0 alpha. A flat `color` declaration is the opaque fallback for browsers without `background-clip: text`.
+
+Two composition rules came out of the same pass:
+
+- **The exit is a link, not a button.** On a page with no boxes, a beveled pill is the only object with depth, and it reads as belonging to a different era. The exit is text + a rule that lights up on hover + an arrow that shifts. (`buttonVariants` is exported for links, but "it is a link" is not by itself a reason to dress it as a button.)
+- **With only two blocks left, the hero is centred.** Left alignment over a two-block page leaves half the screen empty, and empty is read as unfinished, not as whitespace. Centring also means the scroll-linked recede uses the default `transform-origin` — a left-aligned hero has to pin it to `left center` or the mark drifts out of the column as it scales.
 
 ## Motion
 
@@ -258,6 +313,7 @@ Five devices, all in `components/fx/` and `app/globals.css`:
 | --- | --- |
 | `AppAtmosphere` | One environment for the whole app. Mounted in the root layout; selects the per-route preset. |
 | `ParticleField` | Depth and "this system is running". Curl-noise flow field on canvas. |
+| `MoteField` | The light is on. Dust drifting through the beam; homepage only, brightness gated by distance from the light. |
 | `useReveal` / `MotionBlock` | Section entry. Content arriving as you scroll to it, not all at once. |
 | `CountUp` | A number is a measurement being taken. |
 | `.soj-grow-x` | Data bars scaling in. A measurement landing. |
@@ -359,6 +415,7 @@ SOJ product components live in `components/soj/**`:
 - `CodeWorkspace`
 - `ProblemStatement` (the full reading panel; the title is owned by `PageHeader`)
 - `AuthGate`
+- *(deleted)* `SojWordmark` — the hand-authored SVG brand wordmark. Removed after review: hand-drawn curves read as amateur next to a real typeface, and at `width: 100%` the mark alone was 400px tall. The homepage typesets a lockup instead — see "The wordmark is typeset, and the hero is centred". **Do not reintroduce a drawn brand mark.**
 
 Motion components live in `components/fx/**`:
 
@@ -378,6 +435,10 @@ Do:
 - Put every user-visible string through `lib/i18n`. Hardcoded English in a Chinese interface is a bug, not a detail.
 - Keep header stats to one group, and keep data visuals where their decision is made.
 - Register a new route in the `AppAtmosphere` preset table when its attention requirement differs from `drift`, and justify the choice in the table's comment.
+- Reach for `Button`'s `variant="bare"` + `size="bare"` when an element has to be clickable but must **not look like a button** — a full-bleed block, for example. It is the difference between "a button with no fill" (`ghost`, still sized and padded like a button, for a toolbar row) and "not a button" (bare, layout owned by the caller).
+- Give every dialog a visible way out. `DialogContent` renders one, and it is not optional: Radix guarantees only Esc and the overlay, and a touch device has no Esc.
+- Give a modal its own surface step. A sheet on `soj.surface` with inputs on `soj.bg-raised` reads as *fields pressed into a panel*; a sheet and its inputs on the same colour read as *a table stuck on a wall*.
+- Reach for `variant="solid"` (flat silver) when the primary action sits inside a typographic, box-free composition. Reserve the beveled `primary` for dense application surfaces where the button has to hold its own against a panel.
 - Update this document when adding a shared token or shared component.
 - Run `npm run lint:style`, `npm run lint`, and `npx tsc --noEmit` before every commit.
 
@@ -385,6 +446,10 @@ Do not:
 
 - Add raw hex or rgb colours in `app`, `components`, or `features`.
 - Add page-local button, input, badge, or panel styling.
+- **Hand-draw brand glyphs.** A drawn mark has no font metrics behind it, so its curves are guesswork, and it always ends up oversized. Typeset a lockup (name + category word) instead.
+- **List *which* languages, tags, or difficulties exist on the homepage.** That is the problem set's job. The homepage carries the scale (how many), never the inventory (which ones).
+- **Put a beveled `primary` button on the homepage.** On a page with no boxes it becomes the only object with depth, i.e. the only object from a different era.
+- Put a brand mark, a hero graphic, or a background field above the fold that makes the reader scroll before learning what the product is.
 - **Mount a `ParticleField` on a page.** The environment is global; a page-local field is how the background becomes a decoration again.
 - **Add a page-level dashboard above the content the page is for** — metric blocks, summary cards, stage strips. If the data matters, it belongs in the table row or the header's single stat group.
 - **Add an element to the top nav that is useless before login.** That belongs in the account menu.

@@ -187,20 +187,33 @@ export function ParticleField({
       const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
       const nextWidth = Math.max(1, Math.round(rect.width));
       const nextHeight = Math.max(1, Math.round(rect.height));
-      const changed = nextWidth !== width || nextHeight !== height;
+      const nextBufferWidth = Math.round(nextWidth * dpr);
+      const nextBufferHeight = Math.round(nextHeight * dpr);
+      // 尺寸没变就直接返回。**这不是优化，是正确性。**
+      // 给 canvas.width 赋值会连带清空画布，而重画挂在下面的 `changed` 上；
+      // 少了这个提前返回，ResizeObserver 里那次「尺寸没变的初始回调」
+      // 就会把画布擦干净且不再重画。动画态下看不出来（下一帧补上），
+      // **prefers-reduced-motion 下没有下一帧，整个背景就是一块空底色**——
+      // 而这一档的承诺恰恰是「不进入循环，但仍旧是一张完整的静帧构图」。
+      if (
+        nextWidth === width &&
+        nextHeight === height &&
+        canvas.width === nextBufferWidth &&
+        canvas.height === nextBufferHeight
+      ) {
+        return;
+      }
       width = nextWidth;
       height = nextHeight;
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
+      canvas.width = nextBufferWidth;
+      canvas.height = nextBufferHeight;
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.fillStyle = colorBg;
       ctx.fillRect(0, 0, width, height);
-      if (changed) {
-        rebuild();
-        if (reduceMotion.matches) renderStatic();
-      }
+      rebuild();
+      if (reduceMotion.matches) renderStatic();
     };
 
     /**
