@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { permissionsForRoles } from "@/lib/auth/permissions";
 import { clearSession, createMemorySessionStore, createMockSession, restoreSession, saveSession } from "@/lib/auth/session";
 import { mockUser } from "@/lib/mock/fixtures";
 
@@ -69,5 +70,34 @@ describe("auth session boundary", () => {
     clearSession(store);
 
     expect(restoreSession(store)).toBeNull();
+  });
+
+  it("keeps sessions whose user carries contest-scoped roles", () => {
+    const now = new Date("2026-07-07T10:00:00Z");
+    const session = createMockSession(
+      {
+        ...mockUser,
+        roles: ["user", "contest_manager"],
+        permissions: permissionsForRoles("user", "contest_manager"),
+      },
+      now,
+    );
+    const store = createMemorySessionStore(session);
+
+    expect(restoreSession(store, now)).toMatchObject({
+      user: { roles: ["user", "contest_manager"] },
+    });
+  });
+
+  it("clears sessions carrying an unknown role", () => {
+    const store = createMemorySessionStore({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+      user: { ...mockUser, roles: ["user", "intruder"] as never },
+      expiresAt: "2026-07-07T22:00:00.000Z",
+    });
+
+    expect(restoreSession(store, new Date("2026-07-07T10:00:00Z"))).toBeNull();
+    expect(store.getItem("soj.session")).toBeNull();
   });
 });

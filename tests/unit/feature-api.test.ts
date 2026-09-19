@@ -152,9 +152,10 @@ describe("feature api modules", () => {
     const apiClient = {
       ...client,
       contests: {
-        list: client.contests.list,
+        ...client.contests,
         get: vi.fn(async () => ({
           id: 99,
+          ownerUserId: 1,
           title: "Backend Cup",
           type: "acm" as const,
           status: "running" as const,
@@ -162,6 +163,7 @@ describe("feature api modules", () => {
           endsAt: "2026-07-08T12:00:00Z",
           freezeAt: "2026-07-08T11:30:00Z",
           registered: false,
+          currentUserRoles: [],
           problems: [],
         })),
         register: vi.fn(),

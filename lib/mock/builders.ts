@@ -26,6 +26,7 @@ export function buildProblem(overrides: Partial<ProblemDetail> = {}): ProblemDet
 export function buildContest(overrides: Partial<ContestSummary> = {}): ContestSummary {
   return {
     id: overrides.id ?? 1,
+    ownerUserId: overrides.ownerUserId ?? 1,
     title: "SOJ Signal Cup",
     type: "acm",
     status: "running",
@@ -33,6 +34,7 @@ export function buildContest(overrides: Partial<ContestSummary> = {}): ContestSu
     endsAt: "2026-07-07T14:00:00Z",
     freezeAt: "2026-07-07T13:00:00Z",
     registered: true,
+    currentUserRoles: [],
     problems: [
       { problemId: 1, alias: "A", title: "Signal Path 1" },
       { problemId: 2, alias: "B", title: "Cache Relay" },

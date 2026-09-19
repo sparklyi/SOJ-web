@@ -1,10 +1,17 @@
-import type { ContestRegistrationResponse, ContestResponse, ScoreboardCell, ScoreboardResponse } from "./backend-types";
-import type { ContestRegistration, ContestStatus, ContestSummary } from "./types";
+import type {
+  ContestRegistrationResponse,
+  ContestResponse,
+  ContestRoleAssignmentResponse,
+  ScoreboardCell,
+  ScoreboardResponse,
+} from "./backend-types";
+import type { ContestRegistration, ContestRoleAssignment, ContestStatus, ContestSummary } from "./types";
 import type { ScoreboardModel, ScoreboardProblemCell, ScoreboardProblemStatus } from "@/lib/domain/scoreboard";
 
 export function mapContestResponse(input: ContestResponse, now: Date = new Date()): ContestSummary {
   return {
     id: input.id,
+    ownerUserId: input.owner_user_id,
     title: input.title,
     type: input.scoring_mode,
     status: mapContestStatus(input, now),
@@ -12,6 +19,7 @@ export function mapContestResponse(input: ContestResponse, now: Date = new Date(
     endsAt: input.end_at,
     freezeAt: input.freeze_at,
     registered: input.registered,
+    currentUserRoles: [...(input.current_user_roles ?? [])],
     problems: [...input.problems]
       .sort((a, b) => a.sort_order - b.sort_order || a.alias.localeCompare(b.alias))
       .map((problem) => ({
@@ -20,6 +28,19 @@ export function mapContestResponse(input: ContestResponse, now: Date = new Date(
         title: problem.title ?? `Problem ${problem.alias}`,
       })),
   };
+}
+
+export function mapContestRoleAssignment(input: ContestRoleAssignmentResponse): ContestRoleAssignment {
+  const assignment: ContestRoleAssignment = {
+    id: input.id,
+    contestId: input.contest_id,
+    userId: input.user_id,
+    role: input.role,
+    grantedAt: input.granted_at,
+  };
+  if (input.username) assignment.username = input.username;
+  if (input.granted_by != null) assignment.grantedBy = input.granted_by;
+  return assignment;
 }
 
 export function mapContestRegistration(input: ContestRegistrationResponse): ContestRegistration {

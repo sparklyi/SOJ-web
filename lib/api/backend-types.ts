@@ -1,4 +1,4 @@
-import type { Permission, Role } from "@/lib/auth/permissions";
+import type { ContestRole, Permission, Role } from "@/lib/auth/permissions";
 
 export type Envelope<T> = {
   data?: T;
@@ -257,6 +257,7 @@ export type ContestResponse = {
   status: BackendContestStatus;
   scoring_mode: "acm";
   registered: boolean;
+  current_user_roles: ContestRole[];
   start_at: string;
   end_at: string;
   freeze_at: string;
@@ -337,4 +338,150 @@ export type ContestRegistrationRequest = {
   display_name: string;
   email: string;
   invite_code?: string;
+};
+
+export type ProblemReviewQueueResponse = {
+  items: ProblemResponse[];
+  page: number;
+  page_size: number;
+  total: number;
+};
+
+export type ProblemReviewDecisionRequest = {
+  decision: "approve" | "request_changes";
+  comment?: string;
+};
+
+export type ProblemReviewEventResponse = {
+  id: number;
+  problem_id: number;
+  actor_user_id: number;
+  from_status: ProblemPublicationStatus;
+  to_status: ProblemPublicationStatus;
+  decision: "submit" | "approve" | "request_changes";
+  comment?: string | null;
+  created_at: string;
+};
+
+export type ProblemReviewEventPageResponse = {
+  items: ProblemReviewEventResponse[];
+};
+
+export type RejudgeBatchStatus = "queued" | "running" | "completed" | "failed" | "canceled";
+export type RejudgeItemStatus = "queued" | "running" | "completed" | "failed" | "canceled";
+
+export type RejudgeBatchResponse = {
+  id: number;
+  problem_id?: number | null;
+  contest_id?: number | null;
+  requested_by: number;
+  status: RejudgeBatchStatus;
+  reason: string;
+  total_count: number;
+  completed_count: number;
+  failed_count: number;
+  canceled_count: number;
+  error_message?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RejudgeBatchItemResponse = {
+  id: number;
+  batch_id: number;
+  submission_id: number;
+  task_id: number;
+  attempt_id?: number | null;
+  status: RejudgeItemStatus;
+  error_message?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RejudgeBatchDetailResponse = {
+  batch: RejudgeBatchResponse;
+  items: RejudgeBatchItemResponse[];
+};
+
+export type RejudgeBatchPageResponse = {
+  items: RejudgeBatchResponse[];
+  page: number;
+  page_size: number;
+  total: number;
+};
+
+export type RejudgeBatchCreateRequest = {
+  problem_id?: number | null;
+  contest_id?: number | null;
+  reason: string;
+};
+
+export type RejudgeBatchCancelRequest = {
+  reason: string;
+};
+
+export type ContestRoleAssignmentResponse = {
+  id: number;
+  contest_id: number;
+  user_id: number;
+  username?: string;
+  role: ContestRole;
+  granted_by?: number | null;
+  granted_at: string;
+  revoked_at?: string | null;
+};
+
+export type ContestRoleAssignmentPageResponse = {
+  items: ContestRoleAssignmentResponse[];
+  total: number;
+};
+
+export type RoleAssignmentResponse = {
+  id: number;
+  user_id: number;
+  role: Role;
+  granted_by?: number | null;
+  granted_at: string;
+  revoked_at?: string | null;
+};
+
+export type UserPageResponse = {
+  items: UserResponse[];
+  page: number;
+  page_size: number;
+  total: number;
+};
+
+export type UserCursorPageResponse = {
+  items: UserResponse[];
+  next_cursor?: string;
+};
+
+export type AdminUserUpdateRequest = {
+  username?: string;
+  bio?: string | null;
+  status?: UserStatus;
+};
+
+export type RoleGrantRequest = {
+  role: Role;
+  reason: string;
+};
+
+export type RoleRevokeRequest = {
+  reason: string;
+};
+
+export type ContestRoleGrantRequest = {
+  user_id: number;
+  role: ContestRole;
+  reason: string;
+};
+
+export type ContestRoleRevokeRequest = {
+  reason: string;
 };

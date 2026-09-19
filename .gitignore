@@ -16,7 +16,10 @@ coverage
 .next/
 playwright-report/
 test-results/
+output/
 .superpowers/
+.workbuddy/
+.playwright-cli/
 *.tsbuildinfo
 *.local
 

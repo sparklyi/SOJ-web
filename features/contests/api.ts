@@ -1,5 +1,6 @@
 import { createApiClient } from "@/lib/api/client";
 import type { ApiClient } from "@/lib/api/types";
+import type { ContestRole } from "@/lib/auth/permissions";
 import { buildArenaEvents } from "@/lib/domain/arena";
 import { canRegister, canSubmit, getContestPhase } from "@/lib/domain/contest";
 import { sortSubmissionsByNewest } from "@/lib/domain/submission";
@@ -37,4 +38,24 @@ export async function getContestArenaEvents(id: number, client: ApiClient = crea
     contest,
     sortSubmissionsByNewest(submissions.items.filter((submission) => submission.contestId === id)),
   );
+}
+
+export async function listContestRoles(id: number, client: ApiClient = createApiClient()) {
+  return client.contests.listRoles(id);
+}
+
+export async function grantContestRole(
+  id: number,
+  input: { userId: number; role: ContestRole; reason: string },
+  client: ApiClient = createApiClient(),
+) {
+  return client.contests.grantRole(id, input);
+}
+
+export async function revokeContestRole(
+  id: number,
+  input: { userId: number; role: ContestRole; reason: string },
+  client: ApiClient = createApiClient(),
+) {
+  return client.contests.revokeRole(id, input);
 }

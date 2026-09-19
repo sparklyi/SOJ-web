@@ -26,7 +26,19 @@ export function TopNav() {
   const authenticatedUser = status === "authenticated" ? user : null;
   const isAuthenticated = authenticatedUser !== null;
   const canOpenAuthoring = can("problem.create") || can("problem.review") || can("problem.manage_all");
-  const visibleItems = canOpenAuthoring ? [...navItems, { href: "/manage/problems", labelKey: "nav.author" as const }] : navItems;
+  const canOpenReview = can("problem.review") || can("problem.manage_all");
+  // Only the globally held capabilities appear here. A contest-scoped judge or
+  // manager reaches rejudge from the contest page instead, because the session
+  // cannot enumerate contest assignments.
+  const canOpenRejudge = can("submission.rejudge") || can("problem.manage_all");
+  const canOpenAdmin = can("user.manage");
+  const visibleItems = [
+    ...navItems,
+    ...(canOpenAuthoring ? [{ href: "/manage/problems", labelKey: "nav.author" as const }] : []),
+    ...(canOpenReview ? [{ href: "/manage/reviews", labelKey: "nav.reviews" as const }] : []),
+    ...(canOpenRejudge ? [{ href: "/manage/rejudge", labelKey: "nav.rejudge" as const }] : []),
+    ...(canOpenAdmin ? [{ href: "/admin/users", labelKey: "nav.adminUsers" as const }] : []),
+  ];
   const currentPathname = unlocalizePath(pathname);
   const activeHref = visibleItems.find((item) => currentPathname === item.href || (item.href !== "/" && currentPathname.startsWith(`${item.href}/`)))?.href ?? "/";
 
@@ -124,6 +136,21 @@ export function TopNav() {
                   {canOpenAuthoring ? (
                     <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/problems">
                       {t("nav.account.authorProblems")}
+                    </LocalizedLink>
+                  ) : null}
+                  {canOpenReview ? (
+                    <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/reviews">
+                      {t("nav.reviews")}
+                    </LocalizedLink>
+                  ) : null}
+                  {canOpenRejudge ? (
+                    <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/rejudge">
+                      {t("nav.rejudge")}
+                    </LocalizedLink>
+                  ) : null}
+                  {canOpenAdmin ? (
+                    <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/admin/users">
+                      {t("nav.adminUsers")}
                     </LocalizedLink>
                   ) : null}
                   <button
