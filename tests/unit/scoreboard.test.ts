@@ -149,6 +149,7 @@ function contestResponse(overrides: {
   startAt?: string;
   endAt?: string;
   freezeAt?: string;
+  currentUserRoles?: Array<"contest_staff" | "contest_manager" | "contest_judge">;
   problems?: Array<{ problem_id: number; alias: string; sort_order: number; title?: string }>;
 } = {}) {
   return {
@@ -160,6 +161,7 @@ function contestResponse(overrides: {
     status: overrides.status ?? "published",
     scoring_mode: "acm" as const,
     registered: overrides.registered ?? false,
+    current_user_roles: overrides.currentUserRoles ?? [],
     start_at: overrides.startAt ?? "2026-07-08T10:00:00Z",
     end_at: overrides.endAt ?? "2026-07-08T12:00:00Z",
     freeze_at: overrides.freezeAt ?? "2026-07-08T11:30:00Z",

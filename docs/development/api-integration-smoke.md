@@ -69,6 +69,11 @@ Open `http://localhost:3000` and use these flows:
 6. Open `/contests`, register for a contest, then enter its workspace.
 7. Submit from the contest workspace and open the contest scoreboard.
 8. Open `/manage/problems`, create a draft, save its statement, upload a testcase zip, run validation, and submit it for review.
+9. Sign in as a reviewer (different account from the author) and open `/manage/reviews`. Approve the submitted problem, then reopen its detail page and confirm it is published. Repeat the flow with "Request changes" and confirm the author can edit it again.
+10. Open `/manage/rejudge` as an operator, create a batch for the published problem, open the batch detail, and cancel its queued items while it is still queued or running.
+11. Open `/admin/users` as an admin, search for a user, grant a global role with a reason, then revoke it. Confirm the form is disabled for the signed-in account itself.
+12. Open a contest you own or manage and use the "Contest roles" entry to grant a contest role to another user, then revoke it.
+13. Sign in as a user who only holds a contest-scoped role (no global `submission.rejudge`). Open that contest's detail page and confirm the "Rejudge contest" entry appears only for a manager or judge, then create a batch from `/contests/{id}/rejudge` and confirm the target is pinned to that contest.
 
 ## Expected Behavior
 
@@ -81,6 +86,20 @@ Open `http://localhost:3000` and use these flows:
 - ACM scoreboard renders backend rows in HTTP mode.
 - Direct publication before a valid current-testcase check returns `422 problem.check_required`.
 - The authoring browser smoke submits only after validation; publication remains a separate reviewer decision.
+- The review workbench, rejudge console, and role managers render a permission state instead of firing requests the session cannot make, so a signed-in account without the capability sees an explicit denial.
+- Contest role administration is resolved from the contest owner, an existing contest-manager assignment, or an admin/root session, because contest roles never appear in the global permission list.
+
+## RBAC Smoke Checklist
+
+Run this against a backend that has the role seeds applied:
+
+1. `user` can read problems and submit, but `/manage/problems`, `/manage/reviews`, `/manage/rejudge`, and `/admin/users` all show the permission state.
+2. `author` reaches `/manage/problems`, can create a draft and submit it for review, and cannot decide a review.
+3. `reviewer` reaches `/manage/reviews`, is refused when deciding a problem they own (`problem.self_review_forbidden`), and can approve another author's problem.
+4. `operator` reaches `/manage/rejudge` and can create a problem-target batch; a non-operator gets `auth.forbidden`.
+5. A user holding only `contest_judge` in one contest reaches that contest's rejudge entry but not `/manage/rejudge`, and is refused a contest target in a contest where they hold no role.
+6. `admin` reaches every surface, including `/admin/users` and the contest role manager, and holds every entry in the 22-permission set.
+7. `root` behaves like `admin`; the difference is operational, not a difference in permission set.
 
 ## Known Backend Contract Gaps
 
