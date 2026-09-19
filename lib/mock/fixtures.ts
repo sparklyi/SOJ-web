@@ -1,4 +1,15 @@
-import type { ContestSummary, CurrentUser, JudgeLanguage, ProblemDetail, SubmissionSummary } from "@/lib/api/types";
+import type {
+  AdminUser,
+  ContestRoleAssignment,
+  ContestSummary,
+  CurrentUser,
+  JudgeLanguage,
+  ProblemDetail,
+  ProblemReviewEvent,
+  RejudgeBatch,
+  RejudgeBatchItem,
+  SubmissionSummary,
+} from "@/lib/api/types";
 import { permissionsForRoles } from "@/lib/auth/permissions";
 import { buildAcmScoreboardRow, buildContest, buildOiScoreboardRow, buildProblem, buildSubmission } from "./builders";
 
@@ -14,6 +25,36 @@ export const mockAuthorUser: CurrentUser = {
   ...mockUser,
   roles: ["user", "author"],
   permissions: permissionsForRoles("user", "author"),
+};
+
+export const mockReviewerUser: CurrentUser = {
+  ...mockUser,
+  roles: ["user", "reviewer"],
+  permissions: permissionsForRoles("user", "reviewer"),
+};
+
+export const mockOperatorUser: CurrentUser = {
+  ...mockUser,
+  roles: ["user", "operator"],
+  permissions: permissionsForRoles("user", "operator"),
+};
+
+export const mockAdminUser: CurrentUser = {
+  ...mockUser,
+  roles: ["user", "admin"],
+  permissions: permissionsForRoles("user", "admin"),
+};
+
+export const mockRootUser: CurrentUser = {
+  ...mockUser,
+  roles: ["user", "root"],
+  permissions: permissionsForRoles("user", "root"),
+};
+
+export const mockContestManagerUser: CurrentUser = {
+  ...mockUser,
+  roles: ["user", "contest_manager"],
+  permissions: permissionsForRoles("user", "contest_manager"),
 };
 
 export const mockProblems: ProblemDetail[] = [
@@ -89,8 +130,85 @@ export const mockLanguages: JudgeLanguage[] = [
   },
 ];
 
-export const mockAcmScoreboardRows = [
-  buildAcmScoreboardRow({ id: "team-1", handle: "lin-chen", solved: 5, penalty: 312, movement: 2 }),
+export const mockProblemsAwaitingReview = ["Cache Relay", "Frozen Matrix"];
+
+export const mockReviewEvents: ProblemReviewEvent[] = [
+  {
+    id: 2,
+    problemId: 2,
+    actorUserId: 7,
+    fromStatus: "changes_requested",
+    toStatus: "in_review",
+    decision: "submit",
+    comment: "Added the missing constraint and pushed the fixed testcase set.",
+    createdAt: "2026-07-07T10:20:00Z",
+  },
+  {
+    id: 1,
+    problemId: 2,
+    actorUserId: 21,
+    fromStatus: "in_review",
+    toStatus: "changes_requested",
+    decision: "request_changes",
+    comment: "Sample 2 contradicts the stated output format.",
+    createdAt: "2026-07-07T09:41:00Z",
+  },
+];
+
+export const mockContestRoleAssignments: ContestRoleAssignment[] = [
+  { id: 1, contestId: 1, userId: 21, username: "noa-weiss", role: "contest_manager", grantedBy: 7, grantedAt: "2026-07-07T09:10:00Z" },
+  { id: 2, contestId: 1, userId: 33, username: "ravi-menon", role: "contest_judge", grantedBy: 7, grantedAt: "2026-07-07T09:12:00Z" },
+  { id: 3, contestId: 1, userId: 12, username: "aya-sato", role: "contest_staff", grantedBy: 7, grantedAt: "2026-07-07T09:15:00Z" },
+];
+
+export const mockAdminUsers: AdminUser[] = [
+  { id: 7, email: "lin.chen@soj.dev", handle: "lin-chen", status: "active", roles: ["user"], createdAt: "2026-06-01T09:00:00Z", updatedAt: "2026-06-01T09:00:00Z" },
+  { id: 12, email: "aya.sato@soj.dev", handle: "aya-sato", status: "active", roles: ["user", "author"], createdAt: "2026-06-02T09:00:00Z", updatedAt: "2026-06-20T09:00:00Z" },
+  { id: 21, email: "noa.weiss@soj.dev", handle: "noa-weiss", status: "active", roles: ["user", "reviewer"], createdAt: "2026-06-03T09:00:00Z", updatedAt: "2026-06-21T09:00:00Z" },
+  { id: 33, email: "ravi.menon@soj.dev", handle: "ravi-menon", status: "disabled", roles: ["user", "admin"], createdAt: "2026-06-04T09:00:00Z", updatedAt: "2026-07-01T09:00:00Z" },
+];
+
+export const mockRejudgeBatches: RejudgeBatch[] = [
+  {
+    id: 2,
+    contestId: 1,
+    requestedBy: 7,
+    status: "running",
+    reason: "Recompute after the freeze unseal fix.",
+    totalCount: 40,
+    completedCount: 17,
+    failedCount: 1,
+    canceledCount: 0,
+    startedAt: "2026-07-07T10:00:00Z",
+    createdAt: "2026-07-07T09:58:00Z",
+    updatedAt: "2026-07-07T10:02:00Z",
+  },
+  {
+    id: 1,
+    problemId: 2,
+    requestedBy: 7,
+    status: "completed",
+    reason: "Checker fix for the empty-input case.",
+    totalCount: 12,
+    completedCount: 12,
+    failedCount: 0,
+    canceledCount: 0,
+    startedAt: "2026-07-07T09:00:00Z",
+    finishedAt: "2026-07-07T09:04:00Z",
+    createdAt: "2026-07-07T08:59:00Z",
+    updatedAt: "2026-07-07T09:04:00Z",
+  },
+];
+
+export const mockRejudgeBatchItems: RejudgeBatchItem[] = [
+  { id: 1, batchId: 2, submissionId: 4, taskId: 2001, attemptId: 901, status: "completed", startedAt: "2026-07-07T10:00:10Z", finishedAt: "2026-07-07T10:00:14Z" },
+  { id: 2, batchId: 2, submissionId: 5, taskId: 2002, attemptId: 902, status: "completed", startedAt: "2026-07-07T10:00:14Z", finishedAt: "2026-07-07T10:00:19Z" },
+  { id: 3, batchId: 2, submissionId: 6, taskId: 2003, status: "failed", errorMessage: "judge agent disconnected before the attempt started", startedAt: "2026-07-07T10:00:19Z", finishedAt: "2026-07-07T10:00:21Z" },
+  { id: 4, batchId: 2, submissionId: 7, taskId: 2004, status: "running", startedAt: "2026-07-07T10:00:21Z" },
+  { id: 5, batchId: 2, submissionId: 8, taskId: 2005, status: "queued" },
+];
+
+export const mockAcmScoreboardRows = [  buildAcmScoreboardRow({ id: "team-1", handle: "lin-chen", solved: 5, penalty: 312, movement: 2 }),
   buildAcmScoreboardRow({ id: "team-2", handle: "mira", solved: 4, penalty: 260, movement: -1 }),
   buildAcmScoreboardRow({ id: "team-3", handle: "ravi", solved: 4, penalty: 344, movement: 0 }),
 ];

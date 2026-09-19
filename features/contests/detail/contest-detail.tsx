@@ -8,6 +8,7 @@ import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translator } from "@/lib/i18n/translate";
 import { ContestProblemTable } from "./contest-problem-table";
 import { ContestRegistration } from "./contest-registration";
+import { ContestManageEntries } from "./contest-manage-entries";
 
 type ContestDetailProps = {
   contest: ContestSummary & {
@@ -77,6 +78,7 @@ export async function ContestDetail({ contest }: ContestDetailProps) {
           <div className="grid grid-cols-2 gap-3">
             <RouteAction href={`/contests/${contest.id}/scoreboard`} label={t("contests.action.scoreboard")} />
             <RouteAction href={`/contests/${contest.id}/arena`} label={t("contests.action.arena")} />
+            <ContestManageEntries contestId={contest.id} />
             {firstProblemId ? <RouteAction href={`/contests/${contest.id}/problems/${firstProblemId}`} label={t("contests.action.firstProblem")} primary /> : null}
           </div>
         </aside>

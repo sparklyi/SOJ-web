@@ -1,17 +1,35 @@
 import { ApiError } from "./errors";
 import { request } from "./http-client";
 import type {
+  AdminUserUpdateRequest,
   AuthResponse,
   ContestRegistrationResponse,
   ContestResponse,
+  ContestRoleAssignmentPageResponse,
+  ContestRoleAssignmentResponse,
+  ContestRoleGrantRequest,
+  ContestRoleRevokeRequest,
   LanguageResponse,
   LoginRequest,
   PageResponse,
   ProblemAuthoringStateResponse,
   ProblemCheckResponse,
   ProblemResponse,
+  ProblemReviewDecisionRequest,
+  ProblemReviewEventPageResponse,
+  ProblemReviewEventResponse,
+  ProblemReviewQueueResponse,
   ProblemStatementResponse,
   ProblemStatsResponse,
+  RejudgeBatchCancelRequest,
+  RejudgeBatchCreateRequest,
+  RejudgeBatchDetailResponse,
+  RejudgeBatchItemResponse,
+  RejudgeBatchPageResponse,
+  RejudgeBatchResponse,
+  RoleAssignmentResponse,
+  RoleGrantRequest,
+  RoleRevokeRequest,
   TestcaseSetResponse,
   RefreshRequest,
   RegisterRequest,
@@ -20,11 +38,28 @@ import type {
   ScoreboardResponse,
   SubmissionCreateRequest,
   SubmissionResponse,
+  UserPageResponse,
   UserResponse,
 } from "./backend-types";
 import type { AuthSession } from "@/lib/auth/session";
-import type { ApiClient, AuthoringProblem, AuthoringStatement, AuthoringTestcaseSet, CurrentUser, JudgeLanguage, PageResult, ProblemCheckRun } from "./types";
-import { mapContestRegistration, mapContestResponse, mapContestScoreboard } from "./contest-mappers";
+import { isGlobalRole } from "@/lib/auth/permissions";
+import type {
+  AdminUser,
+  ApiClient,
+  AuthoringProblem,
+  AuthoringStatement,
+  AuthoringTestcaseSet,
+  CurrentUser,
+  GlobalRoleAssignment,
+  JudgeLanguage,
+  PageResult,
+  ProblemCheckRun,
+  ProblemReviewEvent,
+  RejudgeBatch,
+  RejudgeBatchDetail,
+  RejudgeBatchItem,
+} from "./types";
+import { mapContestRegistration, mapContestResponse, mapContestRoleAssignment, mapContestScoreboard } from "./contest-mappers";
 import { mapProblemDetail, mapProblemSummary } from "./problem-mappers";
 import { mapRunSummary, mapSubmissionSummary } from "./submission-mappers";
 
@@ -57,6 +92,79 @@ function mapUser(input: UserResponse): CurrentUser {
     roles: input.roles,
     permissions: input.permissions,
   };
+}
+
+function mapAdminUser(input: UserResponse): AdminUser {
+  return {
+    id: input.id,
+    email: input.email,
+    handle: input.username,
+    status: input.status,
+    roles: input.roles.filter(isGlobalRole),
+    createdAt: input.created_at,
+    updatedAt: input.updated_at,
+  };
+}
+
+function mapGlobalRoleAssignment(input: RoleAssignmentResponse): GlobalRoleAssignment {
+  const assignment: GlobalRoleAssignment = {
+    id: input.id,
+    userId: input.user_id,
+    role: input.role as GlobalRoleAssignment["role"],
+    grantedAt: input.granted_at,
+  };
+  if (input.granted_by != null) assignment.grantedBy = input.granted_by;
+  return assignment;
+}
+
+function mapReviewEvent(input: ProblemReviewEventResponse): ProblemReviewEvent {
+  const event: ProblemReviewEvent = {
+    id: input.id,
+    problemId: input.problem_id,
+    actorUserId: input.actor_user_id,
+    fromStatus: input.from_status,
+    toStatus: input.to_status,
+    decision: input.decision,
+    createdAt: input.created_at,
+  };
+  if (input.comment) event.comment = input.comment;
+  return event;
+}
+
+function mapRejudgeBatch(input: RejudgeBatchResponse): RejudgeBatch {
+  const batch: RejudgeBatch = {
+    id: input.id,
+    requestedBy: input.requested_by,
+    status: input.status,
+    reason: input.reason,
+    totalCount: input.total_count,
+    completedCount: input.completed_count,
+    failedCount: input.failed_count,
+    canceledCount: input.canceled_count,
+    createdAt: input.created_at,
+    updatedAt: input.updated_at,
+  };
+  if (input.problem_id != null) batch.problemId = input.problem_id;
+  if (input.contest_id != null) batch.contestId = input.contest_id;
+  if (input.error_message) batch.errorMessage = input.error_message;
+  if (input.started_at) batch.startedAt = input.started_at;
+  if (input.finished_at) batch.finishedAt = input.finished_at;
+  return batch;
+}
+
+function mapRejudgeBatchItem(input: RejudgeBatchItemResponse): RejudgeBatchItem {
+  const item: RejudgeBatchItem = {
+    id: input.id,
+    batchId: input.batch_id,
+    submissionId: input.submission_id,
+    taskId: input.task_id,
+    status: input.status,
+  };
+  if (input.attempt_id != null) item.attemptId = input.attempt_id;
+  if (input.error_message) item.errorMessage = input.error_message;
+  if (input.started_at) item.startedAt = input.started_at;
+  if (input.finished_at) item.finishedAt = input.finished_at;
+  return item;
 }
 
 function mapAuthoringProblem(input: ProblemResponse): AuthoringProblem {
@@ -319,6 +427,30 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
         });
         return mapAuthoringProblem(data);
       },
+      reviewQueue: async () => {
+        const data = await request<ProblemReviewQueueResponse>("/api/v1/problems/review-queue", {
+          accessToken: options.accessToken,
+          query: { page: 1, page_size: 100 },
+        });
+        return { items: data.items.map(mapAuthoringProblem), total: data.total };
+      },
+      decideReview: async (id, input) => {
+        const body: ProblemReviewDecisionRequest = { decision: input.decision };
+        if (input.comment) body.comment = input.comment;
+        const data = await request<ProblemResponse>(`/api/v1/problems/${id}/review/decision`, {
+          accessToken: options.accessToken,
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        return mapAuthoringProblem(data);
+      },
+      reviewEvents: async (id) => {
+        const data = await request<ProblemReviewEventPageResponse>(`/api/v1/problems/${id}/review/events`, {
+          accessToken: options.accessToken,
+        });
+        return data.items.map(mapReviewEvent);
+      },
     },
     submissions: {
       list: async () => {
@@ -426,6 +558,31 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
 
         return mapContestScoreboard({ ...firstPage, rows, next_cursor: undefined });
       },
+      listRoles: async (id) => {
+        const data = await request<ContestRoleAssignmentPageResponse>(`/api/v1/contests/${id}/roles`, {
+          accessToken: options.accessToken,
+        });
+        return data.items.map(mapContestRoleAssignment);
+      },
+      grantRole: async (id, input) => {
+        const body: ContestRoleGrantRequest = { user_id: input.userId, role: input.role, reason: input.reason };
+        const data = await request<ContestRoleAssignmentResponse>(`/api/v1/contests/${id}/roles`, {
+          accessToken: options.accessToken,
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        return mapContestRoleAssignment(data);
+      },
+      revokeRole: async (id, input) => {
+        const body: ContestRoleRevokeRequest = { reason: input.reason };
+        await request<undefined>(`/api/v1/contests/${id}/roles/${input.role}/users/${input.userId}`, {
+          accessToken: options.accessToken,
+          method: "DELETE",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      },
     },
     languages: {
       list: async (filter = {}): Promise<PageResult<JudgeLanguage>> => {
@@ -439,6 +596,95 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
         });
         const items = data.items.map(mapLanguage);
         return { items, total: data.total };
+      },
+    },
+    rejudge: {
+      list: async (filter = {}) => {
+        const data = await request<RejudgeBatchPageResponse>("/api/v1/rejudge-batches", {
+          accessToken: options.accessToken,
+          query: {
+            page: 1,
+            page_size: 50,
+            problem_id: filter.problemId,
+            contest_id: filter.contestId,
+            status: filter.status,
+          },
+        });
+        return { items: data.items.map(mapRejudgeBatch), total: data.total };
+      },
+      create: async (input) => {
+        const body: RejudgeBatchCreateRequest = { reason: input.reason };
+        if (input.problemId != null) body.problem_id = input.problemId;
+        if (input.contestId != null) body.contest_id = input.contestId;
+        const data = await request<RejudgeBatchResponse>("/api/v1/rejudge-batches", {
+          accessToken: options.accessToken,
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        return mapRejudgeBatch(data);
+      },
+      get: async (id): Promise<RejudgeBatchDetail> => {
+        const data = await request<RejudgeBatchDetailResponse>(`/api/v1/rejudge-batches/${id}`, {
+          accessToken: options.accessToken,
+        });
+        return { batch: mapRejudgeBatch(data.batch), items: data.items.map(mapRejudgeBatchItem) };
+      },
+      cancel: async (id, input) => {
+        const body: RejudgeBatchCancelRequest = { reason: input.reason };
+        const data = await request<RejudgeBatchResponse>(`/api/v1/rejudge-batches/${id}/cancel`, {
+          accessToken: options.accessToken,
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        return mapRejudgeBatch(data);
+      },
+    },
+    admin: {
+      listUsers: async (filter = {}) => {
+        const data = await request<UserPageResponse>("/api/v1/admin/users", {
+          accessToken: options.accessToken,
+          query: {
+            page: filter.page ?? 1,
+            page_size: filter.pageSize ?? 50,
+            keyword: filter.keyword,
+            status: filter.status,
+          },
+        });
+        return { items: data.items.map(mapAdminUser), total: data.total };
+      },
+      updateUser: async (id, input) => {
+        const body: AdminUserUpdateRequest = {};
+        if (input.username !== undefined) body.username = input.username;
+        if (input.bio !== undefined) body.bio = input.bio;
+        if (input.status !== undefined) body.status = input.status;
+        const data = await request<UserResponse>(`/api/v1/admin/users/${id}`, {
+          accessToken: options.accessToken,
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        return mapAdminUser(data);
+      },
+      grantRole: async (id, input) => {
+        const body: RoleGrantRequest = { role: input.role, reason: input.reason };
+        const data = await request<RoleAssignmentResponse>(`/api/v1/admin/users/${id}/roles`, {
+          accessToken: options.accessToken,
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        return mapGlobalRoleAssignment(data);
+      },
+      revokeRole: async (id, input) => {
+        const body: RoleRevokeRequest = { reason: input.reason };
+        await request<undefined>(`/api/v1/admin/users/${id}/roles/${input.role}`, {
+          accessToken: options.accessToken,
+          method: "DELETE",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
       },
     },
   };

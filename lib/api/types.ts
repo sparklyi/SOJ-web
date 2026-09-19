@@ -1,6 +1,6 @@
 import type { AuthSession } from "@/lib/auth/session";
 import type { ScoreboardModel } from "@/lib/domain/scoreboard";
-import type { Permission, Role } from "@/lib/auth/permissions";
+import type { ContestRole, GlobalRole, Permission, Role } from "@/lib/auth/permissions";
 
 export type ApiMode = "mock" | "http";
 
@@ -118,6 +118,7 @@ export type ContestStatus = "scheduled" | "running" | "frozen" | "ended" | "unse
 
 export type ContestSummary = {
   id: number;
+  ownerUserId: number;
   title: string;
   type: ContestType;
   status: ContestStatus;
@@ -125,6 +126,7 @@ export type ContestSummary = {
   endsAt: string;
   freezeAt: string;
   registered: boolean;
+  currentUserRoles: ContestRole[];
   problems: Array<{ problemId: number; alias: string; title: string }>;
 };
 
@@ -265,6 +267,86 @@ export type JudgeLanguage = {
   enabled: boolean;
 };
 
+export type ReviewDecision = "approve" | "request_changes";
+
+export type ProblemReviewEvent = {
+  id: number;
+  problemId: number;
+  actorUserId: number;
+  fromStatus: ProblemPublicationStatus;
+  toStatus: ProblemPublicationStatus;
+  decision: "submit" | "approve" | "request_changes";
+  comment?: string;
+  createdAt: string;
+};
+
+export type RejudgeBatchStatus = "queued" | "running" | "completed" | "failed" | "canceled";
+
+export type RejudgeBatch = {
+  id: number;
+  problemId?: number;
+  contestId?: number;
+  requestedBy: number;
+  status: RejudgeBatchStatus;
+  reason: string;
+  totalCount: number;
+  completedCount: number;
+  failedCount: number;
+  canceledCount: number;
+  errorMessage?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RejudgeBatchItem = {
+  id: number;
+  batchId: number;
+  submissionId: number;
+  taskId: number;
+  attemptId?: number;
+  status: RejudgeBatchStatus;
+  errorMessage?: string;
+  startedAt?: string;
+  finishedAt?: string;
+};
+
+export type RejudgeBatchDetail = {
+  batch: RejudgeBatch;
+  items: RejudgeBatchItem[];
+};
+
+export type ContestRoleAssignment = {
+  id: number;
+  contestId: number;
+  userId: number;
+  username?: string;
+  role: ContestRole;
+  grantedBy?: number;
+  grantedAt: string;
+};
+
+export type GlobalRoleAssignment = {
+  id: number;
+  userId: number;
+  role: GlobalRole;
+  grantedBy?: number;
+  grantedAt: string;
+};
+
+export type AdminUserStatus = "active" | "disabled" | "deleted";
+
+export type AdminUser = {
+  id: number;
+  email: string;
+  handle: string;
+  status: AdminUserStatus;
+  roles: GlobalRole[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CurrentUser = {
   id: number;
   handle: string;
@@ -297,6 +379,9 @@ export type ApiClient = {
     getAuthoringState: (id: number) => Promise<ProblemAuthoringState>;
     runCheck: (id: number) => Promise<ProblemCheckRun>;
     submitReview: (id: number) => Promise<AuthoringProblem>;
+    reviewQueue: () => Promise<PageResult<AuthoringProblem>>;
+    decideReview: (id: number, input: { decision: ReviewDecision; comment?: string }) => Promise<AuthoringProblem>;
+    reviewEvents: (id: number) => Promise<ProblemReviewEvent[]>;
   };
   submissions: {
     list: () => Promise<PageResult<SubmissionSummary>>;
@@ -312,8 +397,23 @@ export type ApiClient = {
     get: (id: number) => Promise<ContestSummary>;
     register: (id: number, input: ContestRegistrationInput) => Promise<ContestRegistration>;
     scoreboard: (id: number) => Promise<ScoreboardModel>;
+    listRoles: (id: number) => Promise<ContestRoleAssignment[]>;
+    grantRole: (id: number, input: { userId: number; role: ContestRole; reason: string }) => Promise<ContestRoleAssignment>;
+    revokeRole: (id: number, input: { userId: number; role: ContestRole; reason: string }) => Promise<void>;
   };
   languages: {
     list: (filter?: { enabled?: boolean; engine?: string }) => Promise<PageResult<JudgeLanguage>>;
+  };
+  rejudge: {
+    list: (filter?: { problemId?: number; contestId?: number; status?: RejudgeBatchStatus }) => Promise<PageResult<RejudgeBatch>>;
+    create: (input: { problemId?: number; contestId?: number; reason: string }) => Promise<RejudgeBatch>;
+    get: (id: number) => Promise<RejudgeBatchDetail>;
+    cancel: (id: number, input: { reason: string }) => Promise<RejudgeBatch>;
+  };
+  admin: {
+    listUsers: (filter?: { keyword?: string; status?: AdminUserStatus; page?: number; pageSize?: number }) => Promise<PageResult<AdminUser>>;
+    updateUser: (id: number, input: { username?: string; bio?: string | null; status?: AdminUserStatus }) => Promise<AdminUser>;
+    grantRole: (id: number, input: { role: GlobalRole; reason: string }) => Promise<GlobalRoleAssignment>;
+    revokeRole: (id: number, input: { role: GlobalRole; reason: string }) => Promise<void>;
   };
 };
