@@ -1,26 +1,23 @@
-import { cn } from "@/lib/ui/cn";
+import { Badge } from "@/components/ui/badge";
 
 type StatusTone = "neutral" | "accent" | "success" | "warning" | "danger" | "info";
-
-const tones: Record<StatusTone, string> = {
-  neutral: "border-soj-line bg-soj-surface text-soj-muted",
-  accent: "border-soj-accent/50 bg-soj-accent/10 text-soj-accent",
-  success: "border-soj-success/50 bg-soj-success/10 text-soj-success",
-  warning: "border-soj-warning/50 bg-soj-warning/10 text-soj-warning",
-  danger: "border-soj-danger/50 bg-soj-danger/10 text-soj-danger",
-  info: "border-soj-info/50 bg-soj-info/10 text-soj-info",
-};
 
 type StatusPillProps = {
   children: React.ReactNode;
   tone?: StatusTone;
   className?: string;
+  /** 表达「正在发生」时才加点，例如 running / frozen；纯静态状态不要加。 */
+  withDot?: boolean;
 };
 
-export function StatusPill({ children, tone = "neutral", className }: StatusPillProps) {
+/**
+ * 兼容层：状态徽章的视觉统一由 components/ui/Badge 负责。
+ * 保留此组件是为了不改动既有调用点，实现上不再自带一套色板。
+ */
+export function StatusPill({ children, tone = "neutral", className, withDot = false }: StatusPillProps) {
   return (
-    <span className={cn("inline-flex w-fit items-center justify-self-start whitespace-nowrap rounded-soj-sm border px-2 py-1 font-mono text-xs", tones[tone], className)}>
+    <Badge tone={tone} className={className} withDot={withDot}>
       {children}
-    </span>
+    </Badge>
   );
 }

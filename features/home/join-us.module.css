@@ -1,0 +1,142 @@
+/* 加入我们。
+   首页的收尾。做法和展台相反：展台是「把视线钉在一件东西上」，
+   这里是「把话说大，然后把路指出来」。
+
+   唯一一条结构线是上沿的分隔线：它与展台铭牌上沿是同一种线，
+   于是整页读起来是同一块展板被切成两段，而不是两块贴在一起的区块。
+
+   这一块本身没有按钮外观：没有底色、没有描边、没有圆角。
+   排版（排列方式 / 内边距 / 整行宽度）由 JSX 上的工具类给，这里只管**字与那条光**，
+   两者职责不重叠——所以不存在「模块类与工具类谁覆盖谁」的问题。
+
+   对齐是**居中**的。上一版左对齐，在一个已经居中的页面里，
+   一行顶到左边的字加上甩到最右边的箭头，读起来像没收尾。 */
+
+.join {
+  border-top: 1px solid var(--color-soj-line);
+}
+
+/* 收束句。小字、次要色——它是给下面那句大话铺路的，不是主角。 */
+.statement {
+  font-size: clamp(15px, 1.4vw, 19px);
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  color: var(--color-soj-muted);
+}
+
+/* 展示字。
+   字号上限 146px 是被高度约束住的：再大就会把这一块推到两屏之外，
+   而它只是收尾，不该比展台更占地方。
+   字距给 -0.01em：全大写字母在高字号下天然显松，轻微收紧才像一整块牌子。 */
+.invite {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(16px, 2.4vw, 40px);
+  font-family: var(--font-soj-display), ui-sans-serif, system-ui, "PingFang SC", sans-serif;
+  font-size: clamp(46px, 9.4vw, 146px);
+  font-weight: 620;
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+  /* 默认是**实心字**，任何浏览器都能看见。
+     下面 @supports 里才把它变成有明暗的字——这个顺序不能反：
+     反过来写（起始态透明、靠 background-clip 才可见）在没有该能力的浏览器上
+     会得到一个「点了有反应但看不见字」的按钮。 */
+  color: var(--color-soj-text);
+}
+
+.arrow {
+  flex: none;
+  width: clamp(30px, 4vw, 56px);
+  height: auto;
+  color: var(--color-soj-muted);
+}
+
+/* 暗 → 亮的扫过。
+   一条硬边的渐变：左半是亮银、右半是**暗银**（不是透明），配 200% 的尺寸，
+   把 background-position 从 100% 拉到 0%，亮的那一半就横着扫过字形。
+
+   两端的取值都是量过的，不是调出来的：
+     · 右端（静止态）46% 混合 = **3.98:1**。它够大字线（3:1），但看着像**禁用**——
+       一个页面上唯一的动作用「暗到像灰掉」的颜色，是最糟的一类取舍。
+       抬到 62% = 6.5:1，再抬到 **70% = 8.0:1**：静止态本身就亮得起来。
+       停在 70% 而不是直接给主文案色，是因为它上面就是站名——
+       收尾句不该比品牌更亮，但要一眼看得出「这里可以按」。
+     · 左端（悬停态）是主文案色 = 15.8:1。
+     两者之间仍有 8.0 → 15.8 的落差，扫过的效果仍然是清楚的。
+
+   为什么右半取暗银而不是透明：先做的是「空心描边字，悬停时填充」，
+   实机看下来静止态读成了**线稿**——一圈 1.5px 的灰线在近黑底上，
+   更像是「这块还没做完」，而不是「这是一句被刻出来的话」。
+
+   触发条件挂在祖先上（`:has(> button:hover)`），因为这一整块都是命中区域：
+   把 hover 写在 `.invite` 自己身上，指针落在两侧留白上时字不会响应，
+   读者会以为它不可点。`:has()` 不支持时的降级是「停在暗银」——而不是「看不见字」。 */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .invite {
+    color: transparent;
+    background-image: linear-gradient(
+      90deg,
+      var(--color-soj-text) 0 50%,
+      color-mix(in oklab, var(--color-soj-text) 70%, var(--color-soj-bg)) 50% 100%
+    );
+    background-size: 200% 100%;
+    background-position: 100% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  .join:has(> button:hover) .invite,
+  .join:has(> button:focus-visible) .invite {
+    background-position: 0 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .invite {
+      transition: background-position 760ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+  }
+}
+
+.join:has(> button:hover) .arrow,
+.join:has(> button:focus-visible) .arrow {
+  color: var(--color-soj-text);
+  transform: translateX(10px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .arrow {
+    transition:
+      transform 460ms cubic-bezier(0.2, 0.7, 0.2, 1),
+      color 320ms ease;
+  }
+}
+
+/* 弹窗内边距。**不在 DialogContent 基础件里定**（基础件只管「它是一块面板」），
+   否则模块类与工具类会同时命中 padding，谁生效取决于产物 CSS 的先后。 */
+.dialog {
+  padding: clamp(22px, 3.2vw, 30px);
+}
+
+.form {
+  margin-top: clamp(20px, 2.4vw, 26px);
+}
+
+/* 页脚的身份切换。它是**收尾**，所以排在主操作下面、居中、次要色。 */
+.switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px 8px;
+  margin: clamp(14px, 1.8vw, 18px) 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-soj-muted);
+}
+
+@media (max-width: 639px) {
+  /* 窄屏上箭头会被挤到字下面去，收小一点让它们同排。 */
+  .arrow {
+    width: 26px;
+  }
+}

@@ -155,7 +155,7 @@ function contestResponse(overrides: {
   return {
     id: 1,
     owner_user_id: 7,
-    title: "Signal Cup",
+    title: "SOJ Weekly Contest",
     description: null,
     visibility: "public" as const,
     status: overrides.status ?? "published",

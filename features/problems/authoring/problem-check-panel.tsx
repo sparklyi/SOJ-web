@@ -63,7 +63,7 @@ export function ProblemCheckPanel({ state, busy, onRunCheck, onSubmitReview }: P
             <ul className="grid gap-2">
               {check.findings.map((finding) => (
                 <li key={finding.id} className="grid gap-1 rounded-soj-md border border-soj-line/55 bg-soj-bg/25 px-3 py-3">
-                  <span className="font-mono text-[11px] uppercase text-soj-danger">{finding.code}</span>
+                  <span className="font-mono text-xs uppercase text-soj-danger">{finding.code}</span>
                   <span className="text-sm text-soj-text">{finding.message}</span>
                 </li>
               ))}

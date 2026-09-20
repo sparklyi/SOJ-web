@@ -92,8 +92,9 @@ export const authMessages = {
     "zh-CN": "正在加载账户会话。",
   },
   "auth.me.loginRequired": { en: "Login is required.", "zh-CN": "请先登录。" },
+  "auth.me.signIn": { en: "Go to login", "zh-CN": "去登录" },
   "auth.me.progress": { en: "Progress", "zh-CN": "进度" },
-  "auth.me.signalPath": { en: "Signal Path", "zh-CN": "信号路径" },
+  "auth.me.shortestPath": { en: "Shortest Path", "zh-CN": "最短路" },
   "auth.me.cacheRelay": { en: "Cache Relay", "zh-CN": "缓存中继" },
 
   "auth.settings.eyebrow": { en: "Control console", "zh-CN": "控制台" },
@@ -109,7 +110,7 @@ export const authMessages = {
   "auth.settings.signedIn": { en: "Signed in", "zh-CN": "已登录" },
   "auth.settings.locked": { en: "Locked", "zh-CN": "锁定" },
   "auth.settings.theme": { en: "Theme", "zh-CN": "主题" },
-  "auth.settings.signal": { en: "Signal", "zh-CN": "Signal" },
+  "auth.settings.themeName": { en: "Dark", "zh-CN": "深色" },
   "auth.settings.editor": { en: "Editor", "zh-CN": "编辑器" },
   "auth.settings.cpp17": { en: "C++17", "zh-CN": "C++17" },
   "auth.settings.profile": { en: "Profile", "zh-CN": "资料" },
@@ -129,7 +130,7 @@ export const authMessages = {
     en: "Theme, language, and contest workspace defaults are staged here for the next settings pass.",
     "zh-CN": "主题、语言和比赛工作区默认项将在后续设置阶段提供。",
   },
-  "auth.settings.themePreference": { en: "Signal Arena theme", "zh-CN": "Signal Arena 主题" },
+  "auth.settings.themePreference": { en: "Dark theme", "zh-CN": "深色主题" },
   "auth.settings.languagePreference": {
     en: "C++17 default language",
     "zh-CN": "默认编程语言 C++17",

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("arena renders live big-screen contest signals", async ({ page }) => {
+test("arena renders live big-screen contest state", async ({ page }) => {
   await page.goto("/contests/1/arena");
 
   await expect(page.getByRole("main")).toBeVisible();

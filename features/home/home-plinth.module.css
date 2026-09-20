@@ -1,0 +1,260 @@
+/* 首页展台。
+   取色一律走 @theme 暴露的 --color-soj-*（完整色值），需要透明度时用 color-mix：
+   本项目 style-lint 禁止在源码里出现 RGB / hex 色值字面量。
+
+   一条硬规则：**这一屏没有盒子。** 没有任何 border-radius、没有四周描边、没有面板底色。
+   它直接坐在整站环境（静态冷银网格 + 单侧顶光 + 暗角）上，所以它读成「展厅里的一件展品」，
+   而不是「盖在背景上的一块卡片」。这也是它和其余页面最本质的区别：
+   其它页面由面板组成，首页由陈列组成。
+
+   版式上只有一条结构性线条：铭牌带上沿的受光线。
+   一个锁定式（站名 + 品类词），一句定位，一条铭牌。
+
+   构图是**居中**的。上一版左对齐，而这一页收得只剩三件东西，
+   左对齐会让右侧空出半屏——那不是留白，是没做完。 */
+
+.plinth {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  align-content: center;
+  gap: clamp(34px, 4.6vw, 68px);
+  /* 有高度下限，但不再让内容去撑满它：居中构图下留白落在轴线两侧，
+     是对称的，读起来才是「陈列」。左对齐构图不行——那里的下限会全变成右侧空段。 */
+  min-height: min(78vh, 720px);
+  padding: clamp(56px, 8vh, 104px) 0 clamp(24px, 3vw, 38px);
+  text-align: center;
+  /* 横向裁剪。射灯是绝对定位的装饰，让它把文档撑宽是最低级的一种破版：
+     整页多出一条横向滚动条，而元凶在两屏之外根本看不见。
+     用 clip 而不是 hidden：只裁横向，纵向上大字号字面该溢出多少就溢出多少。 */
+  overflow-x: clip;
+}
+
+/* 射灯。整页只有这一盏**定点**光，职责是把锁定式从底色里托起来。
+   它与环境层顶部那盏同色同向，所以读成「同一盏灯照亮了展品」而不是多出一个光斑。
+   横向不越界；光心落在中轴上——构图居中之后，偏左的光会让画面读成歪的。 */
+.spot {
+  position: absolute;
+  inset: -18% 0 12% 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    58% 54% at 50% 38%,
+    color-mix(in oklab, var(--color-soj-accent) 13%, transparent),
+    transparent 74%
+  );
+}
+
+.stage {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: clamp(18px, 2.2vw, 30px);
+  /* 缩放原点在中轴上。左对齐那一版必须写 left center——否则字标一缩就向右漂出格；
+     居中构图没有这个问题，用默认的中心即可。 */
+  transform-origin: center center;
+}
+
+/* 锁定式：站名 + 品类词，基线对齐。
+   名字大、品类小，两者之间只靠字号与颜色拉开层级——不加分隔符、不加竖线：
+   多一根线就让「名字 + 品类」读成「两个字段」。 */
+.lockup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0 clamp(12px, 1.6vw, 24px);
+  margin: 0;
+}
+
+/* 站名。这是**排字**，不是图形：不描摹、不变形、不做字距粘连。
+   上一版是手绘 SVG 且按列宽撑满，1440 视口上光字标就 400px 高——
+   三个字母占满第一屏，读者要滚动才知道这是干什么的。
+   现在字号收到三分之一上下（clamp 上限 124px），省下的高度还给留白。 */
+.mark {
+  font-family: var(--font-soj-display), ui-sans-serif, system-ui, "PingFang SC", sans-serif;
+  font-size: clamp(56px, 8.6vw, 124px);
+  font-weight: 620;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--color-soj-text);
+}
+
+/* 大字号的受光。**绝不收到透明**：透明收尾正是更早一版字面消失的原因
+   （下半截虚化到 46%，整块读成占位符）。这里只是自上而下轻微压暗，
+   两端分别是 226 与 72% 的混合值，整块始终是「银」。
+   默认那条 color 声明就是完整可见的兜底，拿不到 background-clip 的浏览器得到一块实心银字。 */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .mark {
+    color: transparent;
+    background-image: linear-gradient(
+      180deg,
+      var(--color-soj-text),
+      color-mix(in oklab, var(--color-soj-text) 72%, var(--color-soj-bg))
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+}
+
+/* 品类词。等宽字不参与，它承担的是「这是什么站」，不是计量。 */
+.category {
+  font-size: clamp(16px, 1.62vw, 25px);
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--color-soj-muted);
+  white-space: nowrap;
+}
+
+/* 定位句。锁定式已经把「这是什么」说完了，这句只补「给谁用」。
+   行宽压在 44ch：再宽读者会开始跳行，一句话就散了。 */
+.lead {
+  max-width: 44ch;
+  margin: 0;
+  color: var(--color-soj-muted);
+  font-size: clamp(15px, 1.3vw, 18px);
+  line-height: 1.7;
+}
+
+/* 铭牌带。读数 + 一个出口，坐在展台底部。
+   上沿那道受光线是这块铭牌的边缘——靠投影分层会显得脏，靠一条高光线才有「压出来」的实体感。 */
+.plate {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: clamp(22px, 2.8vw, 34px);
+  padding-top: clamp(20px, 2.4vw, 30px);
+  border-top: 1px solid var(--color-soj-line);
+}
+
+.plate::before {
+  content: "";
+  position: absolute;
+  inset: -1px 0 auto;
+  z-index: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--color-soj-silver) 42%, transparent) 26%,
+    color-mix(in oklab, var(--color-soj-accent) 52%, transparent) 50%,
+    color-mix(in oklab, var(--color-soj-silver) 42%, transparent) 74%,
+    transparent
+  );
+}
+
+.readings {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0;
+}
+
+/* 读数之间用竖线分隔，而不是拉开等距空隙：等距会让几个数读成几段独立信息，
+   竖线让它们读成同一块铭牌上的几格。 */
+.reading {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  margin-right: clamp(18px, 2.4vw, 36px);
+  padding-right: clamp(18px, 2.4vw, 36px);
+  border-right: 1px solid var(--color-soj-line);
+}
+
+.reading:last-child {
+  margin-right: 0;
+  padding-right: 0;
+  border-right: 0;
+}
+
+/* 读数标签。
+   这一处的取值是被测出来的，不是审美选择：上一版是 10px + 全大写 + 0.2em 字距 +
+   最弱那级灰（96,106,122），在曜石底上只有 **3.62:1**——远低于 AA 正文线 4.5:1。
+   后果就是读者「只能看到数字」：铭牌上几个数亮得很，说明它们是什么的几个词却读不出来。
+   标签比正文更需要对比度，因为读者没有上下文可以补。
+   现在：14px、不再全大写、字距归零、换成次要色（146,157,174 = 7.2:1）。
+   保留等宽字只是为了与下面的数字同族——它不再承担「小一号」这件事。 */
+.reading dt {
+  color: var(--color-soj-muted);
+  font-family: var(--font-soj-mono), ui-monospace, monospace;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.reading dd {
+  display: flex;
+  align-items: baseline;
+  /* 数字在标签下方居中。格子宽度由标签与数字里较宽的那个决定，
+     不居中就会出现「标签居中、数字贴左」的错位。 */
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  color: var(--color-soj-text);
+  font-family: var(--font-soj-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(30px, 3.1vw, 44px);
+  font-weight: 620;
+  line-height: 1;
+}
+
+.unit {
+  color: var(--color-soj-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 出口（.enter/.enterIcon）已抽成共享件 components/soj/type-exit.*，
+   样式原样搬走；首页与全站从此用同一个排字出口。 */
+
+/* 滚动联动。**默认完全静止**：只有在浏览器支持滚动时间轴、且读者没有要求减弱动效时，
+   才把锁定式与定位句挂到滚动进度上——向前走一步，展品退后一点。
+
+   两个必须写成长写法的原因：
+   `animation` 简写会把 duration 重置为 0s，而 0s 的滚动动画会直接落在终帧上
+   （字标一开始就是缩小过的样子）。duration 必须是 auto，表示「铺满整条时间轴」。
+   不支持滚动时间轴的浏览器根本进不来这个 @supports，拿到的是一张静帧——
+   而那本来就是这一档的默认形态，不算降级。 */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .stage {
+      animation-name: soj-plinth-recede;
+      animation-duration: auto;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 88vh;
+    }
+  }
+}
+
+/* 幅度刻意压到「几乎察觉不到」：滚过一屏只退后 30px、缩 2.2%。
+   做大就会变成视差特效，而展台需要的是观众走动时展品自然退后。 */
+@keyframes soj-plinth-recede {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(0, -30px, 0) scale(0.978);
+  }
+}
+
+@media (max-width: 639px) {
+  .plinth {
+    /* 窄屏不留下限：手机上的「一屏」本来就短，强行凑高度只会把三件东西拉开到读不出关系。 */
+    min-height: 0;
+    padding: 34px 0 22px;
+  }
+
+  /* 窄屏上几个数带竖线只能挤成两行、线还断在中间，不如去掉线只留间距，整体居中。 */
+  .readings {
+    gap: 18px 28px;
+  }
+
+  .reading {
+    margin-right: 0;
+    padding-right: 0;
+    border-right: 0;
+  }
+}

@@ -2,7 +2,8 @@
 
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { StatusPill } from "@/components/soj/status-pill";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { getApiMode } from "@/lib/api/mode";
@@ -87,43 +88,39 @@ export function ContestRegistration({ contest }: ContestRegistrationProps) {
 
       {canEnter && firstProblemId ? (
         <LocalizedLink
-          className="inline-flex h-12 shrink-0 items-center justify-center rounded-soj-md border border-soj-accent/80 bg-soj-accent px-5 text-base font-medium text-soj-bg shadow-[0_10px_30px_rgb(var(--soj-accent)/0.18),inset_0_1px_0_rgb(255_255_255/0.26)] transition hover:bg-soj-accent/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
+          className={buttonVariants({ size: "lg" })}
           href={`/contests/${contest.id}/problems/${firstProblemId}`}
         >
           {t("contests.registration.enter")}
         </LocalizedLink>
       ) : contest.canRegister ? (
         <form className="grid gap-3" onSubmit={handleSubmit}>
-          <label className="grid gap-1 text-sm text-soj-muted">
-            {t("contests.registration.displayName")}
-            <input
-              className="h-10 rounded-soj-md border border-soj-line bg-soj-bg/45 px-3 text-soj-text outline-none transition focus:border-soj-accent"
-              name="displayName"
-              onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))}
-              required
-              value={form.displayName}
-            />
-          </label>
-          <label className="grid gap-1 text-sm text-soj-muted">
-            {t("contests.registration.email")}
-            <input
-              className="h-10 rounded-soj-md border border-soj-line bg-soj-bg/45 px-3 text-soj-text outline-none transition focus:border-soj-accent"
-              name="email"
-              onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-              required
-              type="email"
-              value={form.email}
-            />
-          </label>
-          <label className="grid gap-1 text-sm text-soj-muted">
-            {t("contests.registration.inviteCode")}
-            <input
-              className="h-10 rounded-soj-md border border-soj-line bg-soj-bg/45 px-3 text-soj-text outline-none transition focus:border-soj-accent"
-              name="inviteCode"
-              onChange={(event) => setForm((current) => ({ ...current, inviteCode: event.target.value }))}
-              value={form.inviteCode}
-            />
-          </label>
+          {/* 三个输入框曾经是手写的（h-10 + 自拼描边/聚焦样式），没有走共享 Input——
+              结果 h-11、/55 聚焦环这些后来定下的规范它全都错过。 */}
+          <Input
+            id="contest-registration-display-name"
+            label={t("contests.registration.displayName")}
+            name="displayName"
+            onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))}
+            required
+            value={form.displayName}
+          />
+          <Input
+            id="contest-registration-email"
+            label={t("contests.registration.email")}
+            name="email"
+            onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+            required
+            type="email"
+            value={form.email}
+          />
+          <Input
+            id="contest-registration-invite-code"
+            label={t("contests.registration.inviteCode")}
+            name="inviteCode"
+            onChange={(event) => setForm((current) => ({ ...current, inviteCode: event.target.value }))}
+            value={form.inviteCode}
+          />
           <Button disabled={!canSubmitRegistration} loading={state.status === "pending"} type="submit" size="lg">
             {needsSession ? t("contests.registration.signInToRegister") : state.status === "pending" ? t("contests.registration.registering") : t("contests.registration.register")}
           </Button>

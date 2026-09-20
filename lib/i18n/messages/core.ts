@@ -3,28 +3,25 @@ import type { MessageCatalog } from "../types";
 export const coreMessages = {
   "meta.title": { en: "SOJ", "zh-CN": "SOJ" },
   "meta.description": {
-    en: "Signal Arena for problem solving and programming contests.",
-    "zh-CN": "面向解题与编程竞赛的 Signal Arena。",
+    en: "Online judge for practice, contests, submissions, and live scoreboards.",
+    "zh-CN": "面向练习、竞赛、提交与实时榜单的在线评测系统。",
   },
   "nav.home": { en: "Home", "zh-CN": "首页" },
   "nav.problems": { en: "Problems", "zh-CN": "题目" },
   "nav.contests": { en: "Contests", "zh-CN": "比赛" },
-  "nav.submissions": { en: "Submissions", "zh-CN": "提交记录" },
   "nav.author": { en: "Author", "zh-CN": "出题" },
-  "nav.signalOnlineJudge": { en: "Signal Online Judge", "zh-CN": "Signal 在线评测" },
-  "nav.searchPublicProblems": { en: "Search public problems", "zh-CN": "搜索公开题目" },
+  "nav.brandTagline": { en: "Online Judge", "zh-CN": "在线评测" },
   "nav.primary": { en: "Primary navigation", "zh-CN": "主导航" },
   "nav.account.openAuthenticated": {
     en: "Open account menu for {name}",
     "zh-CN": "打开 {name} 的账户菜单",
   },
-  "nav.account.openGuest": { en: "Open guest menu", "zh-CN": "打开访客菜单" },
-  "nav.account.guest": { en: "Guest", "zh-CN": "访客" },
-  "nav.account.notSignedIn": { en: "Not signed in", "zh-CN": "未登录" },
   "nav.account.me": { en: "Me", "zh-CN": "我的账户" },
+  "nav.account.submissions": { en: "My submissions", "zh-CN": "我的提交" },
   "nav.account.settings": { en: "Settings", "zh-CN": "设置" },
   "nav.account.authorProblems": { en: "Author problems", "zh-CN": "管理题目" },
   "nav.account.login": { en: "Login", "zh-CN": "登录" },
+  "nav.account.register": { en: "Register", "zh-CN": "注册" },
   "nav.account.logout": { en: "Logout", "zh-CN": "退出登录" },
   "language.label": { en: "Language", "zh-CN": "语言" },
   "language.switcher": { en: "Switch language", "zh-CN": "切换语言" },
@@ -41,4 +38,14 @@ export const coreMessages = {
   "common.close": { en: "Close", "zh-CN": "关闭" },
   "common.noData": { en: "No data available.", "zh-CN": "暂无数据。" },
   "common.notFound": { en: "Not found", "zh-CN": "未找到" },
+
+  // 站点页脚。三样东西都指向真实存在的地方，见 components/layout/site-footer.tsx。
+  // `footer.label` 是这个地标的无障碍名：没有名字的 contentinfo 在地标列表里读不出来。
+  "footer.label": { en: "Site footer", "zh-CN": "站点页脚" },
+  "footer.copyright": {
+    en: "© {year} SOJ. All rights reserved.",
+    "zh-CN": "© {year} SOJ 版权所有",
+  },
+  "footer.source": { en: "Source code", "zh-CN": "开源仓库" },
+  "footer.issues": { en: "Issues", "zh-CN": "问题反馈" },
 } satisfies MessageCatalog;

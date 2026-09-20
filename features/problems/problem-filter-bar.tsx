@@ -2,11 +2,15 @@
 
 import { FormEvent, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { X } from "lucide-react";
 import type { ProblemDifficulty, ProblemStatus } from "@/lib/api/types";
+import { DifficultyScale, type DifficultyCount } from "@/components/soj/difficulty-composition";
+import { problemDifficultyLabelKey, problemStatusLabelKey } from "@/lib/domain/problem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { cn } from "@/lib/ui/cn";
 
 type ProblemFilterBarProps = {
   query?: string;
@@ -14,27 +18,51 @@ type ProblemFilterBarProps = {
   status?: ProblemStatus;
   tag?: string;
   tags: string[];
+  /** 各难度档位的题量。它同时是分布信息，也是这一排按钮上的计数。 */
+  difficultyCounts: DifficultyCount[];
 };
 
-export function ProblemFilterBar({ query = "", difficulty, status, tag, tags }: ProblemFilterBarProps) {
+/**
+ * 题库筛选工具栏。
+ *
+ * 三处刻意的删减：
+ *
+ * 1. **难度从下拉框改成带计数的按钮组。**
+ *    原先难度分布在页头单画一条堆叠条，难度筛选在下拉框里，同一个概念占两个地方，
+ *    而且两处都要读者自己换算。现在合并成一个东西：按钮上的数字就是分布，
+ *    点它就是筛选。数据图形出现在它能被**使用**的位置，而不是只被观看的位置。
+ *
+ * 2. **删掉「应用」按钮。** 三个下拉框本来就是 onChange 立即生效的，
+ *    真正需要点「应用」的只有搜索框里那行字。为一个输入框养一个全宽的按钮，
+ *    既误导（看起来像所有条件都要点它）又占掉了工具栏三分之一的高度。
+ *    现在搜索回车即生效——这是搜索框的通用预期。
+ *
+ * 3. **难度不再进「已应用筛选」胶囊行。** 按钮组自己已经把选中态画出来了，
+ *    再列一个可删的胶囊，同一件事在一屏里说了两遍。
+ *
+ * 工具栏用比面板更暗的一层底（bg-soj-bg/35），读起来像表格上沿的一条控制带，
+ * 而不是又一张卡片——所以它只有下边界，没有圆角与描边。
+ */
+export function ProblemFilterBar({ query = "", difficulty, status, tag, tags, difficultyCounts }: ProblemFilterBarProps) {
   const { t, localize } = useI18n();
   const [search, setSearch] = useState(query);
   const [isPending, startTransition] = useTransition();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const difficultyOptions: Array<{ value: ProblemDifficulty | "all"; label: string }> = [
-    { value: "all", label: t("problems.allDifficulties") },
-    { value: "easy", label: t("problems.difficulty.easy") },
-    { value: "medium", label: t("problems.difficulty.medium") },
-    { value: "hard", label: t("problems.difficulty.hard") },
-  ];
   const statusOptions: Array<{ value: ProblemStatus | "all"; label: string }> = [
     { value: "all", label: t("problems.allStatuses") },
     { value: "todo", label: t("status.todo") },
     { value: "attempted", label: t("status.attempted") },
     { value: "accepted", label: t("status.solved") },
   ];
+  const difficultyTotal = difficultyCounts.reduce((sum, item) => sum + item.count, 0);
+  const hasFilters = Boolean(query || difficulty || status || tag);
+
+  const activeFilters: Array<{ key: string; label: string }> = [];
+  if (query) activeFilters.push({ key: "q", label: `${t("problems.search")} · ${query}` });
+  if (status) activeFilters.push({ key: "status", label: t(problemStatusLabelKey[status]) });
+  if (tag) activeFilters.push({ key: "tag", label: tag });
 
   function replaceFilter(key: string, value: string) {
     const next = new URLSearchParams(searchParams.toString());
@@ -53,6 +81,11 @@ export function ProblemFilterBar({ query = "", difficulty, status, tag, tags }: 
     replaceFilter("q", search);
   }
 
+  function clearFilter(key: string) {
+    if (key === "q") setSearch("");
+    replaceFilter(key, "");
+  }
+
   function resetFilters() {
     setSearch("");
     startTransition(() => {
@@ -61,81 +94,134 @@ export function ProblemFilterBar({ query = "", difficulty, status, tag, tags }: 
   }
 
   return (
-    <form
-      className="soj-control-panel grid gap-4 p-4 md:p-5"
-      onSubmit={submitSearch}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-soj-line/35 pb-4">
-        <div>
-          <h2 className="text-base font-semibold text-soj-text">{t("problems.findNext")}</h2>
-          <p className="mt-1 text-sm text-soj-muted">{t("problems.filtersShareable")}</p>
-        </div>
-        <div className="h-px w-32 soj-hairline" />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(150px,176px)_minmax(140px,160px)_minmax(150px,192px)_auto] lg:items-end">
-        <Input
-          id="problem-search"
-          label={t("problems.search")}
-          name="query"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={t("problems.searchPlaceholder")}
-        />
-        <div className="grid gap-2">
-          <span className="text-sm font-medium text-soj-text">{t("problems.difficulty")}</span>
-          <Select value={difficulty ?? "all"} onValueChange={(value) => replaceFilter("difficulty", value)}>
-            <SelectTrigger className="w-full" aria-label={t("problems.difficulty")}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {difficultyOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
+    <div className="grid gap-3 border-b border-soj-line bg-soj-bg/35 px-4 py-3.5">
+      <form className="grid gap-3" onSubmit={submitSearch} aria-label={t("problems.findNext")} role="search">
+        <div className="grid gap-3 lg:grid-cols-[minmax(200px,1fr)_auto_minmax(140px,168px)_minmax(140px,168px)] lg:items-end">
+          <Input
+            id="problem-search"
+            label={t("problems.search")}
+            name="query"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t("problems.searchPlaceholder")}
+          />
+          <div className="grid gap-1.5">
+            <span className="text-xs text-soj-muted">{t("problems.difficulty")}</span>
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t("problems.difficulty")}>
+              <FilterChip active={!difficulty} onClick={() => replaceFilter("difficulty", "")}>
+                {t("problems.allDifficulties")}
+                <ChipCount>{difficultyTotal}</ChipCount>
+              </FilterChip>
+              {difficultyCounts.map((item) => (
+                <FilterChip
+                  key={item.difficulty}
+                  active={difficulty === item.difficulty}
+                  onClick={() => replaceFilter("difficulty", difficulty === item.difficulty ? "" : item.difficulty)}
+                >
+                  <DifficultyScale difficulty={item.difficulty} />
+                  {t(problemDifficultyLabelKey[item.difficulty])}
+                  <ChipCount>{item.count}</ChipCount>
+                </FilterChip>
               ))}
-            </SelectContent>
-          </Select>
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <span className="text-xs text-soj-muted">{t("problems.status")}</span>
+            <Select value={status ?? "all"} onValueChange={(value) => replaceFilter("status", value)}>
+              <SelectTrigger className="w-full" aria-label={t("problems.status")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-1.5">
+            <span className="text-xs text-soj-muted">{t("problems.tag")}</span>
+            <Select value={tag ?? "all"} onValueChange={(value) => replaceFilter("tag", value)}>
+              <SelectTrigger className="w-full" aria-label={t("problems.tag")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("problems.allTags")}</SelectItem>
+                {tags.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="grid gap-2">
-          <span className="text-sm font-medium text-soj-text">{t("problems.status")}</span>
-          <Select value={status ?? "all"} onValueChange={(value) => replaceFilter("status", value)}>
-            <SelectTrigger className="w-full" aria-label={t("problems.status")}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      </form>
+
+      {activeFilters.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="soj-eyebrow">{t("problems.activeFilters")}</span>
+          {activeFilters.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => clearFilter(item.key)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-soj-sm border border-soj-line bg-soj-surface",
+                "py-0.5 pr-1.5 pl-2 font-mono text-xs text-soj-muted transition-colors",
+                "hover:border-soj-line-strong hover:text-soj-text",
+              )}
+            >
+              {item.label}
+              <X aria-hidden className="h-3 w-3" />
+              <span className="sr-only">{t("problems.removeFilter")}</span>
+            </button>
+          ))}
+          {hasFilters ? (
+            <Button type="button" variant="ghost" size="sm" loading={isPending} onClick={resetFilters}>
+              {t("problems.reset")}
+            </Button>
+          ) : null}
         </div>
-        <div className="grid gap-2">
-          <span className="text-sm font-medium text-soj-text">{t("problems.tag")}</span>
-          <Select value={tag ?? "all"} onValueChange={(value) => replaceFilter("tag", value)}>
-            <SelectTrigger className="w-full" aria-label={t("problems.tag")}>
-            <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("problems.allTags")}</SelectItem>
-              {tags.map((item) => (
-                <SelectItem key={item} value={item}>
-                  {item}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex gap-2">
-          <Button type="submit" loading={isPending} className="min-w-24">
-            {t("problems.apply")}
-          </Button>
-          <Button type="button" variant="ghost" onClick={resetFilters}>
-            {t("problems.reset")}
-          </Button>
-        </div>
-      </div>
-    </form>
+      ) : null}
+    </div>
   );
+}
+
+/**
+ * 筛选按钮。
+ *
+ * 选中态用中性亮面而不是强调色：这一屏的强调色要留给表格里的实时状态与链接，
+ * 一排四个按钮全蓝的话，读者找不到真正的重点在哪。
+ */
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-10 items-center gap-1.5 rounded-soj-md border px-2.5 text-xs transition",
+        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent",
+        active
+          ? "soj-inset-light border-soj-line-strong bg-soj-surface-2 text-soj-text"
+          : "border-soj-line bg-soj-bg-raised/60 text-soj-muted hover:border-soj-line-strong hover:text-soj-text",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ChipCount({ children }: { children: React.ReactNode }) {
+  return <span className="font-mono text-xs tabular-nums text-soj-muted">{children}</span>;
 }

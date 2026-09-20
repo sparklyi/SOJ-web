@@ -12,6 +12,17 @@ import type { Translator } from "@/lib/i18n/translate";
 
 type AuthFormProps = {
   mode: "login" | "register";
+  /**
+   * 表单外壳。
+   *
+   * `panel` —— 独立页面用：自带面板边框与内边距，另外带一块标题区
+   * （登录页/注册页上，读者需要知道自己站在哪一页）。
+   *
+   * `bare` —— 弹窗里用：弹窗本身已经是一块面板，外面再套一层边框就成了盒中盒；
+   * 而标题区与弹窗上的「注册 / 登录」切换页签说的是同一件事，留着就是同一句话讲两遍。
+   * 这两点在独立页面上都不存在，所以不能直接把页面版缩一缩塞进弹窗。
+   */
+  chrome?: "panel" | "bare";
 };
 
 type FieldErrors = {
@@ -20,7 +31,7 @@ type FieldErrors = {
   password?: string;
 };
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, chrome = "panel" }: AuthFormProps) {
   const router = useRouter();
   const { localize, t } = useI18n();
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -56,14 +67,25 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   }
 
+  const bare = chrome === "bare";
+
   return (
-    <form className="soj-account-panel grid grid-cols-[minmax(0,1fr)] gap-4 p-5" onSubmit={submit}>
-      <div className="border-b border-soj-line/60 pb-4">
-        <h2 className="text-xl font-semibold text-soj-text">{isRegister ? t("auth.form.registerTitle") : t("auth.form.loginTitle")}</h2>
-        <p className="mt-1 text-sm text-soj-muted">
-          {isRegister ? t("auth.form.registerDescription") : t("auth.form.loginDescription")}
-        </p>
-      </div>
+    <form
+      className={
+        bare
+          ? "grid grid-cols-[minmax(0,1fr)] gap-4"
+          : "soj-account-panel grid grid-cols-[minmax(0,1fr)] gap-4 p-5"
+      }
+      onSubmit={submit}
+    >
+      {bare ? null : (
+        <div className="border-b border-soj-line/60 pb-4">
+          <h2 className="text-xl font-semibold text-soj-text">{isRegister ? t("auth.form.registerTitle") : t("auth.form.loginTitle")}</h2>
+          <p className="mt-1 text-sm text-soj-muted">
+            {isRegister ? t("auth.form.registerDescription") : t("auth.form.loginDescription")}
+          </p>
+        </div>
+      )}
       <Input id={mode + "-email"} name="email" label={t("auth.form.email")} type="email" autoComplete="email" error={errors.email} />
       {isRegister ? <Input id="register-username" name="username" label={t("auth.form.username")} autoComplete="username" error={errors.username} /> : null}
       <Input
@@ -79,7 +101,10 @@ export function AuthForm({ mode }: AuthFormProps) {
           {apiError}
         </p>
       ) : null}
-      <Button type="submit" loading={submitting}>
+      {/* 提交用**扁平银**（solid）而不是默认的镀铬 `primary`：
+          这份表单出现在两种场合——独立鉴权页与首页弹窗——两种都是
+          「一整屏只有一个主操作」的场景，那里立体修饰只会读成旧式拟物。 */}
+      <Button type="submit" variant="solid" loading={submitting}>
         {isRegister ? t("auth.form.createAccount") : t("auth.form.login")}
       </Button>
     </form>
