@@ -254,6 +254,13 @@ export type RunSummary = RunResult & {
   finishedAt?: string;
 };
 
+/** 站级聚合：题目数（公开已发布）、提交数、语言数（已启用）。 */
+export type SiteFacts = {
+  problems: number;
+  submissions: number;
+  languages: number;
+};
+
 export type JudgeLanguage = {
   id: number;
   engine: string;
@@ -403,6 +410,10 @@ export type ApiClient = {
   };
   languages: {
     list: (filter?: { enabled?: boolean; engine?: string }) => Promise<PageResult<JudgeLanguage>>;
+  };
+  stats: {
+    /** 站级聚合（首页三数），后端 Redis 缓存 + 写路径刷新。 */
+    site: () => Promise<SiteFacts>;
   };
   rejudge: {
     list: (filter?: { problemId?: number; contestId?: number; status?: RejudgeBatchStatus }) => Promise<PageResult<RejudgeBatch>>;

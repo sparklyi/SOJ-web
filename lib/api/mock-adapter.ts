@@ -397,6 +397,15 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         return { items, total: items.length };
       },
     },
+    stats: {
+      // 演示夹具没有 Redis 可言，但口径与真实接口一致：
+      // 题目数 = 展示的公开题，提交数 = 各题提交量之和，语言数 = 已启用语言。
+      site: async () => ({
+        problems: mockProblems.length,
+        submissions: mockProblems.reduce((total, problem) => total + problem.submissionCount, 0),
+        languages: mockLanguages.filter((language) => language.enabled).length,
+      }),
+    },
     rejudge: {
       list: async (filter = {}) => {
         const actor = requireMockUser(currentUser);
