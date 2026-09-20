@@ -1,5 +1,6 @@
 import type { ProblemDetail } from "@/lib/api/types";
 import type { Translator } from "@/lib/i18n/translate";
+import { MathText } from "@/components/soj/math-text";
 
 /**
  * 题面阅读区。
@@ -25,18 +26,19 @@ export function ProblemStatement({ problem, t }: { problem: ProblemDetail; t: Tr
           {t("problem.statement")}
         </h2>
         {/* 面板有 780px 宽，但正文一行排到 100 个字符就不是给人读的了。
-            正文单独限宽，表单类的双栏区块仍然吃满宽度。 */}
-        <p className="mt-3 max-w-[72ch] leading-7 text-soj-text">{problem.statement}</p>
+            正文单独限宽，表单类的双栏区块仍然吃满宽度。
+            题面支持行内 $...$ 与独立 $$...$$ 的 LaTeX（KaTeX 服务端渲染）。 */}
+        <MathText text={problem.statement} className="mt-3 max-w-[72ch] text-soj-text" />
       </section>
 
       <section className="grid gap-6 border-t border-soj-line px-5 py-5 md:grid-cols-2 md:px-6 md:py-6">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-soj-text">{t("problem.input")}</h2>
-          <p className="mt-2 text-sm leading-7 text-soj-muted">{problem.input}</p>
+          <MathText text={problem.input} className="mt-2 text-sm text-soj-muted" />
         </div>
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-soj-text">{t("problem.output")}</h2>
-          <p className="mt-2 text-sm leading-7 text-soj-muted">{problem.output}</p>
+          <MathText text={problem.output} className="mt-2 text-sm text-soj-muted" />
         </div>
       </section>
 

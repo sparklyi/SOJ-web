@@ -58,7 +58,9 @@ export async function ProblemDetailView({ problem, languages = [] }: ProblemDeta
           </div>
         }
       />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+      {/* 侧栏要装下代码编辑器：lg 26rem 起，xl 30rem，阅读栏相应让位。
+          编辑区是提交面板的主角，比统计块更需要水平空间。 */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-start xl:grid-cols-[minmax(0,1fr)_30rem]">
         <ProblemStatement problem={problem} t={t} />
         <ProblemSubmitPanelLoader initialLanguages={languages} problem={problem} />
       </div>

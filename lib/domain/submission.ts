@@ -1,4 +1,5 @@
 import type { JudgeStatus, SubmissionSummary } from "@/lib/api/types";
+import type { MessageKey } from "@/lib/i18n/messages";
 
 export type SubmissionTone = "neutral" | "info" | "accent" | "success" | "warning" | "danger";
 
@@ -27,6 +28,21 @@ const states: Record<JudgeStatus, Omit<SubmissionDisplayState, "status">> = {
 export function getSubmissionDisplayState(status: JudgeStatus): SubmissionDisplayState {
   return { status, ...states[status] };
 }
+
+/** JudgeStatus → i18n key（`status.*`，见 lib/i18n/messages/system.ts）。 */
+export const judgeStatusLabelKey: Record<JudgeStatus, MessageKey> = {
+  queued: "status.queued",
+  compiling: "status.compiling",
+  running: "status.running",
+  accepted: "status.accepted",
+  wrong_answer: "status.wrongAnswer",
+  runtime_error: "status.runtimeError",
+  compile_error: "status.compileError",
+  time_limit: "status.timeLimit",
+  memory_limit: "status.memoryLimit",
+  canceled: "status.canceled",
+  system_error: "status.systemError",
+};
 
 export function isSubmissionTerminal(status: JudgeStatus) {
   return states[status].terminal;
