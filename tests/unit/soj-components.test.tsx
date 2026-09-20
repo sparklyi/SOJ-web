@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { I18nProvider } from "@/components/providers/i18n-provider";
-import { CodeWorkspace } from "@/components/soj/code-workspace";
+import { CodeWorkspace, isPristineSource } from "@/components/soj/code-workspace";
 import { ScoreboardGrid } from "@/components/soj/scoreboard-grid";
 import { SubmissionTimeline } from "@/components/soj/submission-timeline";
 import { VerdictBadge } from "@/components/soj/verdict-badge";
@@ -96,6 +96,18 @@ describe("soj product components", () => {
     expect(handleChange).toHaveBeenCalledWith(
       expect.objectContaining({ sourceCode: "next source", languageId: mockLanguages[0]?.id }),
     );
+  });
+
+  it("treats the unmodified starter as pristine and user code as not", () => {
+    const starter = "#include <bits/stdc++.h>";
+    // 从未种入的初始空态：该种。
+    expect(isPristineSource("", "", false)).toBe(true);
+    // 用户一个字没写就换了语言：上一份模板还在编辑器里，该换新模板。
+    expect(isPristineSource(starter, starter, true)).toBe(true);
+    // 用户写过的代码：换语言也不动。
+    expect(isPristineSource("int main() { return 1; }", starter, true)).toBe(false);
+    // 用户亲手清空的空串：尊重清空，不强行回填。
+    expect(isPristineSource("", starter, true)).toBe(false);
   });
 
   it("disables HTTP submit without a browser session and posts edited source with one", async () => {

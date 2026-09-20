@@ -107,6 +107,14 @@ export function starterSource(language: JudgeLanguage | undefined, t: Translator
 }
 
 /**
+ * 换语言时源码是不是「还没动过的模板」。导出纯函数是为了把这条判据测死：
+ * 用户没写一个字就换语言 → 换成新语言的模板；写过或亲手清空过 → 一个字符都不动。
+ */
+export function isPristineSource(sourceCode: string, lastStarter: string, everSeeded: boolean): boolean {
+  return sourceCode === lastStarter || (!everSeeded && sourceCode === "");
+}
+
+/**
  * 代码工作区：一个面板装下编辑器要用的全部东西。
  *
  * 成熟 OJ（洛谷 / AtCoder）的提交页形态：语言选择贴着编辑器上沿，
@@ -122,13 +130,24 @@ export function CodeWorkspace({ languages, initialLanguageId, value, onChange, a
   const [selectedLanguageId, setSelectedLanguageId] = useState(initial ? String(initial) : "");
   const effectiveSelectedLanguageId = selectedLanguageId || (languages[0] ? String(languages[0].id) : "");
   const selectedLanguage = languages.find((item) => String(item.id) === effectiveSelectedLanguageId);
-  // 语言目录可能是异步到达的：就绪且用户尚未编辑时，把模板种入受控状态。
-  // 种过一次（或用户编辑过）就不再动，用户清空编辑器也不会被强行回填。
-  const editedRef = useRef(false);
+  // 语言目录可能是异步到达的，模板要等选型就绪才能种入受控状态。
+  //
+  // 「还没动过」的判据不是「用户碰没碰过编辑器」，而是**源码此刻是不是上一份模板**：
+  //   · 空串且从未种入 —— 目录未就绪的初始态，种入；
+  //   · 源码恰好等于上一份选型对应的模板 —— 用户没写一个字就换了语言，
+  //     换成新语言的模板（这正是成熟 OJ 的行为：C++ 空壳切到 Go 就给 Go 壳）；
+  //   · 源码是别的内容 —— 用户写过的代码，一个字符都不动，换语言也不清空；
+  //   · 源码是用户亲手清空的空串 —— 尊重清空，不强行回填。
+  const lastStarterRef = useRef("");
+  const everSeededRef = useRef(false);
   const starter = selectedLanguage ? starterSource(selectedLanguage, t) : "";
 
   useEffect(() => {
-    if (editedRef.current || !selectedLanguage || value.sourceCode !== "") return;
+    if (!selectedLanguage || starter === "") return;
+    if (!isPristineSource(value.sourceCode, lastStarterRef.current, everSeededRef.current)) return;
+    if (value.sourceCode === starter) return;
+    everSeededRef.current = true;
+    lastStarterRef.current = starter;
     onChange({ ...value, sourceCode: starter });
   }, [onChange, selectedLanguage, starter, value]);
 
@@ -177,14 +196,16 @@ export function CodeWorkspace({ languages, initialLanguageId, value, onChange, a
       <div className={cn("bg-soj-bg", languages.length === 0 && "opacity-60")}>
         <CodeMirror
           className="soj-code-editor"
-          value={value.sourceCode === "" ? starter : value.sourceCode}
+          // 模板由种入 effect 写进受控状态后随 props 回流，渲染层只信 value——
+          // 渲染期读 ref 被 react-hooks 禁止，而且显示与状态一旦分叉，
+          // 「用户清空」就会被模板顶回来。
+          value={value.sourceCode}
           height="384px"
           theme="none"
           extensions={extensions}
           editable={languages.length > 0}
           basicSetup={{ foldGutter: false, autocompletion: false, highlightSelectionMatches: false }}
           onChange={(next) => {
-            editedRef.current = true;
             update({ sourceCode: next });
           }}
           aria-label={t("problems.sourceCode")}

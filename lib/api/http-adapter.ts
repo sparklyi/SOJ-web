@@ -58,6 +58,7 @@ import type {
   RejudgeBatch,
   RejudgeBatchDetail,
   RejudgeBatchItem,
+  SiteFacts,
 } from "./types";
 import { mapContestRegistration, mapContestResponse, mapContestRoleAssignment, mapContestScoreboard } from "./contest-mappers";
 import { mapProblemDetail, mapProblemSummary } from "./problem-mappers";
@@ -596,6 +597,14 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
         });
         const items = data.items.map(mapLanguage);
         return { items, total: data.total };
+      },
+    },
+    stats: {
+      site: async () => {
+        const data = await request<SiteFacts>("/api/v1/stats/site", {
+          accessToken: options.accessToken,
+        });
+        return data;
       },
     },
     rejudge: {
