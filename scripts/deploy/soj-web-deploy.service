@@ -1,0 +1,6 @@
+[Unit]
+Description=SOJ web deploy check (poll GitHub for new web-v* tag)
+
+[Service]
+Type=oneshot
+ExecStart=/opt/soj/bin/web-deploy-check.sh
