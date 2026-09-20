@@ -22,7 +22,7 @@ export default function SettingsPage() {
       title={t("auth.settings.title")}
       description={t("auth.settings.description")}
       meta={user ? "@" + user.handle : t("auth.settings.guest")}
-      signal={
+      aside={
         <>
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -34,7 +34,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-2 gap-2">
             <div className="soj-submission-chip">
               <span>{t("auth.settings.theme")}</span>
-              <strong>{t("auth.settings.signal")}</strong>
+              <strong>{t("auth.settings.themeName")}</strong>
             </div>
             <div className="soj-submission-chip">
               <span>{t("auth.settings.editor")}</span>
@@ -60,14 +60,14 @@ export default function SettingsPage() {
           <StatusPill tone="accent">{t("auth.settings.local")}</StatusPill>
           <h2 className="text-xl font-semibold">{t("auth.settings.preferences")}</h2>
           <p className="max-w-xl text-sm leading-6 text-soj-muted">{t("auth.settings.preferencesDescription")}</p>
-          <div className="grid gap-2">
+          {/* 三行「偏好」曾经各是一个描边盒 + 一枚亮蓝圆点。圆点的语义是「已选中」，
+              而这三项没有任何一项可切换——一个说谎的状态标记。
+              清单也不该套盒子：盒子的边界在近黑底上几乎看不见，只留下一圈噪点。 */}
+          <ul className="grid gap-1.5 text-sm text-soj-muted">
             {preferences.map((item) => (
-              <div key={item.key} className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-soj-md border border-soj-line/50 bg-soj-bg/24 px-3 py-3 text-sm text-soj-muted">
-                <span className="h-2 w-2 rounded-full bg-soj-accent" />
-                <span>{item.label}</span>
-              </div>
+              <li key={item.key}>{item.label}</li>
             ))}
-          </div>
+          </ul>
         </section>
       </div>
     </AccountSurface>

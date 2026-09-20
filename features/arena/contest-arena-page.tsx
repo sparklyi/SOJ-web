@@ -38,7 +38,7 @@ export async function ContestArenaPage({ contest, events, scoreboard }: ContestA
 
             <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-end">
               <div className="soj-arena-leader p-5">
-                <span className="text-sm text-soj-muted">{t("arena.leaderSignal")}</span>
+                <span className="text-sm text-soj-muted">{t("arena.leader")}</span>
                 <div className="mt-4 font-mono text-8xl font-semibold leading-none text-soj-accent">{leader?.rank ?? "-"}</div>
                 <div className="mt-3 flex items-end justify-between gap-4">
                   <div className="text-3xl font-semibold text-soj-text">{leader?.handle ?? t("arena.noRank")}</div>
@@ -109,7 +109,7 @@ function ArenaMetric({ label, value, tone = "text" }: { label: string; value: st
   }[tone];
 
   return (
-    <div className="rounded-soj-md border border-soj-line/50 bg-soj-bg/24 p-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+    <div className="soj-chip p-3">
       <div className="text-xs text-soj-muted">{label}</div>
       <div className={`mt-1 font-mono text-xl ${toneClass}`}>{value}</div>
     </div>
@@ -121,7 +121,7 @@ function ArenaTicker({ events, t }: { events: ArenaEvent[]; t: Translator }) {
   return (
     <div className="soj-arena-ticker p-4">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-soj-muted">{t("arena.latestSignal")}</span>
+        <span className="text-sm text-soj-muted">{t("arena.latestVerdict")}</span>
         <span className="h-px w-20 soj-hairline" />
       </div>
       {latest ? (
@@ -130,7 +130,7 @@ function ArenaTicker({ events, t }: { events: ArenaEvent[]; t: Translator }) {
           <div className="mt-1 font-mono text-sm text-soj-accent">{latest.label}</div>
         </div>
       ) : (
-        <div className="mt-4 text-sm text-soj-muted">{t("arena.noSignal")}</div>
+        <div className="mt-4 text-sm text-soj-muted">{t("arena.noVerdict")}</div>
       )}
     </div>
   );

@@ -1,11 +1,13 @@
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { ContestClock } from "@/components/soj/contest-clock";
 import { StatusPill } from "@/components/soj/status-pill";
+import { buttonVariants } from "@/components/ui/button";
 import { getContestDurationMinutes } from "@/lib/domain/contest";
 import type { ContestStatus, ContestSummary, ContestType } from "@/lib/api/types";
 import { getServerLocale, getServerTranslator } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translator } from "@/lib/i18n/translate";
+import { cn } from "@/lib/ui/cn";
 import { ContestProblemTable } from "./contest-problem-table";
 import { ContestRegistration } from "./contest-registration";
 import { ContestManageEntries } from "./contest-manage-entries";
@@ -39,7 +41,7 @@ export async function ContestDetail({ contest }: ContestDetailProps) {
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
-      <section aria-label={t("contests.detail.command")} className="soj-contest-detail-stage soj-enter grid gap-6 p-5 md:p-7 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <section aria-label={t("contests.detail.command")} className="soj-panel soj-enter grid gap-6 p-5 md:p-7 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="relative z-[1] flex min-w-0 flex-col justify-between gap-8">
           <div>
             <div className="flex flex-wrap items-center gap-3">
@@ -47,7 +49,10 @@ export async function ContestDetail({ contest }: ContestDetailProps) {
               <StatusPill tone="neutral">{t(typeLabel[contest.type])}</StatusPill>
               {contest.registered ? <StatusPill tone="success">{t("contests.detail.registered")}</StatusPill> : null}
             </div>
-            <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-none tracking-tight md:text-7xl">{contest.title}</h1>
+            {/* 曾经是 text-5xl/7xl 的超大标题，绕开 soj-display 与全站页头尺度。
+                比赛详情是「正在发生的事」，标题用展示字，但回到比赛列表焦点赛事
+                同一档（text-4xl/6xl），不再自己发明一个更大的级别。 */}
+            <h1 className="soj-display mt-5 max-w-4xl text-4xl leading-none md:text-6xl">{contest.title}</h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-soj-muted">
               {t("contests.detail.description")}
             </p>
@@ -91,7 +96,7 @@ export async function ContestDetail({ contest }: ContestDetailProps) {
             <h2 id="contest-rules-heading" className="text-2xl font-semibold tracking-tight">{t("contests.detail.rules")}</h2>
             <ul className="mt-5 grid gap-3 text-sm leading-6 text-soj-muted">
               {buildRules(contest).map((rule) => (
-                <li key={rule} className="border-l border-soj-accent/35 pl-3">{t(rule)}</li>
+                <li key={rule} className="border-l border-soj-line-strong pl-3">{t(rule)}</li>
               ))}
             </ul>
           </section>
@@ -101,7 +106,9 @@ export async function ContestDetail({ contest }: ContestDetailProps) {
           <h2 id="contest-announcements-heading" className="text-2xl font-semibold tracking-tight">{t("contests.detail.announcements")}</h2>
           <div className="mt-5 grid gap-4">
             {buildAnnouncements(contest).map((item) => (
-              <article key={item.title} className="rounded-[16px_6px_14px_6px] border border-soj-line/50 bg-soj-bg/22 p-4">
+              /* 曾经是不对称切角 rounded-[16px_6px_14px_6px]——那是被清理掉的
+                 「舞台装饰」在工具类里的残留；圆角必须走 scale。 */
+              <article key={item.title} className="rounded-soj-lg border border-soj-line/50 bg-soj-bg/22 p-4">
                 <h3 className="text-sm font-semibold text-soj-text">{t(item.title)}</h3>
                 <p className="mt-2 text-sm leading-6 text-soj-muted">{t(item.body)}</p>
               </article>
@@ -122,7 +129,7 @@ function ContestMetric({ label, value, tone = "text" }: { label: string; value: 
   }[tone];
 
   return (
-    <div className="rounded-soj-md border border-soj-line/50 bg-soj-bg/24 p-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+    <div className="soj-chip p-3">
       <dt className="text-xs text-soj-muted">{label}</dt>
       <dd className={`mt-1 font-mono text-lg ${toneClass}`}>{value}</dd>
     </div>
@@ -138,15 +145,18 @@ function SchedulePoint({ label, value }: { label: string; value: string }) {
   );
 }
 
+/**
+ * 赛事内的路由入口。
+ *
+ * 此前 primary 用的是「实心曜石蓝 + 蓝色外发光」：外发光在深色界面上只会显得廉价，
+ * 而实心蓝又抢走了「实时状态」这个唯一被允许的用途。现在复用 buttonVariants，
+ * 主操作是一块金属银——它天然是整个页面上最亮的东西，层级不需要靠饱和度建立。
+ */
 function RouteAction({ href, label, primary = false }: { href: string; label: string; primary?: boolean }) {
   return (
     <LocalizedLink
       href={href}
-      className={
-        primary
-          ? "col-span-2 inline-flex min-h-10 items-center justify-center rounded-soj-md bg-soj-accent px-3 py-2 text-sm font-semibold text-black shadow-[0_14px_34px_rgb(var(--soj-accent)/0.16)] transition hover:brightness-110 active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
-          : "inline-flex min-h-10 items-center justify-center rounded-soj-md border border-soj-line/55 bg-soj-bg/28 px-3 py-2 text-sm font-medium text-soj-muted transition hover:border-soj-accent/45 hover:text-soj-text active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
-      }
+      className={cn(buttonVariants({ variant: primary ? "solid" : "secondary", size: "md" }), primary && "col-span-2")}
     >
       {label}
     </LocalizedLink>

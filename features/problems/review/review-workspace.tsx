@@ -193,7 +193,7 @@ function ReviewQueue() {
                         onChange={(event) => setComment(event.target.value)}
                         placeholder={t("review.commentPlaceholder")}
                         rows={3}
-                        className="rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 py-2 text-sm text-soj-text transition placeholder:text-soj-muted/70 focus:border-soj-accent focus:outline-none focus:ring-1 focus:ring-soj-accent"
+                        className="rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 py-2 text-sm text-soj-text transition placeholder:text-soj-faint focus:border-soj-accent focus:outline-none focus:ring-1 focus:ring-soj-accent"
                       />
                     </label>
                     <div className="flex flex-wrap gap-3">

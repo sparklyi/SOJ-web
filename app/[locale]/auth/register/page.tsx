@@ -1,5 +1,5 @@
-import { LocalizedLink } from "@/components/i18n/localized-link";
 import { StatusPill } from "@/components/soj/status-pill";
+import { TypeExit } from "@/components/soj/type-exit";
 import { AccountSurface } from "@/features/auth/account-surface";
 import { AuthForm } from "@/features/auth/auth-form";
 import { getServerTranslator } from "@/lib/i18n/server";
@@ -13,7 +13,7 @@ export default async function RegisterPage() {
       title={t("auth.register.title")}
       description={t("auth.register.description")}
       meta={t("auth.register.meta")}
-      signal={
+      aside={
         <>
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -41,9 +41,8 @@ export default async function RegisterPage() {
           <StatusPill tone="success">{t("auth.register.ready")}</StatusPill>
           <h2 className="text-xl font-semibold">{t("auth.register.permissionAware")}</h2>
           <p className="max-w-xl text-sm leading-6 text-soj-muted">{t("auth.register.registrationDescription")}</p>
-          <LocalizedLink className="inline-flex min-h-10 w-fit items-center rounded-soj-md border border-soj-line/60 bg-soj-bg/28 px-3 text-sm font-medium text-soj-accent transition hover:border-soj-accent/55 hover:text-soj-text focus-visible:outline-soj-accent" href="/auth/login">
-            {t("auth.register.backToLogin")}
-          </LocalizedLink>
+          {/* 与登录页同一件事：切换身份状态的次级去向，是排字出口，不是描边胶囊。 */}
+          <TypeExit href="/auth/login" direction="back">{t("auth.register.backToLogin")}</TypeExit>
         </section>
       </div>
     </AccountSurface>

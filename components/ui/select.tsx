@@ -10,7 +10,7 @@ export function SelectTrigger({ className, children, ...props }: SelectPrimitive
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        "inline-flex h-10 items-center justify-between gap-3 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 text-sm text-soj-text shadow-[inset_0_1px_0_rgb(255_255_255/0.04)] transition hover:border-soj-accent/60",
+        "soj-inset-light inline-flex h-10 items-center justify-between gap-3 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 text-sm text-soj-text transition hover:border-soj-accent/60",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent",
         className,
       )}
@@ -24,7 +24,17 @@ export function SelectTrigger({ className, children, ...props }: SelectPrimitive
 export function SelectContent({ className, ...props }: SelectPrimitive.SelectContentProps) {
   return (
     <SelectPrimitive.Portal>
-      <SelectPrimitive.Content className={cn("z-50 overflow-hidden rounded-soj-md border border-soj-line bg-soj-bg-raised text-soj-text shadow-2xl shadow-black/35", className)} {...props} />
+      {/* position="popper" 必须显式给：默认的 item-aligned 模式在 sticky 页头里
+          会把面板定位到视口外（量到过 y≈1186），弹出的菜单等于不存在。 */}
+      <SelectPrimitive.Content
+        position="popper"
+        sideOffset={6}
+        className={cn(
+          "z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-soj-md border border-soj-line bg-soj-bg-raised text-soj-text shadow-2xl shadow-black/35",
+          className,
+        )}
+        {...props}
+      />
     </SelectPrimitive.Portal>
   );
 }

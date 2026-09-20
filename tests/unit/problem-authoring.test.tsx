@@ -60,8 +60,8 @@ function authoringState(valid: boolean, publicationStatus: ProblemAuthoringState
   return {
     problem: {
       id: 1,
-      title: "Signal Path",
-      slug: "signal-path",
+      title: "Shortest Path",
+      slug: "shortest-path",
       difficulty: "medium",
       visibility: "private",
       publicationStatus,
@@ -73,7 +73,7 @@ function authoringState(valid: boolean, publicationStatus: ProblemAuthoringState
     statement: {
       problemId: 1,
       version: 1,
-      title: "Signal Path",
+      title: "Shortest Path",
       description: "Find a path.",
       inputDescription: "Input",
       outputDescription: "Output",

@@ -9,7 +9,7 @@ test("submission list renders judge rows and verdict states", async ({ page }) =
   await expect(page.getByRole("row").filter({ hasText: "#5" })).toContainText("Wrong Answer");
   await expect(page.getByRole("row").filter({ hasText: "#7" })).toContainText("Compile Error");
   await expect(page.getByRole("row").filter({ hasText: "#8" })).toContainText("System Error");
-  await expect(page.getByText("SOJ Signal Cup").first()).toBeVisible();
+  await expect(page.getByText("SOJ Weekly Contest").first()).toBeVisible();
   await expect(page.getByText("42 ms").first()).toBeVisible();
   await expect(page.getByText("8192 KB").first()).toBeVisible();
 });
@@ -25,7 +25,7 @@ test("submission detail renders lifecycle feedback and contest impact", async ({
   await expect(page.getByText("#8")).toBeVisible();
   await expect(page.getByRole("region", { name: "Runtime and system information" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Runtime and system information" }).getByText("Mismatch at point 4")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Contest impact signal" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Contest impact" })).toBeVisible();
   await expect(page.getByText("Penalty risk")).toBeVisible();
   await expect(page.getByText("+20 min")).toBeVisible();
 });

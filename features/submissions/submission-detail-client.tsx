@@ -2,6 +2,7 @@
 
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { buttonVariants } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { isNotFoundError } from "@/lib/api/errors";
@@ -67,10 +68,10 @@ function SubmissionShell({ title, message }: { title: string; message: string })
         <p className="mt-2 text-sm leading-6 text-soj-muted">{message}</p>
       </div>
       <div className="flex justify-center gap-3">
-        <LocalizedLink className="rounded-soj-md border border-soj-line/70 px-4 py-2 text-sm text-soj-muted transition hover:border-soj-accent/60 hover:text-soj-accent" href="/submissions">
+        <LocalizedLink className={buttonVariants({ variant: "secondary" })} href="/submissions">
           {t("submissions.action.backToList")}
         </LocalizedLink>
-        <LocalizedLink className="rounded-soj-md border border-soj-accent/70 bg-soj-accent px-4 py-2 text-sm text-soj-bg transition hover:bg-soj-accent/90" href="/auth/login">
+        <LocalizedLink className={buttonVariants({ variant: "solid" })} href="/auth/login">
           {t("submissions.action.login")}
         </LocalizedLink>
       </div>

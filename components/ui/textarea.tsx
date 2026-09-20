@@ -19,7 +19,7 @@ export function Textarea({ className, id, label, helperText, error, ...props }: 
       <textarea
         id={textareaId}
         className={cn(
-          "min-h-28 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 py-2 text-sm text-soj-text transition placeholder:text-soj-muted/70",
+          "min-h-28 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 py-2 text-sm text-soj-text transition placeholder:text-soj-faint",
           "focus:border-soj-accent focus:outline-none focus:ring-1 focus:ring-soj-accent disabled:cursor-not-allowed disabled:opacity-45",
           error ? "border-soj-danger focus:border-soj-danger focus:ring-soj-danger" : null,
           className,

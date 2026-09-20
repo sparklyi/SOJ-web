@@ -1,67 +1,73 @@
 import type { ProblemSummary } from "@/lib/api/types";
-import { getAcceptanceRate } from "@/lib/domain/problem";
+import { getAcceptanceRate, problemStatusLabelKey } from "@/lib/domain/problem";
 import { LocalizedLink } from "@/components/i18n/localized-link";
-import { StatusPill } from "@/components/soj/status-pill";
+import { AcceptanceMeter } from "@/components/soj/acceptance-meter";
+import { DifficultyLabel } from "@/components/soj/difficulty-composition";
+import { ProblemStatus, problemRowTone } from "@/components/soj/problem-status";
 import { TableCell, TableRow } from "@/components/ui/table";
 import type { Translator } from "@/lib/i18n/translate";
 
-const difficultyTone = {
-  easy: "success",
-  medium: "warning",
-  hard: "danger",
-} as const;
-
-const difficultyLabelKey = {
-  easy: "problems.difficulty.easy",
-  medium: "problems.difficulty.medium",
-  hard: "problems.difficulty.hard",
-} as const;
-
-const problemStatusLabelKey = {
-  todo: "status.todo",
-  attempted: "status.attempted",
-  accepted: "status.solved",
-} as const;
-
-export function ProblemRow({ problem, t }: { problem: ProblemSummary; t: Translator }) {
+/**
+ * 题库数据行。
+ *
+ * 这一行只保留「决定要不要做这道题」需要的东西，一共四项：
+ *   题号 + 题名 + 标签  —— 这是什么、涉及什么
+ *   难度                —— 我做得了吗
+ *   通过率              —— 别人做起来有多难
+ *   我的状态            —— 我做过吗
+ *
+ * 删掉的两列：
+ *   1. **提交次数**。这是个典型的运营指标：对正在挑题的读者，「这道题被提交过 1902 次」
+ *      不改变任何决定——它既不是难度（难度列已经有了），也不是我的进度。
+ *      它只是让表格宽到需要横向滚动，顺带把通过率挤到视野之外。
+ *   2. **操作**。每行挂一个「提交」按钮，八行就是八个按钮，全都在抢同一份注意力；
+ *      而正常路径本来就是先进题目读题、再在题目页提交。
+ *
+ * 标签从独立一列折进题名格里：它和题名一起回答「这是什么题」，
+ * 单独占一列只为让表格更宽。折进去之后 7 列变 4 列，
+ * 在 1440 甚至 1280 宽度下都不再需要横向滚动。
+ *
+ * 两个「颜色」的决定都在别处（各只有一份定义）：
+ *   难度 → 刻度，无颜色：components/soj/difficulty-composition.tsx
+ *   状态 → 整行染色：components/soj/problem-status.tsx
+ * 这一层只负责把它们贴到格子里。
+ */
+export function ProblemRow({ problem, t, locale }: { problem: ProblemSummary; t: Translator; locale: string }) {
   const acceptance = getAcceptanceRate(problem);
 
   return (
-    <TableRow>
-      <TableCell className="min-w-64">
-        <LocalizedLink
-          href={`/problems/${problem.id}`}
-          className="relative grid gap-1 rounded-soj-sm pl-3 text-soj-text transition duration-200 hover:text-soj-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent group-hover:translate-x-1"
-        >
-          <span className="absolute left-0 top-1 h-8 w-px bg-soj-accent/0 transition group-hover:bg-soj-accent/70" aria-hidden />
-          <span className="font-medium">{problem.title}</span>
-          <span className="font-mono text-xs text-soj-muted">{problem.slug}</span>
-        </LocalizedLink>
-      </TableCell>
-      <TableCell>
-        <StatusPill tone={problem.status === "accepted" ? "success" : problem.status === "attempted" ? "warning" : "neutral"}>
-          {t(problemStatusLabelKey[problem.status])}
-        </StatusPill>
-      </TableCell>
-      <TableCell>
-        <StatusPill tone={difficultyTone[problem.difficulty]}>{t(difficultyLabelKey[problem.difficulty])}</StatusPill>
-      </TableCell>
-      <TableCell>
-        <div className="flex max-w-80 flex-wrap gap-2">
-          {problem.tags.map((tag) => (
-            <StatusPill key={tag}>{tag}</StatusPill>
-          ))}
+    <TableRow className={problemRowTone[problem.status]}>
+      <TableCell className="min-w-0">
+        <div className="grid gap-1.5">
+          <LocalizedLink
+            href={`/problems/${problem.id}`}
+            className="flex items-baseline gap-2.5 text-soj-text transition-colors hover:text-soj-accent"
+          >
+            <span className="font-mono text-xs tabular-nums text-soj-muted">#{problem.id}</span>
+            <span className="truncate font-medium">{problem.title}</span>
+          </LocalizedLink>
+          {problem.tags.length > 0 ? (
+            <span className="flex flex-wrap gap-1.5">
+              {problem.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-soj-sm border border-soj-line px-1.5 py-0.5 font-mono text-xs text-soj-muted"
+                >
+                  {tag}
+                </span>
+              ))}
+            </span>
+          ) : null}
         </div>
       </TableCell>
-      <TableCell className="font-mono text-soj-text">{acceptance.toFixed(1)}%</TableCell>
-      <TableCell className="font-mono text-soj-muted">{problem.submissionCount}</TableCell>
       <TableCell>
-        <LocalizedLink
-          href={`/problems/${problem.id}?submit=1`}
-          className="inline-flex h-8 items-center rounded-soj-md border border-soj-line/70 bg-soj-bg/26 px-3 text-xs font-medium text-soj-text shadow-[inset_0_1px_0_rgb(255_255_255/0.035)] transition hover:border-soj-accent/60 hover:bg-soj-accent/10 hover:text-soj-accent active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
-        >
-          Submit
-        </LocalizedLink>
+        <DifficultyLabel difficulty={problem.difficulty} t={t} />
+      </TableCell>
+      <TableCell className="text-right">
+        <AcceptanceMeter value={acceptance} locale={locale} />
+      </TableCell>
+      <TableCell>
+        <ProblemStatus status={problem.status} label={t(problemStatusLabelKey[problem.status])} />
       </TableCell>
     </TableRow>
   );

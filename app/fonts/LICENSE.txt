@@ -1,0 +1,17 @@
+本目录下的字体文件均为 SIL Open Font License 1.1 授权的开源字体，
+自托管以避免构建期依赖外网。
+
+SpaceGrotesk-Variable.woff2
+  Space Grotesk — Copyright 2018 The Space Grotesk Project Authors
+  https://github.com/floriankarsten/space-grotesk
+
+IBMPlexSans-Variable.woff2
+  IBM Plex Sans — Copyright 2017 IBM Corp.
+  https://github.com/IBM/plex
+
+JetBrainsMono-Variable.woff2
+  JetBrains Mono — Copyright 2020 The JetBrains Mono Project Authors
+  https://github.com/JetBrains/JetBrainsMono
+
+以上字体按 OFL-1.1 分发，可自由用于商业与非商业项目，
+再分发时需保留本声明。各字体的完整许可证文本见其上游仓库。

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { TopNav } from "@/components/layout/top-nav";
+import { PageShell } from "@/components/layout/page-shell";
 import { SubmissionDetailClient } from "@/features/submissions/submission-detail-client";
 
 type SubmissionDetailPageProps = {
@@ -15,11 +15,8 @@ export default async function SubmissionDetailPage({ params }: SubmissionDetailP
   }
 
   return (
-    <div className="min-h-dvh text-soj-text">
-      <TopNav />
-      <main className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 lg:px-8" id="main-content">
-        <SubmissionDetailClient submissionId={submissionId} />
-      </main>
-    </div>
+    <PageShell>
+      <SubmissionDetailClient submissionId={submissionId} />
+    </PageShell>
   );
 }
