@@ -18,6 +18,19 @@ const submissionsCreate = vi.fn();
 const contestsRegister = vi.fn();
 const previousApiMode = process.env.NEXT_PUBLIC_SOJ_API_MODE;
 
+// jsdom 里跑不了真正的 CodeMirror：换成等价的 textarea，
+// 但保留 value/onChange 契约，编辑行为依然被测到。
+vi.mock("@uiw/react-codemirror", () => ({
+  default: (props: { value: string; onChange: (value: string) => void; "aria-label"?: string }) => (
+    <textarea
+      aria-label={props["aria-label"]}
+      value={props.value}
+      onChange={(event) => props.onChange(event.target.value)}
+      readOnly={false}
+    />
+  ),
+}));
+
 function renderWithLocale(ui: ReactNode) {
   return render(<I18nProvider locale="en">{ui}</I18nProvider>);
 }
@@ -67,14 +80,22 @@ describe("soj product components", () => {
     expect(screen.getByText("Score")).toBeVisible();
   });
 
-  it("keeps edited source when switching languages", () => {
-    renderWithLocale(<CodeWorkspace languages={mockLanguages} />);
-
-    const editor = screen.getByLabelText("Source code");
-    fireEvent.change(editor, { target: { value: "custom source" } });
-    fireEvent.change(screen.getByLabelText("Language"), { target: { value: String(mockLanguages[1]?.id) } });
+  it("edits source and reports the workspace state upward", () => {
+    const handleChange = vi.fn();
+    renderWithLocale(
+      <CodeWorkspace
+        languages={mockLanguages}
+        value={{ languageId: mockLanguages[0]?.id, sourceCode: "custom source", stdin: "" }}
+        onChange={handleChange}
+      />,
+    );
 
     expect(screen.getByLabelText("Source code")).toHaveValue("custom source");
+    fireEvent.change(screen.getByLabelText("Source code"), { target: { value: "next source" } });
+
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceCode: "next source", languageId: mockLanguages[0]?.id }),
+    );
   });
 
   it("disables HTTP submit without a browser session and posts edited source with one", async () => {
@@ -91,7 +112,7 @@ describe("soj product components", () => {
     renderWithLocale(<ProblemSubmitPanel problem={problem} languages={mockLanguages} />);
 
     fireEvent.change(screen.getByLabelText("Source code"), { target: { value: "edited source" } });
-    fireEvent.click(screen.getByRole("button", { name: "Submit solution" }));
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
 
     await waitFor(() => {
       expect(submissionsCreate).toHaveBeenCalledWith({

@@ -27,6 +27,9 @@ test("problem detail renders statement and submit rail", async ({ page }) => {
   await expect(page.getByRole("article").getByRole("heading", { name: "Output" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Examples" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Constraints" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Submit" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Submit solution" })).toBeVisible();
+  // 工作区是单一面板：运行/提交是面板底部的两个动作，不再有 Tab 与重复按钮。
+  await expect(page.getByRole("heading", { name: "Code workspace" })).toBeVisible();
+  await expect(page.getByLabel("Custom input")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Run test" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Submit", exact: true })).toBeVisible();
 });

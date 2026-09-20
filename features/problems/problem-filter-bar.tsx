@@ -94,9 +94,9 @@ export function ProblemFilterBar({ query = "", difficulty, status, tag, tags, di
   }
 
   return (
-    <div className="grid gap-3 border-b border-soj-line bg-soj-bg/35 px-4 py-3.5">
+    <div className="grid gap-3 border-b border-soj-line bg-soj-bg/35 px-4 py-3.5" aria-busy={isPending}>
       <form className="grid gap-3" onSubmit={submitSearch} aria-label={t("problems.findNext")} role="search">
-        <div className="grid gap-3 lg:grid-cols-[minmax(200px,1fr)_auto_minmax(140px,168px)_minmax(140px,168px)] lg:items-end">
+        <div className={cn("grid gap-3 transition-opacity lg:grid-cols-[minmax(200px,1fr)_auto_minmax(140px,168px)_minmax(140px,168px)] lg:items-end", isPending && "pointer-events-none opacity-60")}>
           <Input
             id="problem-search"
             label={t("problems.search")}

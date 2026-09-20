@@ -3,7 +3,7 @@
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "@/components/providers/i18n-provider";
-import { CodeWorkspace } from "@/components/soj/code-workspace";
+import { CodeWorkspace, type WorkspaceValue } from "@/components/soj/code-workspace";
 import { ContestClock } from "@/components/soj/contest-clock";
 import { MetricFeed } from "@/components/soj/metric-feed";
 import { StatusPill } from "@/components/soj/status-pill";
@@ -66,10 +66,13 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
   const alias = contestProblem?.alias ?? "A";
   const freezeLabel = contest.status === "frozen" ? t("contests.workspace.rankUpdatesHidden") : t("contests.workspace.rankUpdatesLive");
   const sample = problem.examples[0];
-  const [workspace, setWorkspace] = useState<{ languageId?: number; sourceCode: string }>({
+  const [workspace, setWorkspace] = useState<WorkspaceValue>({
     languageId: languages[0]?.id,
     sourceCode: "",
+    stdin: "",
   });
+  // 语言目录可能异步到达：workspace.languageId 为空时派生到第一个可用语言。
+  const languageId = workspace.languageId ?? languages[0]?.id;
   const [submitState, setSubmitState] = useState<
     | { status: "idle" }
     | { status: "pending" }
@@ -81,7 +84,7 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
   const needsSession = apiMode === "http" && !hasSession;
   const lifecycleAllowsSubmit = contest.status === "running" || contest.status === "frozen";
   const effectiveCanSubmit = contest.canSubmit || (apiMode === "mock" && locallyRegistered && lifecycleAllowsSubmit);
-  const canSubmit = !needsSession && effectiveCanSubmit && Boolean(workspace.languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
+  const canSubmit = !needsSession && effectiveCanSubmit && Boolean(languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
 
   useEffect(() => {
     if (initialLanguages.length > 0) return;
@@ -98,14 +101,14 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
   }, [initialLanguages.length, t]);
 
   const handleSubmit = useCallback(async () => {
-    if (needsSession || !workspace.languageId || !workspace.sourceCode.trim() || !effectiveCanSubmit) return;
+    if (needsSession || !languageId || !workspace.sourceCode.trim() || !effectiveCanSubmit) return;
 
     setSubmitState({ status: "pending" });
     try {
       const submission = await createBrowserApiClient().submissions.create({
         problemId: problem.id,
         contestId: contest.id,
-        languageId: workspace.languageId,
+        languageId,
         sourceCode: workspace.sourceCode,
       });
       setSubmitState({ status: "success", submissionId: submission.id });
@@ -115,7 +118,7 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
         message: error instanceof Error ? error.message : t("submissions.loading.error"),
       });
     }
-  }, [contest.id, effectiveCanSubmit, needsSession, problem.id, t, workspace.languageId, workspace.sourceCode]);
+  }, [contest.id, effectiveCanSubmit, languageId, needsSession, problem.id, t, workspace.sourceCode]);
 
   return (
     <div className="grid gap-6">
@@ -242,16 +245,7 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
             <CodeWorkspace
               languages={languages}
               onChange={setWorkspace}
-              value={`#include <bits/stdc++.h>
-using namespace std;
-
-int main() {
-  ios::sync_with_stdio(false);
-  cin.tie(nullptr);
-
-  // 由题面构建图结构，并保留当前最短的可行路线。
-  return 0;
-}`}
+              value={workspace}
             />
             <div className="grid items-center gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
               <p className="text-sm leading-6 text-soj-muted">
