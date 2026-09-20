@@ -4,11 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import type { JudgeLanguage, ProblemDetail, RunSummary } from "@/lib/api/types";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useI18n } from "@/components/providers/i18n-provider";
-import { CodeWorkspace } from "@/components/soj/code-workspace";
+import { CodeWorkspace, type WorkspaceValue } from "@/components/soj/code-workspace";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { getApiMode } from "@/lib/api/mode";
 import { judgeStatusLabelKey } from "@/lib/domain/submission";
@@ -36,36 +34,40 @@ const RUN_POLL_INTERVAL_MS = 1200;
 const RUN_POLL_DEADLINE_MS = 30_000;
 
 /**
- * 提交侧栏：标准 OJ 的「测试 + 提交」双模式。
+ * 提交侧栏。
  *
- * 同一个代码工作区，底下两个动作：
- * - 测试：代码 + 自定义 stdin 走 self-run（不计入正式评测），实时轮询直到出结果；
- * - 提交：代码进入正式评测队列，结果去「我的提交」看。
- *
- * 指标归页头，侧栏只回答「我现在能做什么」。
+ * 形态对齐成熟 OJ 的提交页：侧栏里只有编辑器一个面板，
+ * 「运行测试」与「提交」是面板底部的两个并排动作——运行是次操作（ghost），
+ * 提交是主操作（solid）。不再用 Tab 把两个动作藏起来，也没有
+ * 「先选模式、再点一次按钮」的双重确认；tag 之类的元信息不进侧栏，
+ * 它们属于题目本身，已经在页头与题面里了。
  */
 export function ProblemSubmitPanel({ problem, languages }: ProblemSubmitPanelProps) {
   const { t } = useI18n();
-  const [workspace, setWorkspace] = useState<{ languageId?: number; sourceCode: string }>({
+  const [workspace, setWorkspace] = useState<WorkspaceValue>({
     languageId: languages[0]?.id,
     sourceCode: "",
+    stdin: "",
   });
+  // 语言目录可能异步到达：workspace.languageId 为空时派生到第一个可用语言，
+  // 用户在下拉里显式切换后（CodeWorkspace 会写回 languageId）以用户选择为准。
+  const languageId = workspace.languageId ?? languages[0]?.id;
   const [submitState, setSubmitState] = useState<SubmitState>({ status: "idle" });
-  const [stdin, setStdin] = useState("");
   const [runState, setRunState] = useState<RunState>({ status: "idle" });
   const hasSession = useBrowserSessionAvailable();
   const needsSession = getApiMode() === "http" && !hasSession;
-  const hasCode = Boolean(workspace.languageId && workspace.sourceCode.trim());
+  const hasCode = Boolean(languageId && workspace.sourceCode.trim());
   const canSubmit = !needsSession && hasCode && submitState.status !== "pending";
+  const canRun = !needsSession && hasCode && runState.status !== "pending";
 
   const handleSubmit = useCallback(async () => {
-    if (needsSession || !workspace.languageId || !workspace.sourceCode.trim()) return;
+    if (needsSession || !languageId || !workspace.sourceCode.trim()) return;
 
     setSubmitState({ status: "pending" });
     try {
       const submission = await createBrowserApiClient().submissions.create({
         problemId: problem.id,
-        languageId: workspace.languageId,
+        languageId,
         sourceCode: workspace.sourceCode,
       });
       setSubmitState({ status: "success", submissionId: submission.id });
@@ -75,19 +77,19 @@ export function ProblemSubmitPanel({ problem, languages }: ProblemSubmitPanelPro
         message: error instanceof Error ? error.message : t("problems.submissionFailed"),
       });
     }
-  }, [needsSession, problem.id, t, workspace.languageId, workspace.sourceCode]);
+  }, [languageId, needsSession, problem.id, t, workspace.sourceCode]);
 
   const handleRun = useCallback(async () => {
-    if (needsSession || !workspace.languageId || !workspace.sourceCode.trim()) return;
+    if (needsSession || !languageId || !workspace.sourceCode.trim()) return;
 
     setRunState({ status: "pending" });
     try {
       const client = createBrowserApiClient();
       let run = await client.runs.create({
         problemId: problem.id,
-        languageId: workspace.languageId,
+        languageId,
         sourceCode: workspace.sourceCode,
-        stdin,
+        stdin: workspace.stdin,
       });
       const deadline = Date.now() + RUN_POLL_DEADLINE_MS;
       while (!isTerminalRun(run.status) && Date.now() < deadline) {
@@ -101,83 +103,56 @@ export function ProblemSubmitPanel({ problem, languages }: ProblemSubmitPanelPro
         message: error instanceof Error ? error.message : t("problems.runFailed"),
       });
     }
-  }, [needsSession, problem.id, stdin, t, workspace.languageId, workspace.sourceCode]);
-
-  const canRun = !needsSession && hasCode && runState.status !== "pending";
+  }, [languageId, needsSession, problem.id, t, workspace.sourceCode, workspace.stdin]);
 
   return (
     <aside className="grid gap-4 lg:sticky lg:top-24 lg:self-start">
-      {/* 标题块不套面板：侧栏里只留编辑器一个「面」，代码才是焦点。 */}
-      <div className="grid gap-3">
-        <div className="grid min-w-0 gap-1">
-          <h2 className="text-sm font-semibold text-soj-text">{t("problems.submitTitle")}</h2>
-          <p className="text-xs leading-5 text-soj-muted">{t("problems.submitDescription")}</p>
-        </div>
-        {problem.tags.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {problem.tags.map((tag) => (
-              <Badge key={tag} tone="neutral" size="sm">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        ) : null}
-      </div>
-      <CodeWorkspace languages={languages} onChange={setWorkspace} />
-
-      <Tabs defaultValue="submit">
-        <TabsList aria-label={t("problems.workspaceModes")}>
-          <TabsTrigger value="submit">{t("problems.tabSubmit")}</TabsTrigger>
-          <TabsTrigger value="test">{t("problems.tabTest")}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="submit" className="grid gap-3">
-          <Button type="button" size="lg" className="w-full" disabled={!canSubmit} onClick={handleSubmit}>
-            {needsSession
-              ? t("problems.signInToSubmit")
-              : submitState.status === "pending"
-                ? t("problems.submitting")
-                : t("problems.submitSolution")}
-          </Button>
-          {needsSession ? (
-            <p className="text-sm text-soj-muted">
-              <LocalizedLink className="text-soj-accent underline-offset-4 hover:underline" href="/auth/login">
-                {t("problems.signIn")}
-              </LocalizedLink>{" "}
-              {t("problems.signInHint")}
-            </p>
-          ) : null}
-          <SubmissionResult state={submitState} />
-        </TabsContent>
-
-        <TabsContent value="test" className="grid gap-3">
-          <Textarea
-            id="problem-run-stdin"
-            label={t("problems.stdinLabel")}
-            helperText={t("problems.stdinHint")}
-            className="min-h-32 font-mono text-[13px]"
-            spellCheck={false}
-            value={stdin}
-            onChange={(event) => setStdin(event.target.value)}
-          />
-          <Button type="button" size="lg" className="w-full" disabled={!canRun} onClick={handleRun}>
-            {needsSession
-              ? t("problems.signInToRun")
-              : runState.status === "pending"
-                ? t("problems.runningTest")
-                : t("problems.runTest")}
-          </Button>
-          {needsSession ? (
-            <p className="text-sm text-soj-muted">
-              <LocalizedLink className="text-soj-accent underline-offset-4 hover:underline" href="/auth/login">
-                {t("problems.signIn")}
-              </LocalizedLink>{" "}
-              {t("problems.signInHint")}
-            </p>
-          ) : null}
-          <RunResultView state={runState} />
-        </TabsContent>
-      </Tabs>
+      <CodeWorkspace
+        languages={languages}
+        value={workspace}
+        onChange={setWorkspace}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              className="flex-1"
+              disabled={!canRun}
+              onClick={handleRun}
+            >
+              {needsSession
+                ? t("problems.signInToRun")
+                : runState.status === "pending"
+                  ? t("problems.runningTest")
+                  : t("problems.runTest")}
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              className="flex-1"
+              disabled={!canSubmit}
+              onClick={handleSubmit}
+            >
+              {needsSession
+                ? t("problems.signInToSubmit")
+                : submitState.status === "pending"
+                  ? t("problems.submitting")
+                  : t("problems.submitAction")}
+            </Button>
+          </>
+        }
+      />
+      {needsSession ? (
+        <p className="text-sm text-soj-muted">
+          <LocalizedLink className="text-soj-accent underline-offset-4 hover:underline" href="/auth/login">
+            {t("problems.signIn")}
+          </LocalizedLink>{" "}
+          {t("problems.signInHint")}
+        </p>
+      ) : null}
+      <SubmissionResult state={submitState} />
+      <RunResultView state={runState} />
     </aside>
   );
 }

@@ -26,11 +26,13 @@ export function SelectContent({ className, ...props }: SelectPrimitive.SelectCon
     <SelectPrimitive.Portal>
       {/* position="popper" 必须显式给：默认的 item-aligned 模式在 sticky 页头里
           会把面板定位到视口外（量到过 y≈1186），弹出的菜单等于不存在。 */}
+      {/* 入场动画不是装饰：popper 新建合成层时 Chromium 可能闪一帧白底，
+          首帧从透明淡入即可把闪帧完全遮蔽。 */}
       <SelectPrimitive.Content
         position="popper"
         sideOffset={6}
         className={cn(
-          "z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-soj-md border border-soj-line bg-soj-bg-raised text-soj-text shadow-2xl shadow-black/35",
+          "soj-pop-in z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-soj-md border border-soj-line bg-soj-bg-raised text-soj-text shadow-2xl shadow-black/35",
           className,
         )}
         {...props}
@@ -42,7 +44,10 @@ export function SelectContent({ className, ...props }: SelectPrimitive.SelectCon
 export function SelectItem({ className, children, ...props }: SelectPrimitive.SelectItemProps) {
   return (
     <SelectPrimitive.Item
-      className={cn("cursor-pointer px-3 py-2 text-sm text-soj-muted outline-none transition hover:bg-soj-surface hover:text-soj-text data-[state=checked]:text-soj-accent", className)}
+      className={cn(
+        "cursor-pointer px-3 py-2 text-sm text-soj-muted outline-none transition data-[highlighted]:bg-soj-surface data-[highlighted]:text-soj-text data-[state=checked]:text-soj-accent",
+        className,
+      )}
       {...props}
     >
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

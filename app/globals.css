@@ -782,12 +782,86 @@ p {
 }
 
 /* ==========================================================================
+   代码编辑器（CodeMirror 6）
+   --------------------------------------------------------------------------
+   颜色只在这里定义，组件里通过 var() 引用——编辑器语法色是代码区自己的
+   一套受限调色板，不占用页面的 accent 配额。
+   ========================================================================== */
+
+:root {
+  --soj-code-keyword: rgb(var(--soj-accent));
+  --soj-code-string: rgb(var(--soj-warning));
+  --soj-code-comment: rgb(var(--soj-text-faint));
+  --soj-code-number: rgb(var(--soj-danger));
+  --soj-code-selection: rgb(var(--soj-accent) / 0.26);
+  --soj-code-activeline: rgb(var(--soj-surface) / 0.5);
+}
+
+.soj-code-editor .cm-editor {
+  background: transparent;
+  color: rgb(var(--soj-text));
+}
+
+/* 聚焦描边交给外层容器的 focus-visible，编辑器自身不画框。 */
+.soj-code-editor .cm-editor.cm-focused {
+  outline: none;
+}
+
+.soj-code-editor .cm-scroller {
+  font-family: var(--font-soj-mono), ui-monospace, monospace;
+  line-height: 1.65;
+}
+
+.soj-code-editor .cm-gutters {
+  border: none;
+  background: transparent;
+  color: rgb(var(--soj-text-faint));
+}
+
+.soj-code-editor .cm-activeLine,
+.soj-code-editor .cm-activeLineGutter {
+  background: var(--soj-code-activeline);
+}
+
+.soj-code-editor .cm-activeLineGutter {
+  color: rgb(var(--soj-text-muted));
+}
+
+.soj-code-editor .cm-cursor,
+.soj-code-editor .cm-dropCursor {
+  border-left-color: rgb(var(--soj-accent));
+}
+
+.soj-code-editor .cm-selectionBackground,
+.soj-code-editor.cm-focused .cm-selectionBackground {
+  background: var(--soj-code-selection) !important;
+}
+
+/* ==========================================================================
    动效
    --------------------------------------------------------------------------
    两组：进入类（页面首次出现）与滚动揭示类（进入视口时触发）。
    滚动揭示默认不隐藏任何内容——只有 JS 就绪后才会「上膛」，
    所以禁用脚本或脚本报错时，页面是完全可见的，不会白屏。
    ========================================================================== */
+
+/* 弹出层（Radix Select 等）入场：首帧透明淡入。
+   popper 会被 Chromium 提升为独立合成层，层创建瞬间可能闪一帧白底；
+   从透明开始渲染即可把那一帧遮蔽掉，同时也给弹出面板一个柔和的出现。 */
+.soj-pop-in {
+  animation: soj-pop-in 0.14s ease-out both;
+}
+
+@keyframes soj-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
 
 .soj-enter {
   animation: soj-enter 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;

@@ -9,6 +9,7 @@ import { Stat, StatDivider, StatGroup } from "@/components/ui/stat";
 import { listProblems } from "@/features/problems/api";
 import { ProblemFilterBar } from "@/features/problems/problem-filter-bar";
 import { ProblemList } from "@/features/problems/problem-list";
+import { matchesProblemFilter } from "@/lib/domain/problem";
 import { getServerTranslator } from "@/lib/i18n/server";
 
 type ProblemsPageProps = {
@@ -56,7 +57,10 @@ export default async function ProblemsPage({ searchParams }: ProblemsPageProps) 
   const params = (await searchParams) ?? {};
   const t = await getServerTranslator();
   const filter = parseFilter(params);
-  const [allProblems, filteredProblems] = await Promise.all([listProblems(), listProblems(filter)]);
+  // 只取一次全量列表，筛选在内存里做。之前这里 fetch 两遍（全量 + 筛选后），
+  // 每次点筛选都打两遍后端 API，列表页的「卡一下」大半是这个延迟。
+  const allProblems = await listProblems();
+  const filteredItems = allProblems.items.filter((problem) => matchesProblemFilter(problem, filter));
   const tags = Array.from(new Set(allProblems.items.flatMap((problem) => problem.tags))).sort();
   const acceptedCount = allProblems.items.filter((problem) => problem.status === "accepted").length;
   const attemptedCount = allProblems.items.filter((problem) => problem.status === "attempted").length;
@@ -94,7 +98,7 @@ export default async function ProblemsPage({ searchParams }: ProblemsPageProps) 
               difficultyCounts={difficultyCounts}
             />
           </Suspense>
-          <ProblemList problems={filteredProblems.items} totalCount={allProblems.total} />
+          <ProblemList problems={filteredItems} totalCount={allProblems.total} />
         </Panel>
       </div>
     </PageShell>
