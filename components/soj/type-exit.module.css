@@ -1,0 +1,54 @@
+/* 排字式出口（TypeExit）的样式。
+   原本长在首页展台的 CSS module 里；其他页面开始引用同一种出口后，
+   把它抽出来变成共享件——「出口长什么样」是站级契约，不该属于某一个页面。
+   取值与被抽出的那一刻完全一致；改这里请同步设计文档的「排字出口」一节。 */
+
+/* 出口。**它不是按钮**：没有底色、没有描边、没有圆角、没有立体感。
+   曾经用共享的 buttonVariants 渲染，出来是一枚镀铬胶囊——
+   整页唯一一件有立体修饰的东西，和扁平的排字差着一个时代。
+
+   中间试过一版「等宽小字 + 一条会点亮的底线」：那条底线本意是排字里的下划线，
+   实机看下来读者读成的是**按钮的边框**（一枚没有底色的空心按钮）。
+   现在底线撤掉，只剩两件东西：一行字、一枚会位移的箭头。
+   反馈因此全落在字本身——静止是次要色，悬停提到主文案色，同时箭头右移。
+   这不是退让：**一个版面只有一个出口时，它不需要靠边框声明自己是可点的。**
+
+   字号 16px：它是页面上除展品外唯一的动作，
+   13px 的等宽字读起来像脚注，而它比脚注重要得多。 */
+.exit {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-soj-muted);
+  font-family: var(--font-soj-mono), ui-monospace, monospace;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  transition: color 220ms ease;
+}
+
+.exit:hover,
+.exit:focus-visible {
+  color: var(--color-soj-text);
+}
+
+.exitIcon {
+  width: 17px;
+  height: 17px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .exitIcon {
+    transition: transform 300ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+}
+
+.exit:hover .exitIcon,
+.exit:focus-visible .exitIcon {
+  transform: translateX(5px);
+}
+
+/* 返回方向：左箭头、向左位移。返回是一个方向，不该拿右箭头凑合。 */
+.exitBack:hover .exitIcon,
+.exitBack:focus-visible .exitIcon {
+  transform: translateX(-5px);
+}

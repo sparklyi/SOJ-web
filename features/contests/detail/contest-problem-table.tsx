@@ -1,5 +1,6 @@
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { StatusPill } from "@/components/soj/status-pill";
+import { buttonVariants } from "@/components/ui/button";
 import type { ContestSummary } from "@/lib/api/types";
 import type { Translator } from "@/lib/i18n/translate";
 
@@ -18,14 +19,18 @@ export function ContestProblemTable({ contest, t }: ContestProblemTableProps) {
           <h2 id="contest-problems-heading" className="text-2xl font-semibold tracking-tight">{t("contests.problem.title")}</h2>
           <p className="mt-2 text-sm leading-6 text-soj-muted">{t("contests.problem.description")}</p>
         </div>
-        <span className="self-start rounded-soj-md border border-soj-line/50 bg-soj-bg/24 px-3 py-2 font-mono text-sm text-soj-accent">
+        {/* 计数就是一行等宽字，不是一枚描边胶囊。 */}
+        <span className="self-start font-mono text-sm text-soj-accent">
           {contest.problems.length}
         </span>
       </div>
       <div className="grid gap-0">
         {contest.problems.map((problem) => (
           <article key={problem.problemId} className="soj-contest-problem-row grid gap-4 p-4 md:grid-cols-[86px_minmax(0,1fr)_150px_150px] md:items-center">
-            <div className="grid h-16 w-16 place-items-center rounded-[18px_6px_14px_6px] border border-soj-accent/40 bg-soj-accent/10 font-mono text-2xl font-semibold text-soj-accent">
+            {/* 曾经是不对称切角 + 强调色底（accent/10）的别名块：切角是被清理的舞台装饰
+                在工具类里的残留；而每一行都点一盏蓝灯，强调色预算就爆了。
+                别名块回到中性的「一格」，靠等宽大字自己成立。 */}
+            <div className="grid h-16 w-16 place-items-center rounded-soj-md border border-soj-line/70 bg-soj-bg/45 font-mono text-2xl font-semibold text-soj-text">
               {problem.alias}
             </div>
             <div className="min-w-0">
@@ -33,7 +38,7 @@ export function ContestProblemTable({ contest, t }: ContestProblemTableProps) {
               <p className="mt-1 text-sm text-soj-muted">{t("contests.problem.workspaceDescription")}</p>
             </div>
             <div>{contest.canSubmit ? <StatusPill tone="accent">{t("contests.problem.submitOpen")}</StatusPill> : <StatusPill tone="neutral">{t("contests.problem.reviewMode")}</StatusPill>}</div>
-            <LocalizedLink href={`/contests/${contest.id}/problems/${problem.problemId}`} className="inline-flex min-h-10 items-center justify-center rounded-soj-md border border-soj-line/55 bg-soj-bg/28 px-3 py-2 text-sm font-medium text-soj-muted transition hover:border-soj-accent/45 hover:text-soj-text active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent" aria-label={`${t("contests.action.openProblem")} ${problem.alias}`}>
+            <LocalizedLink href={`/contests/${contest.id}/problems/${problem.problemId}`} className={buttonVariants({ variant: "solid", size: "sm" })} aria-label={`${t("contests.action.openProblem")} ${problem.alias}`}>
               {t("contests.action.openProblem")}
             </LocalizedLink>
           </article>

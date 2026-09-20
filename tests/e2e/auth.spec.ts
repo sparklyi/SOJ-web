@@ -24,11 +24,11 @@ test("register page validates the new account contract", async ({ page }) => {
 
 test("anonymous account pages do not expose a fixture user", async ({ page }) => {
   await page.goto("/me");
-  await expect(page.getByText("Guest", { exact: true }).first()).toBeVisible();
+  // 未登录：右上角是登录 / 注册出口，账号菜单不存在。
+  await expect(page.getByRole("link", { name: "Login" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Register" })).toBeVisible();
   await expect(page.getByText("Lin Chen")).not.toBeVisible();
-
-  await page.getByRole("button", { name: "Open guest menu" }).click();
-  await expect(page.getByRole("dialog").getByText("Guest", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open guest menu" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Author" })).toHaveCount(0);
 });
 
@@ -76,7 +76,9 @@ test("expired sessions are cleared before account UI is shown", async ({ page })
   });
 
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Open guest menu" })).toBeVisible();
+  // 过期会话清理后，导航回到「未登录」形态：登录 / 注册出口，无访客菜单。
+  await expect(page.getByRole("link", { name: "Login" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open guest menu" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Author" })).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("soj.session"))).toBeNull();
 });

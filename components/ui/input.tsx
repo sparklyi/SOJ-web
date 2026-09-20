@@ -19,7 +19,7 @@ export function Input({ className, id, label, helperText, error, ...props }: Inp
       <input
         id={inputId}
         className={cn(
-          "soj-inset-light h-11 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 text-sm text-soj-text transition placeholder:text-soj-muted/70",
+          "soj-inset-light h-11 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 text-sm text-soj-text transition placeholder:text-soj-faint",
           "focus:border-soj-accent focus:outline-none focus:ring-1 focus:ring-soj-accent/55 disabled:cursor-not-allowed disabled:opacity-45",
           error ? "border-soj-danger focus:border-soj-danger focus:ring-soj-danger" : null,
           className,

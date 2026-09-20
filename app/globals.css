@@ -71,10 +71,9 @@
   --soj-info: 108 152 255;
   --soj-focus: 140 176 255;
 
-  /* 冷银：主操作的材料。金属渐变两端 + 其上文字颜色。 */
+  /* 冷银：主操作的材料。金属面色 + 其上文字颜色（扁平，无渐变）。 */
   --soj-silver: 205 216 231;
   --soj-metal-from: 238 243 250;
-  --soj-metal-to: 176 190 212;
   --soj-metal-ink: 9 12 18;
 
   /* 语义色。它们只出现在状态徽标里，不参与品牌表达。 */
@@ -181,11 +180,16 @@ p {
 }
 
 /* 微型标签：分区名、单位、坐标轴注释。全大写 + 宽字距 + 等宽。
-   字距从 0.22em 收到 0.15em：那个值是按 10px 调的，字号提到 11px 后同样的
-   相对字距会散得看不出是一个词——大写拉丁在 11px 上的可读上限就在这附近。 */
+   字号走过的路：10px → 11px → **12px**。
+   前两版都在给自己找理由（「它是眉标，比正文小一号是排版惯例」），
+   而这条理由正是让 10px 长回来的缝——眉标在全站有几十处，
+   每一处都在读者真正需要扫读的位置（分区名、单位、坐标轴刻度）。
+   现在全站只有一条硬线：**任何可见文字不低于 12px**，
+   `tests/e2e/design-language.spec.ts` 从计算样式复算，没有例外清单。
+   字距 0.15em 是按小字号调的，12px 下仍然合适。 */
 .soj-eyebrow {
   font-family: var(--font-soj-mono), ui-monospace, monospace;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -247,25 +251,11 @@ p {
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
 }
 
-/* 金属面：主操作。上亮下暗的垂直渐变 + 顶部白边 + 底部暗边 = 一块压出来的金属。 */
-.soj-metal {
-  border: 1px solid rgb(var(--soj-metal-from) / 0.9);
-  background-image: linear-gradient(180deg, rgb(var(--soj-metal-from)), rgb(var(--soj-metal-to)));
-  color: rgb(var(--soj-metal-ink));
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.75),
-    inset 0 -1px 0 rgb(0 0 0 / 0.22),
-    0 1px 2px rgb(0 0 0 / 0.45);
-}
-
-.soj-metal:hover {
-  background-image: linear-gradient(180deg, rgb(255 255 255), rgb(var(--soj-metal-from)));
-}
-
-/* 金属平面：主操作的扁平版。同一块材料，但没有任何立体修饰——无渐变、无内外描边。
-   为什么要它：.soj-metal 的垂直渐变 + 顶部白边 + 底部暗边是一枚「压出来的」按钮，
-   放在大字号、无盒子的排字页面上会读成旧式拟物（一枚发亮的胶囊）。
-   扁平版只保留材料本身，用于有排版承托、全屏只有一个主操作的场合。 */
+/* 金属平面：主操作。
+   曾经还有一个立体版（垂直渐变 + 顶部白边 + 底部暗边的镀铬胶囊 .soj-metal），
+   首页改版时被整个废掉：一枚发亮的胶囊和扁平的排字差着一个时代，
+   这条判据已推广到全站——产品里不允许再出现「压出来的」按钮。
+   扁平版只保留材料本身。 */
 .soj-metal-flat {
   background-color: rgb(var(--soj-metal-from));
   color: rgb(var(--soj-metal-ink));
@@ -743,8 +733,10 @@ p {
 
 .soj-submission-chip span {
   font-family: var(--font-soj-mono), ui-monospace, monospace;
-  font-size: 10px;
-  color: rgb(var(--soj-text-faint));
+  /* 10px + 最弱灰是首页明令修掉的病（标签 3.62:1 读者看不见）：
+     chip 的 span 是「说明 strong 是什么」的字段名，必须能读。 */
+  font-size: 12px;
+  color: rgb(var(--soj-text-muted));
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }

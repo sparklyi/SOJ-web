@@ -3,7 +3,9 @@
 import { useAuth } from "@/components/providers/auth-provider";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { AuthGate } from "@/components/soj/auth-gate";
+import { ProblemStatus } from "@/components/soj/problem-status";
 import { StatusPill } from "@/components/soj/status-pill";
+import { TypeExit } from "@/components/soj/type-exit";
 import { AccountSurface } from "@/features/auth/account-surface";
 
 export function AccountOverview() {
@@ -40,7 +42,17 @@ export function AccountOverview() {
         </>
       }
     >
-      <AuthGate user={user} fallback={<p className="text-sm text-soj-muted">{loading ? t("auth.me.loadingAccountSession") : t("auth.me.loginRequired")}</p>}>
+      {/* 未登录时曾经只留一句「请先登录」——一句话把人钉在原地，
+          既说清了状态又不给出口。状态句后面必须跟一个能走的地方。 */}
+      <AuthGate
+        user={user}
+        fallback={
+          <div className="grid justify-items-start gap-4 rounded-soj-lg border border-soj-line bg-soj-surface/45 p-6">
+            <p className="text-sm text-soj-muted">{loading ? t("auth.me.loadingAccountSession") : t("auth.me.loginRequired")}</p>
+            {loading ? null : <TypeExit href="/auth/login">{t("auth.me.signIn")}</TypeExit>}
+          </div>
+        }
+      >
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
           <section className="soj-account-panel grid grid-cols-[minmax(0,1fr)] gap-4 p-5">
             <StatusPill tone="accent">{t("auth.me.signedIn")}</StatusPill>
@@ -54,11 +66,11 @@ export function AccountOverview() {
             <h2 className="text-xl font-semibold">{t("auth.me.progress")}</h2>
             <div className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-soj-line pb-3 text-sm">
               <span className="text-soj-muted">{t("auth.me.shortestPath")}</span>
-              <StatusPill tone="success">{t("status.solved")}</StatusPill>
+              <ProblemStatus status="accepted" label={t("status.solved")} />
             </div>
             <div className="grid grid-cols-[1fr_auto] items-center gap-3 text-sm">
               <span className="text-soj-muted">{t("auth.me.cacheRelay")}</span>
-              <StatusPill tone="warning">{t("status.attempted")}</StatusPill>
+              <ProblemStatus status="attempted" label={t("status.attempted")} />
             </div>
           </section>
         </div>

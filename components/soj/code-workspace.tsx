@@ -77,7 +77,7 @@ export function CodeWorkspace({ languages, initialLanguageId, value = "", onChan
   return (
     <section className="soj-panel overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-soj-line px-4 py-2">
-        <h2 className="font-mono text-[11px] uppercase tracking-[0.14em] text-soj-muted">
+        <h2 className="font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">
           {t("problems.codeWorkspace")}
         </h2>
         <label className="grid gap-1">

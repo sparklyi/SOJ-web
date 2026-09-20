@@ -31,7 +31,7 @@ export function AcceptanceAxis({ value, label, locale, className }: AcceptanceAx
         </span>
       </div>
       <div className="flex items-center gap-3">
-        <span className="font-mono text-[10px] tabular-nums text-soj-faint">0%</span>
+        <span className="font-mono text-xs tabular-nums text-soj-muted">0%</span>
         <span
           className="relative h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-soj-surface-2"
           role="img"
@@ -51,7 +51,7 @@ export function AcceptanceAxis({ value, label, locale, className }: AcceptanceAx
             ))}
           </span>
         </span>
-        <span className="font-mono text-[10px] tabular-nums text-soj-faint">100%</span>
+        <span className="font-mono text-xs tabular-nums text-soj-muted">100%</span>
       </div>
     </div>
   );

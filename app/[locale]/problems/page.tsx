@@ -44,6 +44,11 @@ function parseFilter(params: Record<string, string | string[] | undefined>): Pro
  * 是用户自己会关心的；而目录统计（一共几道题、几道困难）只在挑题的那一刻有用，
  * 所以它应该出现在挑题的地方——也就是表格上沿那排难度按钮上，而不是页头。
  *
+ * 进度的词条与列表行、状态筛选器共用同一套（已解决 / 已尝试 / 未开始），
+ * 并且整组标注「我的进度」——题目是公共的，这三档说的是我和题目的关系，
+ * 曾经把它们写成「热身 / 复习 / 未开始」，读起来像题目自己的分类，
+ * 而且三种词性（动作建议 × 动作建议 × 进度）挤在一根轴上，轴本身就不成立。
+ *
  * 上一版页头同时放了三类东西：四个进度数字、一条难度堆叠条、一套图例，
  * 于是在表格出现之前，读者要先读完一整屏与自己无关的统计。
  */
@@ -64,15 +69,17 @@ export default async function ProblemsPage({ searchParams }: ProblemsPageProps) 
         <PageHeader
           eyebrow={t("problems.practiceControl")}
           title={t("problems.pageTitle")}
-          description={t("problems.pageDescription")}
           meta={
-            <StatGroup>
-              <Stat label={t("problems.warmUp")} value={acceptedCount} tone="success" />
-              <StatDivider />
-              <Stat label={t("problems.review")} value={attemptedCount} tone="warning" />
-              <StatDivider />
-              <Stat label={t("problems.todo")} value={todoCount} tone="faint" />
-            </StatGroup>
+            <div className="grid gap-2.5">
+              <span className="soj-eyebrow">{t("problems.myProgress")}</span>
+              <StatGroup>
+                <Stat label={t("status.solved")} value={acceptedCount} />
+                <StatDivider />
+                <Stat label={t("status.attempted")} value={attemptedCount} />
+                <StatDivider />
+                <Stat label={t("status.todo")} value={todoCount} />
+              </StatGroup>
+            </div>
           }
         />
 

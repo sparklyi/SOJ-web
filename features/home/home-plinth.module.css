@@ -205,49 +205,8 @@
   font-weight: 500;
 }
 
-/* 出口。**它不是按钮**：没有底色、没有描边、没有圆角、没有立体感。
-   上一版用共享的 buttonVariants 渲染，出来是一枚镀铬胶囊——
-   整页唯一一件有立体修饰的东西，和扁平的排字差着一个时代。
-
-   中间试过一版「等宽小字 + 一条会点亮的底线」：那条底线本意是排字里的下划线，
-   实机看下来读者读成的是**按钮的边框**（一枚没有底色的空心按钮）。
-   现在底线撤掉，只剩两件东西：一行字、一枚会位移的箭头。
-   反馈因此全落在字本身——静止是次要色，悬停提到主文案色，同时箭头右移。
-   这不是退让：**一个页面只有一个出口，它不需要靠边框声明自己是可点的。**
-
-   字号从 13px 提到 16px：它是页面上除展品外唯一的动作，
-   13px 的等宽字读起来像脚注，而它比脚注重要得多。 */
-.enter {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--color-soj-muted);
-  font-family: var(--font-soj-mono), ui-monospace, monospace;
-  font-size: 16px;
-  letter-spacing: 0.06em;
-  transition: color 220ms ease;
-}
-
-.enter:hover,
-.enter:focus-visible {
-  color: var(--color-soj-text);
-}
-
-.enterIcon {
-  width: 17px;
-  height: 17px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .enterIcon {
-    transition: transform 300ms cubic-bezier(0.2, 0.7, 0.2, 1);
-  }
-}
-
-.enter:hover .enterIcon,
-.enter:focus-visible .enterIcon {
-  transform: translateX(5px);
-}
+/* 出口（.enter/.enterIcon）已抽成共享件 components/soj/type-exit.*，
+   样式原样搬走；首页与全站从此用同一个排字出口。 */
 
 /* 滚动联动。**默认完全静止**：只有在浏览器支持滚动时间轴、且读者没有要求减弱动效时，
    才把锁定式与定位句挂到滚动进度上——向前走一步，展品退后一点。

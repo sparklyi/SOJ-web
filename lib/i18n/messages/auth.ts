@@ -92,6 +92,7 @@ export const authMessages = {
     "zh-CN": "正在加载账户会话。",
   },
   "auth.me.loginRequired": { en: "Login is required.", "zh-CN": "请先登录。" },
+  "auth.me.signIn": { en: "Go to login", "zh-CN": "去登录" },
   "auth.me.progress": { en: "Progress", "zh-CN": "进度" },
   "auth.me.shortestPath": { en: "Shortest Path", "zh-CN": "最短路" },
   "auth.me.cacheRelay": { en: "Cache Relay", "zh-CN": "缓存中继" },

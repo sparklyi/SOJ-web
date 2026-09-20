@@ -71,7 +71,7 @@ function SubmissionShell({ title, message }: { title: string; message: string })
         <LocalizedLink className={buttonVariants({ variant: "secondary" })} href="/submissions">
           {t("submissions.action.backToList")}
         </LocalizedLink>
-        <LocalizedLink className={buttonVariants({ variant: "primary" })} href="/auth/login">
+        <LocalizedLink className={buttonVariants({ variant: "solid" })} href="/auth/login">
           {t("submissions.action.login")}
         </LocalizedLink>
       </div>

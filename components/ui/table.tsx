@@ -20,7 +20,7 @@ export function TableHead({ className, sticky = false, ...props }: TableHeadProp
   return (
     <thead
       className={cn(
-        "border-b border-soj-line text-[11px] font-medium uppercase tracking-[0.12em] text-soj-faint",
+        "border-b border-soj-line text-xs font-medium uppercase tracking-[0.12em] text-soj-faint",
         sticky && "[&>tr>th]:sticky [&>tr>th]:top-0 [&>tr>th]:z-10 [&>tr>th]:bg-soj-bg-raised",
         className,
       )}

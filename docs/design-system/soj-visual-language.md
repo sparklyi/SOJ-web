@@ -54,7 +54,7 @@ All colours are semantic CSS variables in `app/globals.css` and Tailwind tokens 
 Two editorial rules that were learned the hard way:
 
 - **The background steps must lean blue, not neutral grey.** A neutral grey base makes obsidian blue look grey; a green-grey base kills it outright. The base has a deliberate blue cast for this reason — do not "clean it up" to neutral.
-- **A ladder must start brighter than its track.** The first attempt at the difficulty ladder used `soj.line-strong` for the easiest tier, which is roughly the same value as the track it sits in. The easiest tier vanished and the whole chart read as a single blue bar. Any ordered ladder needs its lowest step to be clearly lighter than its own track.
+- **A ladder must start brighter than its track.** The first attempt at the difficulty ladder used `soj.line-strong` for the easiest tier, which is roughly the same value as the track it sits in. The easiest tier vanished and the whole chart read as a single blue bar. Any ordered ladder needs its lowest step to be clearly lighter than its own track. The composition bar is now the only ladder left on the site (difficulty everywhere else is encoded by length), and its lowest step is `soj.silver/35` against a `soj.bg/75` track for exactly this reason.
 
 And one measured rule about the label tier:
 
@@ -82,7 +82,9 @@ Obsidian blue is the scarcest resource. On any single screen it may appear for *
 1. **Live state** — something is happening right now (running contest, active judge, live pulse).
 2. **Focus** — focus rings and selection.
 3. **Link** — a navigation affordance.
-4. **Data extreme** — the top of an ordered ladder (the hardest tier, the busiest problem, the filled portion of a gauge).
+4. **Data extreme** — the filled portion of a scale (the acceptance axis on a problem header).
+
+A fifth use — the **my-progress row tint** on the problem list — shares slot 4's logic: it is large-area but extremely faint (`accent/12`), so it reads as "the same hue, deepened" rather than a second colour. The row tint was once success green; green is the complementary temperature to the blue-leaning base, so a full row of it reads as a foreign patch bolted onto the page. Large areas of colour must share the base's temperature; small marks (a few characters of feedback text, test-point cells) may keep the semantic green.
 
 There is no "primary action" slot in this list, and that is the point. **The primary action is metallic silver, not blue.** A silver button is the brightest object on a dark page, so hierarchy is established by luminance instead of saturation — which is what makes a dark UI look expensive rather than loud.
 
@@ -90,7 +92,8 @@ Consequences:
 
 | Wrong | Right |
 | --- | --- |
-| Solid accent-filled button with a coloured glow shadow | `Button` variant `primary` (`.soj-metal`) |
+| Solid accent-filled button with a coloured glow shadow | `Button` (default variant `solid`, `.soj-metal-flat`) |
+| A beveled button (vertical gradient + top white edge + bottom dark edge) | flat silver. The beveled `.soj-metal` was retired site-wide — see Material. |
 | Accent eyebrow / kicker text | `soj.faint` |
 | Accent-tinted count in a "how many of X" chip | neutral surface; accent is for state, not quantity |
 | Accent inline status text that is not a link | `Badge` with the matching semantic tone |
@@ -114,8 +117,8 @@ Material primitives:
 | `.soj-panel-flat` | Transparent, outline only. For sections that should blend into the page. |
 | `.soj-well` | Recessed: code editors, example I/O blocks, logs. The only second surface allowed inside a panel. |
 | `.soj-chip` | A single standalone reading. Not a grouping device — do not build metric grids out of it. |
-| `.soj-metal` | The primary action. Vertical silver gradient + inner highlight + inner shadow. |
-| `.soj-metal-flat` | The same silver with every depth cue removed — no gradient, no inner edges. `Button` variant `solid`. Use it where a bevel would read as skeuomorphic: a screen whose only primary action sits inside a typographic composition. |
+| `.soj-metal-flat` | The primary action, and the **only** metal there is. Flat silver: a single fill, no gradient, no inner edges. `Button`'s default variant (`solid`). |
+| ~~`.soj-metal`~~ | **Retired.** It was the same silver with the depth cues put back (vertical gradient, `inset 0 1px` white top edge, `inset 0 -1px` dark bottom edge). The distinction it was invented for — "bevel on dense application screens, flat inside typographic compositions" — did not survive contact with the site: once every page was pulled onto one language, the beveled variant had no screen left where it was the right answer, and a page could hold two buttons of the same rank in two different materials. The variant and the `--soj-metal-to` token are gone; do not reintroduce them without retiring this paragraph. |
 | `.soj-sheet` | A modal sheet: surface colour + outline + shadow (outer drop + top inner highlight), set as one class. They are set together on purpose — split across utilities, a change to one half-updates the panel. |
 | `.soj-inset-light` | Top inner highlight for thin surfaces (inputs, selects, nav selection). |
 | `.soj-gridlines` | Coordinate grid. Gives dense areas a spatial reference. |
@@ -191,17 +194,19 @@ Three primitives, one per question type. All three live in `components/soj/`.
 
 | Primitive | Answers | File |
 | --- | --- | --- |
-| `DifficultyBar` + `DifficultyLegend` | "what are the parts of this whole?" | `difficulty-composition.tsx` |
+| `DifficultyScale` / `DifficultyLabel` | "how hard is this one?" — long form, everywhere difficulty is shown | `difficulty-composition.tsx` |
+| `DifficultyBar` + `DifficultyLegend` | "what are the parts of this whole?" — aggregate only | `difficulty-composition.tsx` |
 | `AcceptanceAxis` | "where does this value sit on a scale?" | `acceptance-axis.tsx` |
 | `AcceptanceMeter` | "how do these rows compare?" | `acceptance-meter.tsx` |
 
 Rules:
 
-- **Ordered data uses a brightness ladder, not a rainbow.** Easy/medium/hard as green/yellow/red reads as a rainbow progress bar and destroys the ordering. Use three steps of one hue family: `soj.muted/45` → `soj.silver/75` → `soj.accent`. The hardest tier is the accent, because "hardest" is the data extreme.
-- **Emit one definition.** Difficulty colours are defined once, in `difficulty-composition.tsx`, and difficulty *labels* once, in `lib/domain/problem.ts`. Two copies will drift, and one of them will be forgotten during the next palette change.
+- **Difficulty is a sequence; encode it with length, not colour.** Two attempts failed before this one. Green/yellow/red read as a rainbow and stole the semantic palette, so "hard" was red in the list and blue in the filter bar. The fix after that — three steps of one hue (`muted/45` → `silver/75` → `accent`) — was internally consistent but still asked the reader to learn a lookup table, and three dark values on a near-black page are hard to tell apart at all. Both versions shared one mistake: they encoded an **order** as a **category**. Hue expresses category and lightness expresses strength; neither says "more than". Three bars at 1 / 2 / 3 height say it with nothing to memorise, and spend no colour at all. So difficulty carries **no colour anywhere**: list rows, detail header and filter chips all render `DifficultyScale` plus a neutral word.
+- **The one exception is the composition bar**, which must fill continuously and so cannot use bars: it uses three steps of a *single* hue (`soj.silver/35` → `/65` → `/100`) — the weakest possible form of the ladder, with no hue to learn. Its legend uses `DifficultyScale`, not swatches, so the bar and the legend share one mark.
+- **Emit one definition per concern.** Difficulty *labels* live once in `lib/domain/problem.ts`; the difficulty *visual* (scale levels, bar fill) lives once in `difficulty-composition.tsx`; the problem-*status* icon, tone and row tint live once in `problem-status.tsx`. When labels and tones shared one file, the domain map and the bar ladder each believed they were the definition, and drifted.
 - **A track must be visible.** A meter whose track matches the background makes a 4.6% row read as "nothing was drawn" instead of "almost nobody passes" — those are different statements. Tracks use `soj.surface-2` against a panel background.
 - **Bars go before the number, not under it.** A bar wider than its number pushes past it and the column reads as a set of unrelated underlines. Right-align the group in dense tables; the number sits in a fixed-width slot after the bar.
-- **Do not encode the same datum twice in one row.** The acceptance meter is neutral silver, not semantic colour, because the difficulty badge in the same row already carries colour. Two signals in one row is harder to read than one.
+- **Do not encode the same datum twice in one row.** The acceptance meter is neutral silver, not semantic colour — the row tint already carries my progress, and two colour signals in one row is harder to read than one.
 - Do not use a bar to restate a number the reader can already compare column-wise. Bars earn their space where values differ by more than an order of magnitude.
 
 ## Information Architecture
@@ -240,6 +245,21 @@ Building a global ranking page would mean inventing an across-the-board score. W
 - **A row gets one primary action.** Secondary destinations become text links beside it, so actions of unequal weight stop looking equal.
 - **A control and its chart should be the same object.** Where a distribution explains a filter, the filter carries the distribution.
 
+### One page shell, one page header
+
+Every page is `TopNav` + `<main>` at the same width + `PageHeader`. There used to be three shells and they were all load-bearing:
+
+- `PageShell` carried a `text-3xl md:text-5xl` title of its own, so a page using it and a page using `PageHeader` had two different h1 sizes.
+- `AccountSurface` (me / settings / auth) carried a third: a hero panel, a pill-shaped eyebrow, and `text-4xl md:text-6xl`.
+- Contests, submission detail, workspace and the style guide each hand-rolled the same `TopNav` + `main` wrapper again.
+
+The cost was not visual inconsistency in the abstract — it was that **changing one typographic decision required four edits**, and any page that missed one fell out of the family silently. `AccountSurface` and `PageShell` are now thin wrappers over `PageHeader`; the hand-rolled wrappers were deleted.
+
+Two follow-on rules, both enforced by `tests/e2e/design-language.spec.ts`:
+
+- **A display-size title is not a way to make a page feel important.** The oversized `text-5xl/7xl` titles on contest detail and workspace were folded into `.soj-display` at the header scale. A title competes with the content beneath it for the same box, and above a data table it always wins.
+- **A detail page's "back" is a typographic exit, not a pill.** Two pills side by side (back, badge) on a detail page gave a navigation affordance and a status the same visual weight.
+
 ### Column and surface pruning, as applied
 
 | Surface | Before | After | Why |
@@ -252,6 +272,12 @@ Building a global ranking page would mean inventing an across-the-board score. W
 | Homepage, second pass | 展台 + 核心能力 (3 explanatory rows) + 题库样张 (3 problems) + 评测流程 (4 stages) + 焦点比赛 + 三步开始 | 展台 + 构成铭牌 + 加入我们 | The middle four sections were all **either a copy of another page or a tutorial** — see below. |
 | Homepage, third pass | 展台 (wordmark + four numbers) + 构成铭牌 (three cells of tag pills) + 加入我们 (two buttons) | 展台 (wordmark fills the column, 14px labels) + 构成铭牌 (no pills) + 加入我们 (one block → dialog) | The numbers were legible and their labels were not: 3.62:1 at 10px, i.e. 「只能看到数字」. And two side-by-side buttons split a first-time visitor into "register / login" before he had decided anything. |
 | Homepage, fourth pass | 展台 (drawn wordmark filling the column + four numbers + a chrome exit button) + 构成铭牌 (difficulty mix / language list / topic list) + 加入我们 (left-aligned, dialog with tabs) | 展台 (typeset lockup + three numbers + a typographic exit) → 加入我们 (centred, uppercase, dialog with a footer switch) | Three separate judgements, all from the reader: the drawn wordmark was **ugly and 400px tall**; the plate listed *which* languages and *which* tags, which is the problem set's job; and the exit button was the **only beveled object on a flat page**. |
+| Contest list | featured card with a coloured glow, an inner outlined box, and a divided panel inside it — three stacked visual layers around one row of content | one panel: status line, title, one stat group, one action column | Each layer was added to separate the card from the page. Three layers in the same place do not read as separation, they read as a rendering fault. The glow was also the second of the two page-level light sources the site allows, spent on a list row. |
+| Submission detail | dead `soj-*` stage classes, two pills, a `text-4xl/6xl` title, a decoration strip with no definition, and three outlined metric boxes | one panel: typographic back exit, `Badge`, `StatGroup` | The metric boxes cut one row of numbers into three objects. Readings do not need boxes — `StatGroup` already gives them a shared baseline and dividers. |
+| Problems header stats | three numbers labelled 热身 / 复习 / 未开始, coloured green / yellow / grey | three numbers labelled 已解决 / 已尝试 / 未开始 under one 「我的进度」 label, all in text colour | The problems are public; the *status* is mine. The old labels mixed action suggestions (warm up, review) with a progress state (not started) on one axis, so they read as categories of problem, and solved problems were called "warm-up". The colours spent semantic tones on numbers that carry no state. |
+| Problems status column | text pills in three vocabularies (row: 待完成/已尝试/已解决, filter: same, header: 热身/复习/未开始), "attempted" in warning yellow | one vocabulary everywhere (已解决 / 已尝试 / 未开始), icon + text: check / dashed circle / minus, only "solved" keeps colour | One state, three sets of words, is three states. Yellow for "attempted" was a semantics lie — trying and failing is not a warning. The icon leads the scan; the word confirms it and keeps the strings testable. |
+| Problems difficulty column | green/yellow/red beads, then a 3px-wide tallening bar whose tiers 1 and 2 were indistinguishable | `DifficultyScale` — three square segments, filled count = tier, no colour | Both earlier versions asked the reader to learn a mapping; the bar version asked and then failed anyway, because its two smallest tiers differed by under 4px of visible area. See "Encode an order with length". |
+| Problems status, second pass | a coloured pill inside the status cell; eight rows carried eight small coloured boxes | the whole row is tinted (`problemRowTone`), the cell keeps only icon + word | "Which of these have I done?" is a question about the *row*, not about a 40px chip inside it. Scanning a column of chips means reading eight separate signals; a tinted row is one glance. The marker also loses its capsule, so the row now has a single coloured thing in it rather than two. |
 
 ## Typography
 
@@ -270,8 +296,16 @@ Three classes carry all display type. Do not hand-roll `font-family` in a compon
 | Class | Role |
 | --- | --- |
 | `.soj-display` | Page titles and brand. Tight tracking (`-0.035em`), `0.95` line-height. |
-| `.soj-eyebrow` | Section names, units, axis annotations. Mono, 11px, uppercase, `0.15em`. |
+| `.soj-eyebrow` | Section names, units, axis annotations. Mono, 12px, uppercase, `0.15em`. |
 | `.soj-num` | Digits that must align column by column. |
+
+### The size floor
+
+**No visible text is smaller than 12px.** Not a guideline — a contract, recomputed from computed styles on twelve routes by `tests/e2e/design-language.spec.ts`.
+
+The floor took three passes to land, and the intermediate versions are the instructive part. It started at 10px, which produced the original complaint ("I can only see the numbers"). The first fix took it to 11px and left a carve-out: *eyebrows are section markers, a step below body copy is a typographic convention.* That carve-out was the bug. Eyebrows are the most numerous label on the site, and they sit exactly where a reader scans — section names, units, axis ticks, table column headers. Sizing them a step below reading size means sizing the thing people read a step below readable. The carve-out is gone, and so is the exception clause in the test.
+
+`.soj-eyebrow` still differs from body copy by **shape** — uppercase, `0.15em` tracking, mono — not by size. That is enough to make it read as a marker.
 
 Rules:
 
@@ -352,7 +386,7 @@ Radius scale (`tailwind.config.ts`, `--radius-soj-*`):
 Rules:
 
 - Do not use `rounded-2xl` or `rounded-3xl` (also enforced by `scripts/style-lint.mjs`).
-- **Do not use asymmetric or multi-value radius.** `border-radius: 18px 6px 14px 6px` is a costume, not a system; it makes the radius scale meaningless and reads as noise at scale. Every corner on a surface uses one scale step.
+- **Do not use asymmetric or multi-value radius.** `border-radius: 18px 6px 14px 6px` is a costume, not a system; it makes the radius scale meaningless and reads as noise at scale. Every corner on a surface uses one scale step. Directional rounding is still fine — "round the top two corners only" yields two distinct values; the cut-corner idiom yields three or more, and that is what `tests/e2e/design-language.spec.ts` flags.
 - Table headers stick to the top of their scroll container (`TableHead sticky`) with a solid `soj.bg-raised` background, so long lists stay readable.
 - Right-align numeric columns and set them in mono. Left-align everything else.
 - Stable dimensions are required for counters, toolbars, tables, score cells, and verdict tiles.
@@ -394,7 +428,7 @@ Rule of thumb: a component library may supply **behaviour** (focus management, p
 
 Low-level primitives live in `components/ui/**`:
 
-- `Button` (`buttonVariants`: `primary` / `secondary` / `outline` / `ghost` / `danger` / `link`; sizes `xs`–`lg`; no coloured glow shadows)
+- `Button` (`buttonVariants`: `solid` / `secondary` / `outline` / `ghost` / `danger` / `link` / `bare`; sizes `xs`–`lg`; no coloured glow shadows; **default is `solid`**) — the beveled `primary` variant was removed, see Material
 - `Badge` (+ `badgeVariants`; tones `neutral` / `accent` / `success` / `warning` / `danger` / `info`; `emphasis="solid"` is for at most one element per screen)
 - `Panel`, `PanelHeader`, `PanelBody`, `PanelFooter`
 - `PageHeader`
@@ -406,10 +440,11 @@ Low-level primitives live in `components/ui/**`:
 SOJ product components live in `components/soj/**`:
 
 - `StatusPill` (thin wrapper over `Badge` — status colour is defined once, in `Badge`)
+- `TypeExit` — the typographic exit. It began inside the homepage's CSS module and moved here the moment a second page needed it; "what an exit looks like" is a site-level contract, not one page's private style.
 - `VerdictBadge`, `ProblemStatus`
 - `ContestClock`
 - `MetricFeed`
-- `DifficultyBar`, `DifficultyLegend`, `tallyDifficulty`
+- `DifficultyScale`, `DifficultyLabel`, `DifficultyBar`, `DifficultyLegend`, `tallyDifficulty`
 - `AcceptanceAxis`, `AcceptanceMeter`
 - `SubmissionTimeline`, `TestPointMatrix`, `ScoreboardGrid`, `RankMovement`
 - `CodeWorkspace`
@@ -422,7 +457,7 @@ Motion components live in `components/fx/**`:
 - `AppAtmosphere` (mounted in the root layout — the app-wide environment layer)
 - `ParticleField`, `MotionBlock`, `useReveal`, `CountUp`
 
-Domain enums map to label keys and tones in exactly one place: `lib/domain/problem.ts`. Do not re-declare a difficulty or status colour map inside a component.
+Domain enums map to **label keys** in exactly one place: `lib/domain/problem.ts`. Their **visual form** lives one level up, with the component that renders it: the difficulty scale and the composition-bar fill in `difficulty-composition.tsx`, the problem-status icon, tone and row tint in `problem-status.tsx`. Never re-declare a difficulty or status colour map inside a feature component — and never let a domain module carry classes.
 
 Numeric formatting lives in exactly one place: `lib/ui/number.ts` (`formatNumber`, `formatDuration`, `formatMemory`). Server components and client components must call the same implementation, and the locale must be passed explicitly — otherwise the same figure renders as `13543` in one place and `13,543` in another, which is more damaging than either form on its own and is very hard to catch in review.
 
@@ -438,7 +473,10 @@ Do:
 - Reach for `Button`'s `variant="bare"` + `size="bare"` when an element has to be clickable but must **not look like a button** — a full-bleed block, for example. It is the difference between "a button with no fill" (`ghost`, still sized and padded like a button, for a toolbar row) and "not a button" (bare, layout owned by the caller).
 - Give every dialog a visible way out. `DialogContent` renders one, and it is not optional: Radix guarantees only Esc and the overlay, and a touch device has no Esc.
 - Give a modal its own surface step. A sheet on `soj.surface` with inputs on `soj.bg-raised` reads as *fields pressed into a panel*; a sheet and its inputs on the same colour read as *a table stuck on a wall*.
-- Reach for `variant="solid"` (flat silver) when the primary action sits inside a typographic, box-free composition. Reserve the beveled `primary` for dense application surfaces where the button has to hold its own against a panel.
+- Keep every visible string at 12px or above. Sizing a label below reading size to make a layout fit is the trade this document exists to forbid.
+- Problems are public; progress is personal. Label per-problem stats and filters as **mine** (「我的进度」/「我的状态」), keep the status vocabulary to one set (已解决 / 已尝试 / 未开始), and let `ProblemStatus` render it — check / dashed circle / minus. **Colour belongs to the whole row, not to the marker**: `problemRowTone` tints a solved row faintly **accent blue** (`accent/12` — same temperature as the base, so a row of it reads as deepening, not as a foreign colour), an attempted row one step lighter than the panel, and leaves an untouched row un-painted. A tinted row is the signal ("I have done something here"), so painting the default state too would erase it. Never present a status as if it were a property of the problem, and never re-introduce a coloured status pill — eight pills in a column is what the row tint replaces.
+- **Encode an order with length, a category with hue.** Difficulty is the reference case: it was first green/yellow/red, then three lightness steps, and both read badly because each asked the reader to learn a mapping. It is now the `DifficultyScale` signal bar — three square segments, filled count = tier, no colour. The first scale was three tallening bars 3px wide: tier 1 vs tier 2 differed by less than four pixels of visible area and was unreadable on the dark base. Segments must be **square and large enough that one segment is a chunk, not a line**. Reach for this whenever a scale is *ordered*; hue is for genuine categories, and on this site there are almost none by design.
+- Reach for `TypeExit` (`components/soj/type-exit`) for a secondary destination that sits **next to typesetting** — the "back to list" on a detail page, "go to login" under a state message, the single exit on the homepage. `direction="back"` flips the arrow. It is a line of mono text plus an arrow that moves: no fill, no outline, no radius, no depth. Not for a toolbar row that needs alignment (use `ghost`) and not for a link inside a sentence (use an accent text link).
 - Update this document when adding a shared token or shared component.
 - Run `npm run lint:style`, `npm run lint`, and `npx tsc --noEmit` before every commit.
 

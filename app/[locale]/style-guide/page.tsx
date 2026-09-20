@@ -3,15 +3,17 @@ import { LocalizedLink } from "@/components/i18n/localized-link";
 import { ParticleField } from "@/components/fx/particle-field";
 import { CountUp } from "@/components/fx/count-up";
 import { MotionBlock } from "@/components/fx/motion-block";
+import { PageShell } from "@/components/layout/page-shell";
 import { AcceptanceAxis } from "@/components/soj/acceptance-axis";
 import { AcceptanceMeter } from "@/components/soj/acceptance-meter";
 import { ContestClock } from "@/components/soj/contest-clock";
-import { DifficultyBar, DifficultyLegend, tallyDifficulty } from "@/components/soj/difficulty-composition";
-import { ProblemStatus } from "@/components/soj/problem-status";
+import { DifficultyBar, DifficultyLabel, DifficultyLegend, tallyDifficulty } from "@/components/soj/difficulty-composition";
+import { ProblemStatus, problemRowTone } from "@/components/soj/problem-status";
 import { ScoreboardGrid } from "@/components/soj/scoreboard-grid";
 import { MetricFeed } from "@/components/soj/metric-feed";
 import { SubmissionTimeline } from "@/components/soj/submission-timeline";
 import { TestPointMatrix } from "@/components/soj/test-point-matrix";
+import { TypeExit } from "@/components/soj/type-exit";
 import { VerdictBadge } from "@/components/soj/verdict-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -25,8 +27,10 @@ import { Stat, StatDivider, StatGroup } from "@/components/ui/stat";
 import { Table, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ProblemSummary } from "@/lib/api/types";
+import { problemStatusLabelKey } from "@/lib/domain/problem";
 import type { MessageKey } from "@/lib/i18n/messages";
 import { getServerLocale, getServerTranslator } from "@/lib/i18n/server";
+import { cn } from "@/lib/ui/cn";
 
 /**
  * 色板。
@@ -77,6 +81,19 @@ const sampleDifficulties: Array<Pick<ProblemSummary, "difficulty">> = [
 ];
 
 /**
+ * 行染色的三档样例（「难度 + 状态」就是一行里参与着色的全部内容）。
+ *
+ * 状态标记单看图标 + 词是看不出「颜色其实铺满整行」的，
+ * 所以这里必须用真实的三行来展示——一行一个状态、一层底色，
+ * 顺序按「已解决 → 已尝试 → 未开始」，也就是底色从有色到没有的那条梯度。
+ */
+const sampleStatusRows = [
+  { difficulty: "easy", status: "accepted" },
+  { difficulty: "medium", status: "attempted" },
+  { difficulty: "hard", status: "todo" },
+] as const;
+
+/**
  * 样式基线页。
  *
  * 它本身也是契约的一部分：任何页面改动只要和这里对不上，就是页面要改。
@@ -93,7 +110,9 @@ export default async function StyleGuidePage() {
   const difficultyCounts = tallyDifficulty(sampleDifficulties);
 
   return (
-    <main className="min-h-dvh bg-soj-bg px-5 py-8 text-soj-text md:px-10">
+    /* 曾经是自写壳（连顶部导航都没有）。契约页没有理由游离在整页壳之外：
+       它自己就是「每个页面都该长这样」的样本。 */
+    <PageShell>
       <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-10">
         <PageHeader
           eyebrow={t("style.designSystem")}
@@ -108,7 +127,7 @@ export default async function StyleGuidePage() {
             {swatches.map(([labelKey, className]) => (
               <div key={labelKey} className="soj-panel p-3">
                 <div className={`${className} h-12 rounded-soj-md border border-soj-line`} />
-                <div className="mt-2.5 font-mono text-[11px] text-soj-muted">{t(labelKey)}</div>
+                <div className="mt-2.5 font-mono text-xs text-soj-muted">{t(labelKey)}</div>
               </div>
             ))}
           </div>
@@ -117,7 +136,7 @@ export default async function StyleGuidePage() {
               {textScale.map(([labelKey, className]) => (
                 <div key={labelKey} className="flex items-baseline justify-between gap-4">
                   <span className={`text-sm ${className}`}>{t("style.textSample")}</span>
-                  <span className="font-mono text-[11px] text-soj-faint">{t(labelKey)}</span>
+                  <span className="font-mono text-xs text-soj-muted">{t(labelKey)}</span>
                 </div>
               ))}
             </div>
@@ -130,16 +149,16 @@ export default async function StyleGuidePage() {
           <Panel variant="flush">
             <div className="grid divide-y divide-soj-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
               <div className="grid content-start gap-3 px-4 py-5">
-                <span className="font-mono text-[11px] text-soj-faint">{t("style.primitiveDisplay")}</span>
+                <span className="font-mono text-xs text-soj-muted">{t("style.primitiveDisplay")}</span>
                 <p className="soj-display text-4xl">SOJ 2026</p>
               </div>
               <div className="grid content-start gap-3 px-4 py-5">
-                <span className="font-mono text-[11px] text-soj-faint">{t("style.primitiveEyebrow")}</span>
+                <span className="font-mono text-xs text-soj-muted">{t("style.primitiveEyebrow")}</span>
                 <p className="soj-eyebrow">Time limit · 1000 ms</p>
                 <p className="soj-eyebrow">内存限制 · 256 MB</p>
               </div>
               <div className="grid content-start gap-3 px-4 py-5">
-                <span className="font-mono text-[11px] text-soj-faint">{t("style.primitiveNum")}</span>
+                <span className="font-mono text-xs text-soj-muted">{t("style.primitiveNum")}</span>
                 <p className="soj-num text-xl">13,543</p>
                 <p className="soj-num text-sm text-soj-muted">00:42:18</p>
               </div>
@@ -165,7 +184,7 @@ export default async function StyleGuidePage() {
             {radiusScale.map(([labelKey, className]) => (
               <div key={labelKey} className="grid gap-2">
                 <div className={`${className} h-16 border border-soj-line-strong bg-soj-surface`} />
-                <span className="font-mono text-[11px] text-soj-faint">{t(labelKey)}</span>
+                <span className="font-mono text-xs text-soj-muted">{t(labelKey)}</span>
               </div>
             ))}
           </div>
@@ -228,7 +247,7 @@ export default async function StyleGuidePage() {
                 <code>{"if (dist[u] + w < dist[v]) { dist[v] = dist[u] + w; push(v); }"}</code>
               </pre>
             </div>
-            <PanelFooter className="font-mono text-[11px] uppercase tracking-[0.14em] text-soj-faint">
+            <PanelFooter className="font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">
               {t("style.surfaceDemoFooter")}
             </PanelFooter>
           </Panel>
@@ -269,13 +288,13 @@ export default async function StyleGuidePage() {
           <Panel variant="flush">
             <div className="grid divide-y divide-soj-line sm:grid-cols-4 sm:divide-x sm:divide-y-0">
               <div className="grid content-start gap-3 px-4 py-4">
-                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-soj-faint">
+                <span className="font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">
                   {t("style.accentPrimary")}
                 </span>
                 <Button className="w-fit">{t("common.submit")}</Button>
               </div>
               <div className="grid content-start gap-3 px-4 py-4">
-                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-soj-faint">
+                <span className="font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">
                   {t("style.accentLive")}
                 </span>
                 <Badge tone="accent" withDot className="w-fit">
@@ -283,7 +302,7 @@ export default async function StyleGuidePage() {
                 </Badge>
               </div>
               <div className="grid content-start gap-3 px-4 py-4">
-                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-soj-faint">
+                <span className="font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">
                   {t("style.glowLive")}
                 </span>
                 <span aria-hidden className="relative block h-12 w-full overflow-hidden rounded-soj-md border border-soj-line">
@@ -291,7 +310,7 @@ export default async function StyleGuidePage() {
                 </span>
               </div>
               <div className="grid content-start gap-3 px-4 py-4">
-                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-soj-faint">
+                <span className="font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">
                   {t("style.accentRankUp")}
                 </span>
                 <span className="font-mono text-sm text-soj-accent">+3</span>
@@ -366,6 +385,11 @@ export default async function StyleGuidePage() {
           <h2 className="text-sm font-semibold">{t("style.controls")}</h2>
           <Panel>
             <PanelBody className="grid gap-4">
+              {/* 按钮基准：**扁平金属主操作 + 排字出口**。
+                  曾经的基准是「镀铬主 + 描边次」；镀铬版（垂直渐变 + 顶部白边）
+                  在首页改版时被整个废掉——一枚发亮的胶囊和扁平的排字差着一个时代，
+                  这条判据已推广到全站，产品里不允许再出现「压出来的」按钮。
+                  默认 variant 即 solid（扁平金属），无需写明。 */}
               <div className="flex flex-wrap items-center gap-3">
                 <Button>{t("common.submit")}</Button>
                 <Button variant="secondary">{t("common.preview")}</Button>
@@ -373,7 +397,15 @@ export default async function StyleGuidePage() {
                 <Button variant="ghost">{t("common.cancel")}</Button>
                 <Button variant="danger">{t("common.delete")}</Button>
                 <Button variant="link">{t("style.linkAction")}</Button>
+                <Button variant="bare" size="bare">
+                  {t("style.bareAction")}
+                </Button>
                 <Button loading>{t("style.judging")}</Button>
+              </div>
+              {/* 排字出口（TypeExit）：一行等宽字 + 一枚会位移的箭头，不是按钮。
+                  用于与排字直接相邻的次级去向——它是首页出口语言的站级化。 */}
+              <div className="flex flex-wrap items-center gap-6">
+                <TypeExit href="/problems">{t("home.exploreProblems")}</TypeExit>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 {/* 尺寸对比用 secondary：四个金属主按钮并排会把「尺寸」这个信息淹掉，
@@ -425,10 +457,27 @@ export default async function StyleGuidePage() {
                   <VerdictBadge status="compile_error" />
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <ProblemStatus status="accepted" />
-                <ProblemStatus status="attempted" />
-                <ProblemStatus status="todo" />
+              {/* 状态与难度都不再是「再给一个胶囊」：
+                  状态是整行染色（颜色铺满那一行，标记只剩图标 + 词），
+                  难度是刻度（长度表达序，整站不占颜色）。 */}
+              <div className="overflow-hidden rounded-soj-md border border-soj-line">
+                {sampleStatusRows.map((row) => (
+                  <div
+                    key={row.status}
+                    className={cn(
+                      "flex items-center justify-between gap-4 border-b border-soj-line/60 px-3 py-2.5 last:border-b-0",
+                      problemRowTone[row.status],
+                    )}
+                  >
+                    <DifficultyLabel difficulty={row.difficulty} t={t} />
+                    <ProblemStatus status={row.status} label={t(problemStatusLabelKey[row.status])} />
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-5">
+                <DifficultyLabel difficulty="easy" t={t} />
+                <DifficultyLabel difficulty="medium" t={t} />
+                <DifficultyLabel difficulty="hard" t={t} />
               </div>
             </PanelBody>
           </Panel>
@@ -530,7 +579,7 @@ export default async function StyleGuidePage() {
                       <TableRow>
                         <TableCell>{t("style.sampleProblem")}</TableCell>
                         <TableCell>
-                          <ProblemStatus status="attempted" />
+                          <ProblemStatus status="attempted" label={t("status.attempted")} />
                         </TableCell>
                         <TableCell className="text-right">
                           <AcceptanceMeter value={47.2} locale={locale} />
@@ -556,6 +605,6 @@ export default async function StyleGuidePage() {
           </Panel>
         </section>
       </div>
-    </main>
+    </PageShell>
   );
 }

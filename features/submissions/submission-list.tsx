@@ -4,8 +4,8 @@ import { Fragment } from "react";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { Table, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
+import { Panel } from "@/components/ui/panel";
 import { VerdictBadge } from "@/components/soj/verdict-badge";
-import { cn } from "@/lib/ui/cn";
 import type { listSubmissions } from "./api";
 
 type SubmissionListProps = {
@@ -50,13 +50,16 @@ export function SubmissionList({ submissions }: SubmissionListProps) {
   const { locale, t } = useI18n();
 
   return (
-    <section className="soj-submission-board">
+    /* 曾经是 soj-submission-board「舞台类」+ soj-submission-row-terminal/live 死类。
+       容器就是一块普通面板，与题库页同一个原语。 */
+    <Panel variant="flush" aria-label={t("submissions.list.ariaLabel")}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-soj-line/60 px-4 py-4 sm:px-5">
         <div>
           <h2 className="text-lg font-semibold text-soj-text">{t("submissions.list.title")}</h2>
           <p className="mt-1 text-sm text-soj-muted">{t("submissions.list.description")}</p>
         </div>
-        <span className="rounded-full border border-soj-line/70 bg-soj-bg/40 px-3 py-1 font-mono text-xs text-soj-muted">
+        {/* 计数不再做成一枚描边胶囊——那是一个「无按钮外观的小按钮」。 */}
+        <span className="font-mono text-xs text-soj-muted">
           {t("submissions.list.records", { count: submissions.length })}
         </span>
       </div>
@@ -78,13 +81,12 @@ export function SubmissionList({ submissions }: SubmissionListProps) {
               if (submission.score > 0) meta.push(`${t("submissions.list.score")} ${submission.score}`);
 
               return (
-                <TableRow
-                  key={submission.id}
-                  className={cn("soj-submission-row", submission.displayState.terminal ? "soj-submission-row-terminal" : "soj-submission-row-live")}
-                >
+                <TableRow key={submission.id}>
                   <TableCell className="font-mono text-soj-text">
+                    {/* 行内编号链接就是一行等宽字：不加底色、不加描边、
+                        不做成「无按钮外观的小按钮」。 */}
                     <LocalizedLink
-                      className="inline-flex min-w-14 items-center justify-center rounded-soj-md border border-soj-line/60 bg-soj-bg/42 px-2.5 py-1.5 transition hover:border-soj-accent/55 hover:text-soj-accent focus-visible:outline-soj-accent"
+                      className="font-mono text-soj-accent underline-offset-4 transition hover:underline focus-visible:underline"
                       href={`/submissions/${submission.id}`}
                     >
                       #{submission.id}
@@ -100,7 +102,7 @@ export function SubmissionList({ submissions }: SubmissionListProps) {
                         {meta.map((item, index) => (
                           <Fragment key={item}>
                             {index > 0 ? (
-                              <span aria-hidden className="text-soj-faint">
+                              <span aria-hidden className="text-soj-line-strong">
                                 ·
                               </span>
                             ) : null}
@@ -119,6 +121,6 @@ export function SubmissionList({ submissions }: SubmissionListProps) {
           </tbody>
         </Table>
       </div>
-    </section>
+    </Panel>
   );
 }

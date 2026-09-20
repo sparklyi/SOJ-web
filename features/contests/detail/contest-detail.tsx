@@ -41,7 +41,7 @@ export async function ContestDetail({ contest }: ContestDetailProps) {
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
-      <section aria-label={t("contests.detail.command")} className="soj-contest-detail-stage soj-enter grid gap-6 p-5 md:p-7 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <section aria-label={t("contests.detail.command")} className="soj-panel soj-enter grid gap-6 p-5 md:p-7 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="relative z-[1] flex min-w-0 flex-col justify-between gap-8">
           <div>
             <div className="flex flex-wrap items-center gap-3">
@@ -49,7 +49,10 @@ export async function ContestDetail({ contest }: ContestDetailProps) {
               <StatusPill tone="neutral">{t(typeLabel[contest.type])}</StatusPill>
               {contest.registered ? <StatusPill tone="success">{t("contests.detail.registered")}</StatusPill> : null}
             </div>
-            <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-none tracking-tight md:text-7xl">{contest.title}</h1>
+            {/* 曾经是 text-5xl/7xl 的超大标题，绕开 soj-display 与全站页头尺度。
+                比赛详情是「正在发生的事」，标题用展示字，但回到比赛列表焦点赛事
+                同一档（text-4xl/6xl），不再自己发明一个更大的级别。 */}
+            <h1 className="soj-display mt-5 max-w-4xl text-4xl leading-none md:text-6xl">{contest.title}</h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-soj-muted">
               {t("contests.detail.description")}
             </p>
@@ -93,7 +96,7 @@ export async function ContestDetail({ contest }: ContestDetailProps) {
             <h2 id="contest-rules-heading" className="text-2xl font-semibold tracking-tight">{t("contests.detail.rules")}</h2>
             <ul className="mt-5 grid gap-3 text-sm leading-6 text-soj-muted">
               {buildRules(contest).map((rule) => (
-                <li key={rule} className="border-l border-soj-accent/35 pl-3">{t(rule)}</li>
+                <li key={rule} className="border-l border-soj-line-strong pl-3">{t(rule)}</li>
               ))}
             </ul>
           </section>
@@ -103,7 +106,9 @@ export async function ContestDetail({ contest }: ContestDetailProps) {
           <h2 id="contest-announcements-heading" className="text-2xl font-semibold tracking-tight">{t("contests.detail.announcements")}</h2>
           <div className="mt-5 grid gap-4">
             {buildAnnouncements(contest).map((item) => (
-              <article key={item.title} className="rounded-[16px_6px_14px_6px] border border-soj-line/50 bg-soj-bg/22 p-4">
+              /* 曾经是不对称切角 rounded-[16px_6px_14px_6px]——那是被清理掉的
+                 「舞台装饰」在工具类里的残留；圆角必须走 scale。 */
+              <article key={item.title} className="rounded-soj-lg border border-soj-line/50 bg-soj-bg/22 p-4">
                 <h3 className="text-sm font-semibold text-soj-text">{t(item.title)}</h3>
                 <p className="mt-2 text-sm leading-6 text-soj-muted">{t(item.body)}</p>
               </article>
@@ -151,7 +156,7 @@ function RouteAction({ href, label, primary = false }: { href: string; label: st
   return (
     <LocalizedLink
       href={href}
-      className={cn(buttonVariants({ variant: primary ? "primary" : "secondary", size: "md" }), primary && "col-span-2")}
+      className={cn(buttonVariants({ variant: primary ? "solid" : "secondary", size: "md" }), primary && "col-span-2")}
     >
       {label}
     </LocalizedLink>

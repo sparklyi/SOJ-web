@@ -9,7 +9,10 @@ import { MetricFeed } from "@/components/soj/metric-feed";
 import { StatusPill } from "@/components/soj/status-pill";
 import { SubmissionTimeline } from "@/components/soj/submission-timeline";
 import { TestPointMatrix } from "@/components/soj/test-point-matrix";
+import { TypeExit } from "@/components/soj/type-exit";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Stat, StatDivider, StatGroup } from "@/components/ui/stat";
 import type { ContestStatus, ContestSummary, JudgeLanguage, ProblemDetail } from "@/lib/api/types";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { getApiMode } from "@/lib/api/mode";
@@ -116,43 +119,36 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
 
   return (
     <div className="grid gap-6">
-      <section className="soj-workspace-stage soj-scanline soj-enter p-5 md:p-7">
+      <section className="soj-workspace-stage soj-enter p-5 md:p-7">
         <div className="relative z-[1] grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-stretch">
           <div className="grid content-between gap-7">
             <div className="grid gap-4">
+              {/* 返回曾经是一枚描边圆角胶囊、题号是另一枚强调色胶囊——两枚并排，
+                  与详情页同一种病。现在返回是排字出口，题号是 Badge。 */}
               <div className="flex flex-wrap items-center gap-3">
-                <LocalizedLink
-                  className="rounded-full border border-soj-line/70 bg-soj-bg/34 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.16em] text-soj-muted transition hover:border-soj-accent/60 hover:text-soj-accent focus-visible:outline-soj-accent"
-                  href={`/contests/${contest.id}`}
-                >
+                <TypeExit href={`/contests/${contest.id}`} direction="back">
                   {t("contests.workspace.back")}
-                </LocalizedLink>
-                <span className="rounded-full border border-soj-accent/50 bg-soj-accent/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-soj-accent">
-                  {t("contests.workspace.problem", { alias })}
-                </span>
+                </TypeExit>
+                <Badge tone="accent">{t("contests.workspace.problem", { alias })}</Badge>
                 <StatusPill tone={contest.type === "acm" ? "info" : "warning"}>{t(contest.type === "acm" ? "status.acm" : "status.oi")}</StatusPill>
                 <StatusPill tone={contest.status === "frozen" ? "warning" : "accent"}>{t(contestStatusLabel[contest.status])}</StatusPill>
               </div>
               <div className="grid gap-3">
-                <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-soj-text md:text-6xl">{problem.title}</h1>
-                <p className="max-w-2xl text-base leading-7 text-soj-muted">
+                <h1 className="max-w-4xl text-2xl font-semibold tracking-[-0.02em] text-soj-text md:text-[28px]">{problem.title}</h1>
+                <p className="max-w-2xl text-sm leading-6 text-soj-muted">
                   {t("contests.workspace.description", { contest: contest.title })}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {[
-                [t("contests.workspace.time"), `${problem.timeLimitMs} ms`],
-                [t("contests.workspace.memory"), formatMemory(problem.memoryLimitKb)],
-                [t("contests.workspace.tags"), t("contests.workspace.lanes", { count: problem.tags.length })],
-              ].map(([label, value]) => (
-                <div key={label} className="soj-submission-metric">
-                  <p className="text-xs text-soj-muted">{label}</p>
-                  <p className="mt-1 font-mono text-lg text-soj-text">{value}</p>
-                </div>
-              ))}
-            </div>
+            {/* 三个指标曾各占一个描边小盒。读数不该套盒子——盒子把一排数字切成了三块。 */}
+            <StatGroup>
+              <Stat label={t("contests.workspace.time")} value={`${problem.timeLimitMs} ms`} />
+              <StatDivider />
+              <Stat label={t("contests.workspace.memory")} value={formatMemory(problem.memoryLimitKb)} />
+              <StatDivider />
+              <Stat label={t("contests.workspace.tags")} value={t("contests.workspace.lanes", { count: problem.tags.length })} />
+            </StatGroup>
           </div>
 
           <aside className="soj-workspace-console grid content-between gap-5 p-5">
@@ -198,13 +194,13 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-soj-muted">{t("contests.workspace.input")}</p>
+                    <p className="font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">{t("contests.workspace.input")}</p>
                     <pre className="soj-workspace-sample">
                       <code>{sample.input}</code>
                     </pre>
                   </div>
                   <div className="grid gap-2">
-                    <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-soj-muted">{t("contests.workspace.output")}</p>
+                    <p className="font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">{t("contests.workspace.output")}</p>
                     <pre className="soj-workspace-sample">
                       <code>{sample.output}</code>
                     </pre>

@@ -1,14 +1,9 @@
 import type { ProblemSummary } from "@/lib/api/types";
-import {
-  getAcceptanceRate,
-  problemDifficultyLabelKey,
-  problemDifficultyTone,
-  problemStatusLabelKey,
-  problemStatusTone,
-} from "@/lib/domain/problem";
+import { getAcceptanceRate, problemStatusLabelKey } from "@/lib/domain/problem";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { AcceptanceMeter } from "@/components/soj/acceptance-meter";
-import { StatusPill } from "@/components/soj/status-pill";
+import { DifficultyLabel } from "@/components/soj/difficulty-composition";
+import { ProblemStatus, problemRowTone } from "@/components/soj/problem-status";
 import { TableCell, TableRow } from "@/components/ui/table";
 import type { Translator } from "@/lib/i18n/translate";
 
@@ -31,19 +26,24 @@ import type { Translator } from "@/lib/i18n/translate";
  * 标签从独立一列折进题名格里：它和题名一起回答「这是什么题」，
  * 单独占一列只为让表格更宽。折进去之后 7 列变 4 列，
  * 在 1440 甚至 1280 宽度下都不再需要横向滚动。
+ *
+ * 两个「颜色」的决定都在别处（各只有一份定义）：
+ *   难度 → 刻度，无颜色：components/soj/difficulty-composition.tsx
+ *   状态 → 整行染色：components/soj/problem-status.tsx
+ * 这一层只负责把它们贴到格子里。
  */
 export function ProblemRow({ problem, t, locale }: { problem: ProblemSummary; t: Translator; locale: string }) {
   const acceptance = getAcceptanceRate(problem);
 
   return (
-    <TableRow>
+    <TableRow className={problemRowTone[problem.status]}>
       <TableCell className="min-w-0">
         <div className="grid gap-1.5">
           <LocalizedLink
             href={`/problems/${problem.id}`}
             className="flex items-baseline gap-2.5 text-soj-text transition-colors hover:text-soj-accent"
           >
-            <span className="font-mono text-xs tabular-nums text-soj-faint">#{problem.id}</span>
+            <span className="font-mono text-xs tabular-nums text-soj-muted">#{problem.id}</span>
             <span className="truncate font-medium">{problem.title}</span>
           </LocalizedLink>
           {problem.tags.length > 0 ? (
@@ -51,7 +51,7 @@ export function ProblemRow({ problem, t, locale }: { problem: ProblemSummary; t:
               {problem.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-soj-sm border border-soj-line bg-soj-surface/55 px-1.5 py-0.5 font-mono text-[10px] text-soj-muted"
+                  className="rounded-soj-sm border border-soj-line px-1.5 py-0.5 font-mono text-xs text-soj-muted"
                 >
                   {tag}
                 </span>
@@ -61,15 +61,13 @@ export function ProblemRow({ problem, t, locale }: { problem: ProblemSummary; t:
         </div>
       </TableCell>
       <TableCell>
-        <StatusPill tone={problemDifficultyTone[problem.difficulty]}>
-          {t(problemDifficultyLabelKey[problem.difficulty])}
-        </StatusPill>
+        <DifficultyLabel difficulty={problem.difficulty} t={t} />
       </TableCell>
       <TableCell className="text-right">
         <AcceptanceMeter value={acceptance} locale={locale} />
       </TableCell>
       <TableCell>
-        <StatusPill tone={problemStatusTone[problem.status]}>{t(problemStatusLabelKey[problem.status])}</StatusPill>
+        <ProblemStatus status={problem.status} label={t(problemStatusLabelKey[problem.status])} />
       </TableCell>
     </TableRow>
   );

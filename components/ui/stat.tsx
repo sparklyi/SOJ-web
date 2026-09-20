@@ -29,9 +29,12 @@ type StatProps = {
 export function Stat({ label, value, hint, tone = "default", className }: StatProps) {
   return (
     <div className={cn("grid gap-1.5", className)}>
-      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-soj-faint">{label}</span>
+      {/* 标签字号与颜色对齐首页读数标签的规范（home-plinth.module.css .reading dt）：
+          曾经是 10px + 全大写 + 最弱灰，读者「只能看到数字」看不到标签——
+          标签比正文更需要对比度，因为读者没有上下文可以补。 */}
+      <span className="font-mono text-[13px] leading-none text-soj-muted">{label}</span>
       <span className={cn("font-mono text-xl font-semibold leading-none tabular-nums", toneClass[tone])}>{value}</span>
-      {hint ? <span className="text-[11px] leading-4 text-soj-muted">{hint}</span> : null}
+      {hint ? <span className="text-xs leading-4 text-soj-muted">{hint}</span> : null}
     </div>
   );
 }

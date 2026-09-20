@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PageHeader } from "@/components/ui/page-header";
 import { TopNav } from "@/components/layout/top-nav";
 
 type AccountSurfaceProps = {
@@ -10,30 +11,20 @@ type AccountSurfaceProps = {
   children: ReactNode;
 };
 
+/**
+ * 账号域整页壳（/me、/settings、/auth/*）。
+ *
+ * 它曾经自带第三套页头规格：一块大英雄面板（soj-account-stage + 已失效的
+ * soj-scanline）+ 圆角胶囊 eyebrow + text-4xl/6xl 标题。那是「舞台类」时代的残留，
+ * 与 PageShell / PageHeader 三套规格并存。现在它只是 PageHeader 的薄封装：
+ * 同一条左基准线、同一个字号尺度，账号页与题库页读起来是同一个产品。
+ */
 export function AccountSurface({ eyebrow, title, description, meta, aside, children }: AccountSurfaceProps) {
   return (
     <div className="min-h-dvh text-soj-text">
       <TopNav />
       <main className="mx-auto grid max-w-[1440px] gap-6 px-4 py-8 sm:px-6 lg:px-8" id="main-content">
-        <section className="soj-account-stage soj-scanline soj-enter p-5 md:p-7">
-          <div className="relative z-[1] grid gap-7 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-stretch">
-            <div className="grid content-between gap-7">
-              <div className="grid gap-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="rounded-full border border-soj-accent/50 bg-soj-accent/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-soj-accent">
-                    {eyebrow}
-                  </span>
-                  {meta ? <span className="font-mono text-xs text-soj-muted">{meta}</span> : null}
-                </div>
-                <div className="grid gap-3">
-                  <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-soj-text md:text-6xl">{title}</h1>
-                  <p className="max-w-2xl text-base leading-7 text-soj-muted">{description}</p>
-                </div>
-              </div>
-            </div>
-            {aside ? <aside className="soj-account-aside grid content-between gap-5 p-5">{aside}</aside> : null}
-          </div>
-        </section>
+        <PageHeader eyebrow={eyebrow} title={title} description={description} meta={meta} aside={aside} />
         {children}
       </main>
     </div>

@@ -69,7 +69,7 @@ export function SubmissionListClient() {
           description={t("submissions.page.description")}
           actions={
             state.status === "auth" ? (
-              <LocalizedLink className={buttonVariants({ variant: "primary", size: "sm" })} href="/auth/login">
+              <LocalizedLink className={buttonVariants({ variant: "solid", size: "sm" })} href="/auth/login">
                 {t("submissions.action.login")}
               </LocalizedLink>
             ) : null
@@ -126,7 +126,7 @@ function SubmissionLoadState({ state }: { state: SubmissionListState }) {
           title={title}
           description={message}
           action={
-            <LocalizedLink className={buttonVariants({ variant: "primary", size: "sm" })} href="/auth/login">
+            <LocalizedLink className={buttonVariants({ variant: "solid", size: "sm" })} href="/auth/login">
               {t("submissions.action.login")}
             </LocalizedLink>
           }

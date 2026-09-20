@@ -1,5 +1,5 @@
-import { LocalizedLink } from "@/components/i18n/localized-link";
 import { StatusPill } from "@/components/soj/status-pill";
+import { TypeExit } from "@/components/soj/type-exit";
 import { AccountSurface } from "@/features/auth/account-surface";
 import { AuthForm } from "@/features/auth/auth-form";
 import { getServerTranslator } from "@/lib/i18n/server";
@@ -41,9 +41,10 @@ export default async function LoginPage() {
           <StatusPill tone="accent">{t("auth.login.session")}</StatusPill>
           <h2 className="text-xl font-semibold">{t("auth.login.sessionState")}</h2>
           <p className="max-w-xl text-sm leading-6 text-soj-muted">{t("auth.login.sessionStateDescription")}</p>
-          <LocalizedLink className="inline-flex min-h-10 w-fit items-center rounded-soj-md border border-soj-line/60 bg-soj-bg/28 px-3 text-sm font-medium text-soj-accent transition hover:border-soj-accent/55 hover:text-soj-text focus-visible:outline-soj-accent" href="/auth/register">
-            {t("auth.login.createAccount")}
-          </LocalizedLink>
+          {/* 去注册曾经是一枚描边胶囊：描边在深底上只比背景亮一点点，
+              既不像按钮也不像链接，只是给文字加了一圈噪点。
+              它和首页弹窗里的「去注册」是同一件事，就用同一个出口形态。 */}
+          <TypeExit href="/auth/register">{t("auth.login.createAccount")}</TypeExit>
         </section>
       </div>
     </AccountSurface>

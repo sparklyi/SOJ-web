@@ -4,7 +4,7 @@ import { FormEvent, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import type { ProblemDifficulty, ProblemStatus } from "@/lib/api/types";
-import { difficultyFill, type DifficultyCount } from "@/components/soj/difficulty-composition";
+import { DifficultyScale, type DifficultyCount } from "@/components/soj/difficulty-composition";
 import { problemDifficultyLabelKey, problemStatusLabelKey } from "@/lib/domain/problem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,7 +118,7 @@ export function ProblemFilterBar({ query = "", difficulty, status, tag, tags, di
                   active={difficulty === item.difficulty}
                   onClick={() => replaceFilter("difficulty", difficulty === item.difficulty ? "" : item.difficulty)}
                 >
-                  <span aria-hidden className={cn("h-2 w-2 rounded-[2px]", difficultyFill[item.difficulty])} />
+                  <DifficultyScale difficulty={item.difficulty} />
                   {t(problemDifficultyLabelKey[item.difficulty])}
                   <ChipCount>{item.count}</ChipCount>
                 </FilterChip>
@@ -169,7 +169,7 @@ export function ProblemFilterBar({ query = "", difficulty, status, tag, tags, di
               onClick={() => clearFilter(item.key)}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-soj-sm border border-soj-line bg-soj-surface",
-                "py-0.5 pr-1.5 pl-2 font-mono text-[10px] text-soj-muted transition-colors",
+                "py-0.5 pr-1.5 pl-2 font-mono text-xs text-soj-muted transition-colors",
                 "hover:border-soj-line-strong hover:text-soj-text",
               )}
             >
@@ -223,5 +223,5 @@ function FilterChip({
 }
 
 function ChipCount({ children }: { children: React.ReactNode }) {
-  return <span className="font-mono text-[10px] tabular-nums text-soj-faint">{children}</span>;
+  return <span className="font-mono text-xs tabular-nums text-soj-muted">{children}</span>;
 }

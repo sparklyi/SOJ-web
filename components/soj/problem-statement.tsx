@@ -21,7 +21,7 @@ export function ProblemStatement({ problem, t }: { problem: ProblemDetail; t: Tr
   return (
     <article className="soj-panel min-w-0">
       <section className="px-5 py-5 md:px-6 md:py-6">
-        <h2 className="font-mono text-[11px] uppercase tracking-[0.16em] text-soj-faint">
+        <h2 className="font-mono text-xs uppercase tracking-[0.16em] text-soj-faint">
           {t("problem.statement")}
         </h2>
         {/* 面板有 780px 宽，但正文一行排到 100 个字符就不是给人读的了。
@@ -45,12 +45,12 @@ export function ProblemStatement({ problem, t }: { problem: ProblemDetail; t: Tr
         <div className="mt-4 grid gap-3">
           {problem.examples.map((example, index) => (
             <figure key={`${example.input}-${index}`} className="soj-well overflow-hidden">
-              <figcaption className="border-b border-soj-line bg-soj-surface/40 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-soj-faint">
+              <figcaption className="border-b border-soj-line bg-soj-surface/40 px-3 py-1.5 font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">
                 {t("problems.example", { number: index + 1 })}
               </figcaption>
               <div className="grid md:grid-cols-2">
                 <div className="min-w-0 p-3 md:border-r md:border-soj-line">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-soj-faint">
+                  <p className="font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">
                     {t("problem.input")}
                   </p>
                   <pre className="mt-2 overflow-auto font-mono text-[13px] leading-6 text-soj-text">
@@ -58,7 +58,7 @@ export function ProblemStatement({ problem, t }: { problem: ProblemDetail; t: Tr
                   </pre>
                 </div>
                 <div className="min-w-0 border-t border-soj-line p-3 md:border-t-0">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-soj-faint">
+                  <p className="font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">
                     {t("problem.output")}
                   </p>
                   <pre className="mt-2 overflow-auto font-mono text-[13px] leading-6 text-soj-text">

@@ -62,10 +62,10 @@ export async function ContestList({ contests }: ContestListProps) {
           aria-label={t("contests.list.featured")}
           className="soj-panel soj-enter relative grid min-h-[300px] gap-6 overflow-hidden p-5 md:p-7 lg:grid-cols-[minmax(0,1fr)_320px]"
         >
-          {/* 全站只允许两处辉光，这里是第二处：焦点赛事是「正在发生的事」，配得上一个光源。
-              网格不再单独画——整站环境层已经有一层，局部再叠一层会变成双线。 */}
-          <div className="soj-glow inset-0" aria-hidden />
-
+          {/* 曾经这里有全站第二处局部辉光（soj-glow）+ 右栏再套一层描边盒，
+              一个焦点赛事等于三盏灯。首页改版定下的规矩是**一盏灯**：
+              光是稀缺品，局部再点一盏，焦点就不在展品上了。
+              网格也不单独画——整站环境层已经有一层，局部再叠一层会变成双线。 */}
           <div className="relative grid min-w-0 content-between gap-8">
             <div>
               <div className="flex flex-wrap items-center gap-3">
@@ -86,7 +86,8 @@ export async function ContestList({ contests }: ContestListProps) {
             </StatGroup>
           </div>
 
-          <aside className="relative grid content-start gap-3 self-start rounded-soj-lg border border-soj-line bg-soj-bg/45 p-4">
+          {/* 右栏不再套描边盒：面板里再开一个盒，读起来是「盒子里的盒子」。 */}
+          <aside className="relative grid content-start gap-3 self-start lg:border-l lg:border-soj-line lg:pl-6">
             <div className="border-b border-soj-line pb-3">
               <h2 className="text-sm font-semibold text-soj-text">{t("contests.list.access")}</h2>
               <p className="mt-1.5 text-xs leading-5 text-soj-muted">{t(statusView[featuredContest.status].phase)}</p>
@@ -161,14 +162,16 @@ export async function ContestList({ contests }: ContestListProps) {
  * 一行文字链接既保住了入口，也让「进场」这件事重新成为唯一的主操作。
  */
 function ContestSubLinks({ contestId, t }: { contestId: number; t: Translator }) {
-  const linkClass = "text-xs text-soj-muted transition-colors hover:text-soj-accent";
+  const linkClass = "font-mono text-xs text-soj-muted transition-colors hover:text-soj-text";
 
   return (
-    <div className="flex items-center gap-2.5 text-xs text-soj-faint">
+    <div className="flex items-center gap-2.5 font-mono text-xs">
       <LocalizedLink className={linkClass} href={`/contests/${contestId}/scoreboard`}>
         {t("contests.action.scoreboard")}
       </LocalizedLink>
-      <span aria-hidden>·</span>
+      <span aria-hidden className="text-soj-line-strong">
+        ·
+      </span>
       <LocalizedLink className={linkClass} href={`/contests/${contestId}/arena`}>
         {t("contests.list.arena")}
       </LocalizedLink>
@@ -196,7 +199,7 @@ function ContestAction({ href, label, primary = false }: { href: string; label: 
   return (
     <LocalizedLink
       href={href}
-      className={cn(buttonVariants({ variant: primary ? "primary" : "secondary", size: "md" }), "w-full")}
+      className={cn(buttonVariants({ variant: primary ? "solid" : "secondary", size: "md" }), "w-full")}
     >
       {label}
     </LocalizedLink>

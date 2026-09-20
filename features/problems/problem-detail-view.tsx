@@ -1,14 +1,9 @@
 import type { JudgeLanguage, ProblemDetail } from "@/lib/api/types";
-import {
-  getAcceptanceRate,
-  problemDifficultyLabelKey,
-  problemDifficultyTone,
-  problemStatusLabelKey,
-  problemStatusTone,
-} from "@/lib/domain/problem";
+import { getAcceptanceRate, problemStatusLabelKey } from "@/lib/domain/problem";
 import { AcceptanceAxis } from "@/components/soj/acceptance-axis";
+import { DifficultyLabel } from "@/components/soj/difficulty-composition";
 import { ProblemStatement } from "@/components/soj/problem-statement";
-import { StatusPill } from "@/components/soj/status-pill";
+import { ProblemStatus } from "@/components/soj/problem-status";
 import { PageHeader } from "@/components/ui/page-header";
 import { Stat, StatDivider, StatGroup } from "@/components/ui/stat";
 import { getServerLocale, getServerTranslator } from "@/lib/i18n/server";
@@ -46,12 +41,8 @@ export async function ProblemDetailView({ problem, languages = [] }: ProblemDeta
         title={problem.title}
         actions={
           <>
-            <StatusPill tone={problemStatusTone[problem.status]}>
-              {t(problemStatusLabelKey[problem.status])}
-            </StatusPill>
-            <StatusPill tone={problemDifficultyTone[problem.difficulty]}>
-              {t(problemDifficultyLabelKey[problem.difficulty])}
-            </StatusPill>
+            <ProblemStatus status={problem.status} label={t(problemStatusLabelKey[problem.status])} />
+            <DifficultyLabel difficulty={problem.difficulty} t={t} />
           </>
         }
         meta={

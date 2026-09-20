@@ -39,7 +39,10 @@ describe("app shell", () => {
     expect(screen.getByRole("link", { name: "Contests" })).toHaveAttribute("href", "/en/contests");
     // 「我的提交」是**我的**东西，收在账号菜单里；未登录时连入口都没有。
     expect(screen.queryByRole("link", { name: "My submissions" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open guest menu" })).toBeVisible();
+    // 未登录没有访客菜单：右上角直接是登录 / 注册两个出口。
+    expect(screen.queryByRole("button", { name: "Open guest menu" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Login" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Register" })).toBeVisible();
     expect(screen.queryByText("Lin Chen")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Author" })).not.toBeInTheDocument();
   });

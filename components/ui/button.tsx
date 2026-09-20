@@ -6,8 +6,10 @@ import { cn } from "@/lib/ui/cn";
 /**
  * Button。
  *
- * 主操作不用彩色，用一块**金属银**（.soj-metal）：上亮下暗的垂直渐变、
- * 顶部白边、底部暗边——它因此成为整个页面上最亮的东西，层级不靠饱和色也成立。
+ * 主操作不用彩色，用一块**扁平金属银**（.soj-metal-flat）。
+ * 曾经还有一个立体版（垂直渐变 + 顶部白边 + 底部暗边的镀铬胶囊），
+ * 首页改版时被整个废掉了：一枚发亮的胶囊和扁平的排字放在一起就是两个时代的东西，
+ * 这条判据随后被推广到全站——**整个产品里不允许再出现压出来的按钮**。
  * 深色界面里给按钮加彩色外发光只会显得廉价，所以这里没有任何 glow 阴影。
  *
  * `buttonVariants` 单独导出，链接按钮（next/link）直接复用同一套视觉。
@@ -17,12 +19,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "soj-metal border-transparent",
         /**
-         * 扁平银：与 `primary` 同一块金属材料，去掉全部立体修饰（垂直渐变、顶部白边、底边）。
-         * 用在「全屏只有一个主操作、周围是大字号排字」的场合——那里镀铬的立体感
-         * 会读成旧式拟物，一枚发亮的胶囊和扁平的字排在一起就是两个时代的东西。
-         * 材质定义在 app/globals.css 的 `.soj-metal-flat`（源码里不许写颜色字面量）。
+         * 主操作。与旧 `primary` 同一块金属材料，但去掉全部立体修饰
+         * （垂直渐变、顶部白边、底边）。材质定义在 app/globals.css 的
+         * `.soj-metal-flat`（源码里不许写颜色字面量）。
          */
         solid: "soj-metal-flat border-transparent",
         secondary:
@@ -64,7 +64,7 @@ const buttonVariants = cva(
       { variant: "link", size: ["xs", "sm", "md", "lg"], class: "h-auto" },
     ],
     defaultVariants: {
-      variant: "primary",
+      variant: "solid",
       size: "md",
       iconOnly: false,
     },
@@ -78,7 +78,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
 
 export function Button({
   className,
-  variant = "primary",
+  variant = "solid",
   size = "md",
   iconOnly = false,
   loading = false,

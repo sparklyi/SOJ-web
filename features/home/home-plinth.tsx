@@ -1,6 +1,5 @@
-import { ArrowRight } from "lucide-react";
 import { CountUp } from "@/components/fx/count-up";
-import { LocalizedLink } from "@/components/i18n/localized-link";
+import { TypeExit } from "@/components/soj/type-exit";
 import { getServerLocale, getServerTranslator } from "@/lib/i18n/server";
 import styles from "./home-plinth.module.css";
 
@@ -87,14 +86,9 @@ export async function HomePlinth({ facts = [] }: { facts?: PlinthFact[] }) {
 
         {/* 展台只留**一个**出口，而且它**不是按钮**。
             上一版这里用 buttonVariants 渲染，出来是一枚发亮的镀铬胶囊——
-            整页唯一一件有立体感的东西。这里改成排字式链接：
-            一行等宽字 + 一枚会位移的箭头，和这一页是同一套材料。
-            底线也不要：它会被读成「没有底色的按钮边框」，而这一页只有一个出口，
-            不需要靠一圈线声明自己可点。 */}
-        <LocalizedLink className={styles.enter} href="/problems">
-          {t("home.exploreProblems")}
-          <ArrowRight aria-hidden className={styles.enterIcon} />
-        </LocalizedLink>
+            整页唯一一件有立体感的东西。排字出口现在抽成了共享件 TypeExit，
+            样式与被抽出的那一刻完全一致（components/soj/type-exit.*）。 */}
+        <TypeExit href="/problems">{t("home.exploreProblems")}</TypeExit>
       </div>
     </section>
   );

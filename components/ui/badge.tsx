@@ -22,7 +22,7 @@ const badgeVariants = cva(
         info: "border-soj-info/40 bg-soj-info/10 text-soj-info",
       },
       size: {
-        sm: "px-1.5 py-0.5 text-[10px]",
+        sm: "px-1.5 py-0.5 text-xs",
         md: "px-2 py-1 text-xs",
       },
       /** solid 仅用于「当前正在发生」的单一状态，全页面最多出现一次。 */

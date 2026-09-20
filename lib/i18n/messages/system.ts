@@ -1,7 +1,7 @@
 import type { MessageCatalog } from "../types";
 
 export const systemMessages = {
-  "status.todo": { en: "Todo", "zh-CN": "待完成" },
+  "status.todo": { en: "Not started", "zh-CN": "未开始" },
   "status.attempted": { en: "Attempted", "zh-CN": "已尝试" },
   "status.solved": { en: "Solved", "zh-CN": "已解决" },
   "status.queued": { en: "Queued", "zh-CN": "排队中" },
@@ -189,6 +189,7 @@ export const systemMessages = {
   "style.demoTag": { en: "Tag", "zh-CN": "标签" },
   "style.outlineAction": { en: "Outline", "zh-CN": "描边" },
   "style.linkAction": { en: "Link", "zh-CN": "文字链接" },
+  "style.bareAction": { en: "Bare", "zh-CN": "无外观" },
   "style.linkButton": { en: "Link button", "zh-CN": "链接式按钮" },
   "style.sizeXs": { en: "XS", "zh-CN": "XS" },
   "style.sizeSm": { en: "SM", "zh-CN": "SM" },

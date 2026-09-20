@@ -20,9 +20,9 @@ type ProblemListProps = {
  * 只有四列，而且在 1280 宽度下也不需要横向滚动——列数本身就是一种设计决定：
  * 能放进一屏、并且每一列都参与「要不要做这道题」这个判断的，才留下。
  *
- * 页脚那行同时回答两个问题：「这一屏能练多少」（可练习条数）
- * 与「筛选后还剩多少」（x / 总数）。数字走 formatNumber，
- * 与页头保持同一种写法，不会出现 13543 与 13,543 并存。
+ * 页脚只有一个数字：「筛选后还剩 x / 总数」。
+ * 曾经左边还有一个「N 道题目可供练习」——它把同一个数字复述了一遍，
+ * 而且读起来像运营文案，删掉之后页脚回到它该有的样子：一行坐标，不是一句话。
  */
 export async function ProblemList({ problems, totalCount }: ProblemListProps) {
   const [t, locale] = await Promise.all([getServerTranslator(), getServerLocale()]);
@@ -50,11 +50,8 @@ export async function ProblemList({ problems, totalCount }: ProblemListProps) {
           </tbody>
         </Table>
       </div>
-      <div className="flex items-center justify-between gap-3 border-t border-soj-line px-4 py-2.5">
+      <div className="flex items-center justify-end border-t border-soj-line px-4 py-2.5">
         <span className="font-mono text-xs text-soj-muted">
-          {t("problems.readyForPractice", { count: formatNumber(problems.length, { locale }) })}
-        </span>
-        <span className="font-mono text-xs text-soj-faint">
           {formatNumber(problems.length, { locale })}/{formatNumber(totalCount, { locale })}
         </span>
       </div>

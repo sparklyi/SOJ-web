@@ -13,11 +13,15 @@ export function getAcceptanceRate(problem: Pick<ProblemSummary, "acceptedCount" 
 }
 
 /**
- * 难度与状态到「标签色 / 文案词条」的唯一映射表。
+ * 难度与状态到「文案词条」的唯一映射表。
  *
- * 列表行、详情页头、提交侧栏都要显示同一组语义，映射散落在各组件里
- * 迟早会出现「列表里困难是红的、详情里是黄的」。所以集中在这里，
- * 所有展示点只消费这一份定义。
+ * 这里只管**词**，不管**色**——色彩属于视觉层，各有一份权威：
+ *   难度三档明度（堆叠条与徽标共用一条阶梯）
+ *     → components/soj/difficulty-composition.tsx
+ *   状态的图标与色调 → components/soj/problem-status.tsx
+ *
+ * 曾经词条和色调都放在这里，而难度条又是另一份定义，结果同一个「困难」
+ * 在筛选栏是蓝的、在列表里是红的：词归 domain，色归组件，互不越界。
  */
 export const problemDifficultyLabelKey = {
   easy: "problems.difficulty.easy",
@@ -25,22 +29,10 @@ export const problemDifficultyLabelKey = {
   hard: "problems.difficulty.hard",
 } as const;
 
-export const problemDifficultyTone = {
-  easy: "success",
-  medium: "warning",
-  hard: "danger",
-} as const;
-
 export const problemStatusLabelKey = {
   todo: "status.todo",
   attempted: "status.attempted",
   accepted: "status.solved",
-} as const;
-
-export const problemStatusTone = {
-  todo: "neutral",
-  attempted: "warning",
-  accepted: "success",
 } as const;
 
 export function matchesProblemFilter(problem: ProblemSummary, filter: ProblemFilter) {
