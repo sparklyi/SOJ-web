@@ -101,10 +101,11 @@ export function CodeWorkspace({ languages, initialLanguageId, value = "", onChan
           </select>
         </label>
       </div>
-      {/* 编辑区用页面底色做出「凹陷井」，让代码区成为侧栏里最暗、最聚焦的一块。 */}
+      {/* 编辑区用页面底色做出「凹陷井」，让代码区成为侧栏里最暗、最聚焦的一块。
+          默认高度对齐一个可见的编辑视口（24rem），仍可手动拉伸。 */}
       <textarea
         aria-label={t("problems.sourceCode")}
-        className="min-h-64 w-full resize-y border-0 bg-soj-bg p-4 font-mono text-[13px] leading-6 text-soj-text outline-none ring-0 placeholder:text-soj-faint focus:bg-soj-surface/60"
+        className="min-h-96 w-full resize-y border-0 bg-soj-bg p-4 font-mono text-[13px] leading-6 text-soj-text outline-none ring-0 placeholder:text-soj-faint focus:bg-soj-surface/60"
         disabled={languages.length === 0}
         spellCheck={false}
         value={effectiveSourceCode}

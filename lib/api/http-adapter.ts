@@ -100,7 +100,7 @@ function mapAdminUser(input: UserResponse): AdminUser {
     email: input.email,
     handle: input.username,
     status: input.status,
-    roles: input.roles.filter(isGlobalRole),
+    roles: (input.roles ?? []).filter(isGlobalRole),
     createdAt: input.created_at,
     updatedAt: input.updated_at,
   };
