@@ -46,7 +46,7 @@ jobs:
       - name: Assemble bundle
         run: |
           VER="${GITHUB_REF_NAME#web-}"
-          cp -r public .next/standalone/public
+          [ -d public ] && cp -r public .next/standalone/public || true
           mkdir -p .next/standalone/.next
           cp -r .next/static .next/standalone/.next/static
           tar -czf "/tmp/soj-web-${VER}.tar.gz" -C .next/standalone .
