@@ -151,15 +151,29 @@ export const mockContests: ContestSummary[] = [
 /**
  * 提交记录。
  *
- * 每条都给一个**不同的** submittedAt：列表按时间倒序排，如果 8 条时间一样，
- * 排序会退化成按 id 兜底，读者看到的是「一列完全相同的时刻」——
- * 这是最省事、也最容易被识破的假数据形态。这里让提交节奏不均匀
- * （3 / 8 / 11 / 16 … 分钟），像真人断续投递，而不是机器批量生成。
+ * 三条约束：
+ * ①每条都给一个**不同的** submittedAt，且**与 id 同向递增**（3 / 8 / 11 / 16 … 分钟）：
+ *   提交号就是投递顺序，列表按时间倒序排 —— 如果时间不随 id 递增，
+ *   读者会看到「#10 比 #1 还早」这种同一张表内自相矛盾的一列；
+ *   全表共用同一个时刻更糟，排序会退化成按 id 兜底，呈现一列完全相同的 ":00"。
+ * ②耗时与内存只在**真的跑过**的行上出现，而且互不相同——`queued` / `compiling`
+ *   还没有跑，`compile_error` / `system_error` 根本没跑起来，空着就是空着
+ *   （列表渲染成破折号）。给它们编一个数值比留空更假；
+ * ③`running` 行给的是「到目前为止的峰值」，这是评测机本来就会报的量。
  */
 export const mockSubmissions: SubmissionSummary[] = [
   buildSubmission({ id: 1, status: "queued", score: 0, problemId: 8, problemTitle: "Arena Clock", submittedAt: minutesFromNow(-79) }),
   buildSubmission({ id: 2, status: "compiling", score: 0, problemId: 3, problemTitle: "Frozen Matrix", submittedAt: minutesFromNow(-66) }),
-  buildSubmission({ id: 3, status: "running", score: 0, problemId: 5, problemTitle: "Rank Delta", submittedAt: minutesFromNow(-53) }),
+  buildSubmission({
+    id: 3,
+    status: "running",
+    score: 0,
+    timeMs: 118,
+    memoryKb: 12288,
+    problemId: 5,
+    problemTitle: "Rank Delta",
+    submittedAt: minutesFromNow(-53),
+  }),
   buildSubmission({
     id: 4,
     status: "accepted",
@@ -175,7 +189,7 @@ export const mockSubmissions: SubmissionSummary[] = [
     status: "wrong_answer",
     score: 35,
     timeMs: 39,
-    memoryKb: 8192,
+    memoryKb: 6400,
     problemId: 7,
     problemTitle: "Memory Gate",
     submittedAt: minutesFromNow(-27),
@@ -196,6 +210,26 @@ export const mockSubmissions: SubmissionSummary[] = [
   buildSubmission({ id: 6, status: "runtime_error", score: 0, timeMs: 12, memoryKb: 4096, problemId: 3, problemTitle: "Frozen Matrix", submittedAt: minutesFromNow(-18) }),
   buildSubmission({ id: 7, status: "compile_error", score: 0, problemId: 6, problemTitle: "Binary Beacon", submittedAt: minutesFromNow(-11) }),
   buildSubmission({ id: 8, status: "system_error", score: 0, problemId: 5, problemTitle: "Rank Delta", submittedAt: minutesFromNow(-3) }),
+  buildSubmission({
+    id: 9,
+    status: "time_limit",
+    score: 60,
+    timeMs: 1000,
+    memoryKb: 262144,
+    problemId: 4,
+    problemTitle: "Judge Queue",
+    submittedAt: minutesFromNow(-2),
+  }),
+  buildSubmission({
+    id: 10,
+    status: "accepted",
+    score: 100,
+    timeMs: 27,
+    memoryKb: 5632,
+    problemId: 8,
+    problemTitle: "Arena Clock",
+    submittedAt: minutesFromNow(-1),
+  }),
 ];
 
 export const mockLanguages: JudgeLanguage[] = [
@@ -298,18 +332,95 @@ export const mockRejudgeBatches: RejudgeBatch[] = [
 export const mockRejudgeBatchItems: RejudgeBatchItem[] = [
   { id: 1, batchId: 2, submissionId: 4, taskId: 2001, attemptId: 901, status: "completed", startedAt: "2026-07-07T10:00:10Z", finishedAt: "2026-07-07T10:00:14Z" },
   { id: 2, batchId: 2, submissionId: 5, taskId: 2002, attemptId: 902, status: "completed", startedAt: "2026-07-07T10:00:14Z", finishedAt: "2026-07-07T10:00:19Z" },
-  { id: 3, batchId: 2, submissionId: 6, taskId: 2003, status: "failed", errorMessage: "judge agent disconnected before the attempt started", startedAt: "2026-07-07T10:00:19Z", finishedAt: "2026-07-07T10:00:21Z" },
+  // 失败原因是上游评测机回报的**系统消息**，按原样显示、不进 i18n；
+  // 但它必须是给人看的句子，不是从日志里抠出来的一截小写内部描述。
+  { id: 3, batchId: 2, submissionId: 6, taskId: 2003, status: "failed", errorMessage: "Judge worker disconnected before the attempt started.", startedAt: "2026-07-07T10:00:19Z", finishedAt: "2026-07-07T10:00:21Z" },
   { id: 4, batchId: 2, submissionId: 7, taskId: 2004, status: "running", startedAt: "2026-07-07T10:00:21Z" },
   { id: 5, batchId: 2, submissionId: 8, taskId: 2005, status: "queued" },
 ];
 
-export const mockAcmScoreboardRows = [  buildAcmScoreboardRow({ id: "team-1", handle: "lin-chen", solved: 5, penalty: 312, movement: 2 }),
-  buildAcmScoreboardRow({ id: "team-2", handle: "mira", solved: 4, penalty: 260, movement: -1 }),
-  buildAcmScoreboardRow({ id: "team-3", handle: "ravi", solved: 4, penalty: 344, movement: 0 }),
+/**
+ * 排行榜。
+ *
+ * 三支队伍的每一格必须**彼此不同**——旧数据里三个人在 B 题上全是
+ * 「答案错误 2」，同一列三个一模一样的单元格比空着更假。
+ * `solved` / `penalty` / `score` 与各自单元格自洽：比赛只有 A/B/C 三道题，
+ * 通过题数不可能出现 4、5。
+ */
+export const mockAcmScoreboardRows = [
+  buildAcmScoreboardRow({
+    id: "team-1",
+    handle: "lin-chen",
+    solved: 3,
+    penalty: 214,
+    movement: 2,
+    problems: [
+      { problemId: 1, alias: "A", status: "accepted", attempts: 1, penalty: 42 },
+      { problemId: 2, alias: "B", status: "accepted", attempts: 1, penalty: 58 },
+      { problemId: 3, alias: "C", status: "accepted", attempts: 2, penalty: 94 },
+    ],
+  }),
+  buildAcmScoreboardRow({
+    id: "team-2",
+    handle: "mira",
+    solved: 2,
+    penalty: 176,
+    movement: -1,
+    problems: [
+      { problemId: 1, alias: "A", status: "accepted", attempts: 2, penalty: 67 },
+      { problemId: 2, alias: "B", status: "wrong_answer", attempts: 3 },
+      { problemId: 3, alias: "C", status: "accepted", attempts: 1, penalty: 89 },
+    ],
+  }),
+  buildAcmScoreboardRow({
+    id: "team-3",
+    handle: "ravi",
+    solved: 1,
+    penalty: 55,
+    movement: 0,
+    problems: [
+      { problemId: 1, alias: "A", status: "accepted", attempts: 1, penalty: 55 },
+      { problemId: 2, alias: "B", status: "pending", attempts: 1 },
+      { problemId: 3, alias: "C", status: "none" },
+    ],
+  }),
 ];
 
 export const mockOiScoreboardRows = [
-  buildOiScoreboardRow({ id: "team-1", handle: "lin-chen", score: 460, lastImprovedAt: "2026-07-07T10:35:00Z", movement: 2 }),
-  buildOiScoreboardRow({ id: "team-2", handle: "mira", score: 420, lastImprovedAt: "2026-07-07T10:41:00Z", movement: 1 }),
-  buildOiScoreboardRow({ id: "team-3", handle: "ravi", score: 420, lastImprovedAt: "2026-07-07T10:22:00Z", movement: -2 }),
+  buildOiScoreboardRow({
+    id: "team-1",
+    handle: "lin-chen",
+    score: 300,
+    lastImprovedAt: minutesFromNow(-8),
+    movement: 2,
+    problems: [
+      { problemId: 1, alias: "A", status: "accepted", score: 100 },
+      { problemId: 2, alias: "B", status: "accepted", score: 100 },
+      { problemId: 3, alias: "C", status: "accepted", score: 100 },
+    ],
+  }),
+  buildOiScoreboardRow({
+    id: "team-2",
+    handle: "mira",
+    score: 270,
+    lastImprovedAt: minutesFromNow(-14),
+    movement: 1,
+    problems: [
+      { problemId: 1, alias: "A", status: "accepted", score: 100 },
+      { problemId: 2, alias: "B", status: "partial", score: 70 },
+      { problemId: 3, alias: "C", status: "accepted", score: 100 },
+    ],
+  }),
+  buildOiScoreboardRow({
+    id: "team-3",
+    handle: "ravi",
+    score: 170,
+    lastImprovedAt: minutesFromNow(-31),
+    movement: -2,
+    problems: [
+      { problemId: 1, alias: "A", status: "accepted", score: 100 },
+      { problemId: 2, alias: "B", status: "partial", score: 70 },
+      { problemId: 3, alias: "C", status: "wrong_answer", score: 0 },
+    ],
+  }),
 ];

@@ -32,10 +32,8 @@ export async function getContestScoreboard(id: number, client: ApiClient = creat
 }
 
 export async function getContestArenaEvents(id: number, client: ApiClient = createApiClient()) {
-  const contest = await client.contests.get(id);
   const submissions = await client.submissions.list();
   return buildArenaEvents(
-    contest,
     sortSubmissionsByNewest(submissions.items.filter((submission) => submission.contestId === id)),
   );
 }

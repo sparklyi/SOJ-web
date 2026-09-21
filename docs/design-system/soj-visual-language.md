@@ -449,8 +449,13 @@ SOJ product components live in `components/soj/**`:
 - `SubmissionTimeline`, `TestPointMatrix`, `ScoreboardGrid`, `RankMovement`
 - `CodeWorkspace`
 - `ProblemStatement` (the full reading panel; the title is owned by `PageHeader`)
-- `AuthGate`
 - *(deleted)* `SojWordmark` — the hand-authored SVG brand wordmark. Removed after review: hand-drawn curves read as amateur next to a real typeface, and at `width: 100%` the mark alone was 400px tall. The homepage typesets a lockup instead — see "The wordmark is typeset, and the hero is centred". **Do not reintroduce a drawn brand mark.**
+- *(deleted)* `AuthGate` — the bare `user ? children : fallback` switch. Removed when the walls themselves were unified; `PermissionGate` supersedes it. The unguarded conditional is what let two different login walls exist side by side.
+
+Access components live in `components/auth/**`:
+
+- `AuthWall` — the **only** shape a login or permission wall takes: a centred panel, one sentence of state, one line of scope, one exit. It carries `my-auto`, so inside the `min-h-dvh` shell it absorbs the leftover height instead of stacking 400px of blank above the footer. A second, hand-rolled wall (left-aligned strip plus a bare text link, no body copy) used to live in the authoring page; one product gets one wall. Do not hand-roll another.
+- `PermissionGate` (`usePermissions`, `roleMessageKey`, `rejudgeStatusMessageKey`) — the route-level block. All three states (checking / anonymous / denied) render `AuthWall`.
 
 Motion components live in `components/fx/**`:
 

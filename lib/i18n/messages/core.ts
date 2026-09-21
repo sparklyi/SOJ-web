@@ -38,6 +38,7 @@ export const coreMessages = {
   "common.close": { en: "Close", "zh-CN": "关闭" },
   "common.noData": { en: "No data available.", "zh-CN": "暂无数据。" },
   "common.notFound": { en: "Not found", "zh-CN": "未找到" },
+  "common.loadError": { en: "This content could not be loaded. Please try again later.", "zh-CN": "内容加载失败，请稍后重试。" },
 
   // 站点页脚。三样东西都指向真实存在的地方，见 components/layout/site-footer.tsx。
   // `footer.label` 是这个地标的无障碍名：没有名字的 contentinfo 在地标列表里读不出来。

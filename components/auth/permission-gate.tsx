@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { LocalizedLink } from "@/components/i18n/localized-link";
+import { AuthWall } from "@/components/auth/auth-wall";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useI18n } from "@/components/providers/i18n-provider";
 import type { Permission } from "@/lib/auth/permissions";
@@ -42,60 +42,27 @@ type PermissionGateProps = {
  * route-level counterpart of hiding a navigation entry: an unauthenticated or
  * under-privileged visitor who types the URL directly sees an explicit state
  * instead of a page that will fail every request behind it.
+ *
+ * 三种状态一律落到共享的 `AuthWall`：这里此前自己捏了一个 `GateState`，
+ * 而管理后台另捏了一个左对齐横条，于是同一个产品里出现了两种登录墙。
  */
 export function PermissionGate({ anyOf, override, children }: PermissionGateProps) {
   const { status, can } = useAuth();
   const { t } = useI18n();
 
   if (status === "loading" || override === "checking") {
-    return <GateState title={t("gate.loading")} />;
+    return <AuthWall title={t("gate.loading")} />;
   }
 
   if (status === "anonymous") {
-    return (
-      <GateState
-        title={t("gate.signInRequired")}
-        body={t("gate.signInBody")}
-        action={
-          <LocalizedLink
-            href="/auth/login"
-            className="inline-flex items-center rounded-soj-md border border-soj-accent/60 bg-soj-accent/10 px-4 py-2 text-sm text-soj-text transition hover:bg-soj-accent/20"
-          >
-            {t("gate.signIn")}
-          </LocalizedLink>
-        }
-      />
-    );
+    return <AuthWall title={t("gate.signInRequired")} body={t("gate.signInBody")} actionHref="/auth/login" actionLabel={t("gate.signIn")} />;
   }
 
   if (override !== "granted" && !anyOf.some((permission) => can(permission))) {
-    return (
-      <GateState
-        title={t("gate.deniedTitle")}
-        body={t("gate.deniedBody")}
-        action={
-          <LocalizedLink
-            href="/"
-            className="inline-flex items-center rounded-soj-md border border-soj-line px-4 py-2 text-sm text-soj-muted transition hover:border-soj-accent/40 hover:text-soj-text"
-          >
-            {t("gate.goHome")}
-          </LocalizedLink>
-        }
-      />
-    );
+    return <AuthWall title={t("gate.deniedTitle")} body={t("gate.deniedBody")} actionHref="/" actionLabel={t("gate.goHome")} />;
   }
 
   return <>{children}</>;
-}
-
-function GateState({ title, body, action }: { title: string; body?: string; action?: ReactNode }) {
-  return (
-    <div className="rounded-soj-lg border border-soj-line/70 bg-soj-surface/60 px-6 py-10 text-center">
-      <p className="text-base font-medium text-soj-text">{title}</p>
-      {body ? <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-soj-muted">{body}</p> : null}
-      {action ? <div className="mt-6 flex justify-center">{action}</div> : null}
-    </div>
-  );
 }
 
 export function roleMessageKey(role: string): MessageKey {

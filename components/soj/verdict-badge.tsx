@@ -2,6 +2,7 @@
 
 import { useI18n } from "@/components/providers/i18n-provider";
 import type { JudgeStatus } from "@/lib/api/types";
+import type { MessageKey } from "@/lib/i18n/messages";
 import { StatusPill } from "./status-pill";
 
 const labels = {
@@ -35,6 +36,17 @@ const tones: Record<JudgeStatus, React.ComponentProps<typeof StatusPill>["tone"]
 type VerdictBadgeProps = {
   status: JudgeStatus;
 };
+
+/**
+ * 徽标自己的词条。
+ *
+ * 导出的原因是「一句话里同一状态别说两遍」：时间线的每一行既有徽标（图标 + 词）
+ * 又有一个文字标签，当那个标签**就是**徽标那个词时，一行里会读成
+ * 「排队中 排队中」。调用点需要能判断「我要写的词与徽标是不是同一个」。
+ */
+export function verdictLabelKey(status: JudgeStatus): MessageKey {
+  return labels[status];
+}
 
 export function VerdictBadge({ status }: VerdictBadgeProps) {
   const { t } = useI18n();

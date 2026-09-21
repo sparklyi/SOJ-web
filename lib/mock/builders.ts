@@ -30,12 +30,27 @@ export function minutesFromNow(minutes: number) {
   return new Date(hourAnchor() + minutes * 60_000).toISOString();
 }
 
+/**
+ * 标题 → 短标识。
+ *
+ * 旧实现把 slug 写死成 `shortest-path-${id}`，于是「Cache Relay」的地址栏里
+ * 写着 shortest-path-2、「Frozen Matrix」写着 shortest-path-3。伪造的痕迹
+ * 不在配色里，就在这种地方——用户点开一道题，看到的短标识和题名毫无关系。
+ */
+function slugify(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export function buildProblem(overrides: Partial<ProblemDetail> = {}): ProblemDetail {
   const id = overrides.id ?? 1;
+  const title = overrides.title ?? `Shortest Path ${id}`;
   return {
     id,
-    slug: `shortest-path-${id}`,
-    title: `Shortest Path ${id}`,
+    title,
+    slug: slugify(title) || `problem-${id}`,
     difficulty: "medium",
     tags: ["graphs", "shortest-path"],
     status: "todo",
@@ -89,12 +104,20 @@ export function buildSubmission(overrides: Partial<SubmissionSummary> = {}): Sub
   };
 }
 
+/**
+ * 排行榜一行。
+ *
+ * 默认值必须**自洽**：`solved` 是下面三个单元格里 accepted 的个数，
+ * `penalty` 是各题解出分钟数加罚时，`score` 是各题得分之和。
+ * 旧默认值写着 solved: 4 / score: 420，而三格题目只有一题通过、
+ * 分数加起来是 170 —— 排行榜上「通过题数 4」配三个格子，一眼就是编的。
+ */
 export function buildAcmScoreboardRow(overrides: Partial<AcmScoreboardRow> = {}): AcmScoreboardRow {
   return {
     id: overrides.id ?? "team-1",
     handle: "lin-chen",
-    solved: 4,
-    penalty: 312,
+    solved: 1,
+    penalty: 42,
     movement: 2,
     problems: [
       { problemId: 1, alias: "A", status: "accepted", attempts: 1, penalty: 42 },
@@ -109,8 +132,8 @@ export function buildOiScoreboardRow(overrides: Partial<OiScoreboardRow> = {}): 
   return {
     id: overrides.id ?? "team-1",
     handle: "lin-chen",
-    score: 420,
-    lastImprovedAt: "2026-07-07T10:35:00Z",
+    score: 170,
+    lastImprovedAt: minutesFromNow(-20),
     movement: 2,
     problems: [
       { problemId: 1, alias: "A", status: "accepted", score: 100 },

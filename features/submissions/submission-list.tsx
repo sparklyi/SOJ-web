@@ -6,6 +6,7 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { Table, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
 import { Panel } from "@/components/ui/panel";
 import { VerdictBadge } from "@/components/soj/verdict-badge";
+import { formatDuration, formatMemory } from "@/lib/ui/number";
 import type { listSubmissions } from "./api";
 
 type SubmissionListProps = {
@@ -22,12 +23,21 @@ function formatSubmittedAt(value: string, locale: string) {
   }).format(new Date(value));
 }
 
-function formatRuntime(value: number | undefined, t: ReturnType<typeof useI18n>["t"]) {
-  return typeof value === "number" ? `${value} ms` : t("submissions.value.pending");
+/**
+ * 耗时与内存。
+ *
+ * 两件事：①走 `lib/ui/number` 的唯一实现，别在这里手写 `${value} ms`
+ * ——否则同一份数字会在题库页写成「1.0 s」、在这里写成「1000 ms」；
+ * ②还没跑完（排队中 / 编译中）或根本没跑起来（编译失败 / 系统错误）的提交
+ * **没有**这两个数值，原先回落到「等待中」，于是整列连成一串同一个词。
+ * 没有数值就是破折号。
+ */
+function formatTime(value: number | undefined, locale: string) {
+  return typeof value === "number" ? formatDuration(value, locale) : "—";
 }
 
-function formatMemory(value: number | undefined, t: ReturnType<typeof useI18n>["t"]) {
-  return typeof value === "number" ? `${value} KB` : t("submissions.value.pending");
+function formatMemoryColumn(value: number | undefined, locale: string) {
+  return typeof value === "number" ? formatMemory(value, locale) : "—";
 }
 
 function contestLabel(submission: SubmissionListProps["submissions"][number], t: ReturnType<typeof useI18n>["t"]) {
@@ -112,8 +122,8 @@ export function SubmissionList({ submissions }: SubmissionListProps) {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-mono text-soj-muted">{formatRuntime(submission.timeMs, t)}</TableCell>
-                  <TableCell className="text-right font-mono text-soj-muted">{formatMemory(submission.memoryKb, t)}</TableCell>
+                  <TableCell className="text-right font-mono text-soj-muted">{formatTime(submission.timeMs, locale)}</TableCell>
+                  <TableCell className="text-right font-mono text-soj-muted">{formatMemoryColumn(submission.memoryKb, locale)}</TableCell>
                   <TableCell className="text-right font-mono text-xs text-soj-muted">{formatSubmittedAt(submission.submittedAt, locale)}</TableCell>
                 </TableRow>
               );

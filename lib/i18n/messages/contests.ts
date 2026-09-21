@@ -111,6 +111,17 @@ export const contestMessages = {
   "contests.list.rounds": { en: "{count} rounds", "zh-CN": "{count} 场比赛" },
   "contests.list.format": { en: "Format", "zh-CN": "赛制" },
   "contests.list.window": { en: "Window", "zh-CN": "时间窗口" },
+  "contests.list.empty": { en: "No contests yet", "zh-CN": "还没有比赛" },
+  "contests.list.emptyDescription": {
+    en: "When a round is scheduled, it will show up here.",
+    "zh-CN": "排期确定后，比赛会出现在这里。",
+  },
+  "contests.notFoundTitle": { en: "Contest not found", "zh-CN": "比赛不存在" },
+  "contests.notFoundDescription": {
+    en: "It may have been removed, or the link is wrong.",
+    "zh-CN": "它可能已被移除，或者链接有误。",
+  },
+  "contests.backToList": { en: "Back to contests", "zh-CN": "返回比赛列表" },
   "contests.problem.title": { en: "Problems", "zh-CN": "题目" },
   "contests.problem.description": {
     en: "Aliases stay stable across workspace, scoreboard, and Arena routes.",

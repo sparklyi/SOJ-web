@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { injectSession } from "./helpers/session";
 
 /**
  * 全站设计回退锁。
@@ -101,6 +102,8 @@ const COLLECT = () => {
 
 async function scan(page: import("@playwright/test").Page, kind: string) {
   const found: string[] = [];
+  // 题库 / 比赛页已上登录墙，匿名只会看到登录门——注入会话才能扫到真实内容页。
+  await injectSession(page);
   for (const route of ROUTES) {
     await page.goto(route);
     const violations = await page.evaluate(COLLECT);
@@ -134,6 +137,7 @@ test("the retired materials do not come back", async ({ page }) => {
  *   2. 有人给「未开始」也刷上底色——默认态一染色，整张表就全有底，信号即消失。
  */
 test("my status tints the whole row, and the default state stays un-tinted", async ({ page }) => {
+  await injectSession(page);
   await page.goto("/problems");
 
   const tintOf = (statusWord: string) =>

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AuthWall } from "@/components/auth/auth-wall";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { PageShell } from "@/components/layout/page-shell";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -9,6 +10,8 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { StatusPill } from "@/components/soj/status-pill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createBrowserApiClient } from "@/lib/api/client";
 import type { AuthoringProblem, ProblemDifficulty } from "@/lib/api/types";
 import { publicationStatusMessageKey } from "./publication-status";
@@ -18,6 +21,8 @@ type ManagerState =
   | { status: "auth" }
   | { status: "error"; message: string }
   | { status: "ready"; problems: AuthoringProblem[] };
+
+const difficultyOptions: ProblemDifficulty[] = ["easy", "medium", "hard"];
 
 export function ProblemManager() {
   const router = useRouter();
@@ -72,15 +77,22 @@ export function ProblemManager() {
   return (
     <PageShell>
       <div className="grid gap-6">
-        <header className="grid gap-3 border-b border-soj-line/70 pb-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-          <div>
-            <p className="font-mono text-xs uppercase text-soj-accent">{t("authoring.console")}</p>
-            <h1 className="mt-2 text-4xl font-semibold text-soj-text md:text-5xl">{t("authoring.title")}</h1>
-          </div>
-          <StatusPill tone={viewState.status === "ready" ? "accent" : "neutral"}>{managerStatusLabel(t, viewState)}</StatusPill>
-        </header>
+        {/* 页头走共享的 PageHeader：这里曾经手写一份（凭空一个 4xl/5xl 标题，
+            与全站页头的 28px 对不上），eyebrow 还和另外五个页头撞同一个「…控制台」。
+            页头是页面级的原语，不该由每个页面自己拼。 */}
+        <PageHeader
+          eyebrow={t("authoring.eyebrow")}
+          title={t("authoring.title")}
+          actions={
+            /* 未登录时这里曾经再挂一颗「需要登录」胶囊，而下面的门面板标题说的
+               就是同一句话——一颗胶囊在页头重复着自己的正文。 */
+            viewState.status === "auth" ? null : (
+              <StatusPill tone={viewState.status === "ready" ? "accent" : "neutral"}>{managerStatusLabel(t, viewState)}</StatusPill>
+            )
+          }
+        />
 
-        {viewState.status === "auth" ? <AccessRequired /> : null}
+        {viewState.status === "auth" ? <AuthWall title={t("gate.signInRequired")} body={t("gate.signInBody")} actionHref="/auth/login" actionLabel={t("gate.signIn")} /> : null}
         {viewState.status === "error" ? <Message tone="danger">{viewState.message}</Message> : null}
         {viewState.status === "loading" ? <Message>{t("authoring.loadingAuthorWorkspace")}</Message> : null}
 
@@ -118,14 +130,23 @@ export function ProblemManager() {
               </div>
               <Input id="create-problem-title" label={t("authoring.titleLabel")} required value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
               <Input id="create-problem-slug" label={t("authoring.slug")} required pattern="[a-z0-9]+(?:[-_][a-z0-9]+)*" value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))} />
-              <label className="grid gap-2 text-sm font-medium text-soj-text">
-                {t("authoring.difficulty")}
-                <select className="h-10 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 text-sm" value={form.difficulty} onChange={(event) => setForm((current) => ({ ...current, difficulty: event.target.value as ProblemDifficulty }))}>
-                  <option value="easy">{t("problems.difficulty.easy")}</option>
-                  <option value="medium">{t("problems.difficulty.medium")}</option>
-                  <option value="hard">{t("problems.difficulty.hard")}</option>
-                </select>
-              </label>
+              {/* 原生 <select> 的选项面板由系统渲染，在深色页面上会弹出一块白底。
+                  全站下拉一律走共享 Select。 */}
+              <div className="grid gap-2">
+                <span className="text-sm font-medium text-soj-text">{t("authoring.difficulty")}</span>
+                <Select value={form.difficulty} onValueChange={(value) => setForm((current) => ({ ...current, difficulty: value as ProblemDifficulty }))}>
+                  <SelectTrigger className="w-full" aria-label={t("authoring.difficulty")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {difficultyOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {t(`problems.difficulty.${option}` as "problems.difficulty.easy")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Input id="create-problem-tags" label={t("authoring.tags")} value={form.tags} onChange={(event) => setForm((current) => ({ ...current, tags: event.target.value }))} />
               <div className="grid grid-cols-2 gap-3">
                 <Input id="create-problem-time" label={t("authoring.time")} min="1" required type="number" value={form.timeLimitMs} onChange={(event) => setForm((current) => ({ ...current, timeLimitMs: event.target.value }))} />
@@ -138,17 +159,6 @@ export function ProblemManager() {
         ) : null}
       </div>
     </PageShell>
-  );
-}
-
-function AccessRequired() {
-  const { t } = useI18n();
-
-  return (
-    <section className="soj-account-panel grid gap-4 p-6">
-      <h2 className="text-xl font-semibold text-soj-text">{t("authoring.authRequired")}</h2>
-      <LocalizedLink className="text-sm text-soj-accent" href="/auth/login">{t("authoring.openLogin")}</LocalizedLink>
-    </section>
   );
 }
 

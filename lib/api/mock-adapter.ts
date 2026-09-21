@@ -158,8 +158,13 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       me: async () => currentUser,
     },
     problems: {
-      list: async () => ({ items: mockProblems, total: mockProblems.length }),
+      // 站点策略与后端 SOJ 一致：题库内容（列表、详情）只对已登录 actor 开放。
+      list: async () => {
+        requireMockUser(currentUser);
+        return { items: mockProblems, total: mockProblems.length };
+      },
       get: async (id) => {
+        requireMockUser(currentUser);
         const problem = mockProblems.find((item) => item.id === id);
         if (!problem) throw notFound("Problem", id);
         return problem;
@@ -325,11 +330,14 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       },
     },
     contests: {
+      // 站点策略与后端 SOJ 一致：比赛内容（列表、详情）只对已登录 actor 开放。
       list: async () => {
+        requireMockUser(currentUser);
         const items = mockContests.map((contest) => withScopedRoles(contest, currentUser));
         return { items, total: items.length };
       },
       get: async (id) => {
+        requireMockUser(currentUser);
         const contest = mockContests.find((item) => item.id === id);
         if (!contest) throw notFound("Contest", id);
         return withScopedRoles(contest, currentUser);
