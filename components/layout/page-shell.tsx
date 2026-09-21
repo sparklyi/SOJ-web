@@ -17,10 +17,10 @@ type PageShellProps = {
  */
 export function PageShell({ children, title, description }: PageShellProps) {
   return (
-    <div className="min-h-dvh text-soj-text">
+    <div className="flex min-h-dvh flex-col text-soj-text">
       <TopNav />
-      <div className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 lg:px-8">
-        <main className="min-w-0" id="main-content">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
+        <main className="flex min-w-0 flex-1 flex-col" id="main-content">
           {title ? <PageHeader title={title} description={description} className="mb-8" /> : null}
           {children}
         </main>

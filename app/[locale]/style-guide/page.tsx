@@ -532,7 +532,7 @@ export default async function StyleGuidePage() {
             <Panel>
               <PanelBody className="grid gap-3">
                 <ContestClock label={t("contest.freezeIn")} value="00:42:18" />
-                <ContestClock label={t("contest.nextFreeze")} value={t("contest.notScheduled")} frozen />
+                <ContestClock label={t("contest.nextFreeze")} value={t("contest.notScheduled")} />
               </PanelBody>
             </Panel>
             <Panel variant="flush">

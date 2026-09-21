@@ -1,48 +1,21 @@
 import type { MessageCatalog } from "../types";
 
 export const authMessages = {
-  "auth.login.eyebrow": { en: "Access console", "zh-CN": "访问控制台" },
+  "auth.login.eyebrow": { en: "Account access", "zh-CN": "账户访问" },
   "auth.login.title": { en: "Login", "zh-CN": "登录" },
   "auth.login.description": {
     en: "Enter SOJ for contests, problems, and submissions.",
     "zh-CN": "进入 SOJ，参与比赛、练习题目并查看提交记录。",
   },
   "auth.login.meta": { en: "Session", "zh-CN": "会话" },
-  "auth.login.sessionRoute": { en: "Session route", "zh-CN": "会话路径" },
-  "auth.login.contestReady": { en: "Contest ready", "zh-CN": "比赛已就绪" },
-  "auth.login.authLabel": { en: "Auth", "zh-CN": "认证" },
-  "auth.login.access": { en: "Access", "zh-CN": "访问" },
-  "auth.login.web": { en: "Web", "zh-CN": "网页" },
-  "auth.login.session": { en: "Session", "zh-CN": "会话" },
-  "auth.login.sessionState": { en: "Session state", "zh-CN": "会话状态" },
-  "auth.login.sessionStateDescription": {
-    en: "SOJ keeps access state consistent across contest, problem, and account surfaces.",
-    "zh-CN": "SOJ 会在比赛、题目和账户界面之间保持一致的访问状态。",
-  },
-  "auth.login.createAccount": { en: "Create an account", "zh-CN": "创建账户" },
 
-  "auth.register.eyebrow": { en: "Identity route", "zh-CN": "身份路径" },
+  "auth.register.eyebrow": { en: "Create account", "zh-CN": "创建账户" },
   "auth.register.title": { en: "Register", "zh-CN": "注册" },
   "auth.register.description": {
     en: "Create an SOJ account for the contest workspace.",
     "zh-CN": "创建 SOJ 账户，进入比赛工作区。",
   },
   "auth.register.meta": { en: "Onboarding", "zh-CN": "入门" },
-  "auth.register.accountState": { en: "Account state", "zh-CN": "账户状态" },
-  "auth.register.ready": { en: "Ready", "zh-CN": "就绪" },
-  "auth.register.open": { en: "Open", "zh-CN": "开放" },
-  "auth.register.profile": { en: "Profile", "zh-CN": "资料" },
-  "auth.register.handle": { en: "Handle", "zh-CN": "用户名" },
-  "auth.register.scope": { en: "Scope", "zh-CN": "范围" },
-  "auth.register.permissionAware": {
-    en: "Permission-aware by default",
-    "zh-CN": "默认按权限控制",
-  },
-  "auth.register.registrationDescription": {
-    en: "Registration keeps the same compact field rhythm as the rest of the contest workspace.",
-    "zh-CN": "注册流程与比赛工作区的其他界面保持相同的紧凑字段节奏。",
-  },
-  "auth.register.backToLogin": { en: "Back to login", "zh-CN": "返回登录" },
 
   "auth.form.loginTitle": { en: "Login", "zh-CN": "登录" },
   "auth.form.registerTitle": { en: "Create account", "zh-CN": "创建账户" },
@@ -59,6 +32,16 @@ export const authMessages = {
   "auth.form.password": { en: "Password", "zh-CN": "密码" },
   "auth.form.createAccount": { en: "Create account", "zh-CN": "创建账户" },
   "auth.form.login": { en: "Login", "zh-CN": "登录" },
+  /**
+   * 登录与注册的互相切换。
+   *
+   * 它必须是**表单页脚**的一行字，而不是旁边另一张卡片里的一个链接：
+   * 切换说的是「我点错了，换一个表单」，它属于表单本身。
+   * 之前登录页把「创建账户」放在右侧一张解释性卡片的末尾，
+   * 注册页把「返回登录」放在同一位置——入口跑出了它该在的地方。
+   */
+  "auth.form.loginFooter": { en: "No account yet?", "zh-CN": "还没有账户？" },
+  "auth.form.registerFooter": { en: "Already have an account?", "zh-CN": "已经有账户？" },
   "auth.validation.emailRequired": { en: "Email is required.", "zh-CN": "请输入邮箱。" },
   "auth.validation.emailInvalid": {
     en: "Enter a valid email address.",
@@ -72,7 +55,7 @@ export const authMessages = {
   },
   "auth.error.authenticationFailed": { en: "Authentication failed.", "zh-CN": "认证失败。" },
 
-  "auth.me.eyebrow": { en: "Identity console", "zh-CN": "身份控制台" },
+  "auth.me.eyebrow": { en: "Account", "zh-CN": "账户" },
   "auth.me.title": { en: "Me", "zh-CN": "我的账户" },
   "auth.me.description": {
     en: "Account state, problem progress, and recent SOJ activity.",
@@ -85,19 +68,17 @@ export const authMessages = {
   "auth.me.signedIn": { en: "Signed in", "zh-CN": "已登录" },
   "auth.me.locked": { en: "Locked", "zh-CN": "锁定" },
   "auth.me.role": { en: "Role", "zh-CN": "角色" },
-  "auth.me.mode": { en: "Mode", "zh-CN": "模式" },
-  "auth.me.browser": { en: "Browser", "zh-CN": "浏览器" },
-  "auth.me.loadingAccountSession": {
-    en: "Loading account session.",
-    "zh-CN": "正在加载账户会话。",
+  "auth.me.progress": { en: "Progress", "zh-CN": "练习进度" },
+  "auth.me.progressSummary": { en: "Problem progress", "zh-CN": "题目进度" },
+  "auth.me.openProblemSet": { en: "Browse problems", "zh-CN": "查看题目集" },
+  "auth.me.progressEmptyTitle": { en: "No practice records yet", "zh-CN": "还没有练习记录" },
+  "auth.me.progressEmptyDescription": {
+    en: "Problems you attempt or solve are listed here by status.",
+    "zh-CN": "做过的题目会按状态出现在这里。",
   },
-  "auth.me.loginRequired": { en: "Login is required.", "zh-CN": "请先登录。" },
-  "auth.me.signIn": { en: "Go to login", "zh-CN": "去登录" },
-  "auth.me.progress": { en: "Progress", "zh-CN": "进度" },
-  "auth.me.shortestPath": { en: "Shortest Path", "zh-CN": "最短路" },
-  "auth.me.cacheRelay": { en: "Cache Relay", "zh-CN": "缓存中继" },
+  "auth.me.progressFailed": { en: "Could not load your progress.", "zh-CN": "无法加载练习进度。" },
 
-  "auth.settings.eyebrow": { en: "Control console", "zh-CN": "控制台" },
+  "auth.settings.eyebrow": { en: "Preferences", "zh-CN": "偏好" },
   "auth.settings.title": { en: "Settings", "zh-CN": "设置" },
   "auth.settings.description": {
     en: "Account preferences and local workspace defaults.",
@@ -109,34 +90,17 @@ export const authMessages = {
   "auth.settings.synced": { en: "Synced", "zh-CN": "已同步" },
   "auth.settings.signedIn": { en: "Signed in", "zh-CN": "已登录" },
   "auth.settings.locked": { en: "Locked", "zh-CN": "锁定" },
-  "auth.settings.theme": { en: "Theme", "zh-CN": "主题" },
-  "auth.settings.themeName": { en: "Dark", "zh-CN": "深色" },
-  "auth.settings.editor": { en: "Editor", "zh-CN": "编辑器" },
-  "auth.settings.cpp17": { en: "C++17", "zh-CN": "C++17" },
   "auth.settings.profile": { en: "Profile", "zh-CN": "资料" },
   "auth.settings.handle": { en: "Handle", "zh-CN": "用户名" },
-  "auth.settings.loadedAccount": {
-    en: "Loaded from the current account boundary.",
-    "zh-CN": "已从当前账户边界加载。",
-  },
-  "auth.settings.loginRequired": {
-    en: "Login is required to load account details.",
-    "zh-CN": "加载账户详情需要先登录。",
-  },
   "auth.settings.displayName": { en: "Display name", "zh-CN": "显示名称" },
-  "auth.settings.local": { en: "Local", "zh-CN": "本地" },
+  "auth.settings.readOnly": {
+    en: "Read from your account. Editing arrives with the profile pass.",
+    "zh-CN": "来自账户信息，编辑能力随账户设置一并开放。",
+  },
   "auth.settings.preferences": { en: "Preferences", "zh-CN": "偏好设置" },
-  "auth.settings.preferencesDescription": {
-    en: "Theme, language, and contest workspace defaults are staged here for the next settings pass.",
-    "zh-CN": "主题、语言和比赛工作区默认项将在后续设置阶段提供。",
-  },
-  "auth.settings.themePreference": { en: "Dark theme", "zh-CN": "深色主题" },
-  "auth.settings.languagePreference": {
-    en: "C++17 default language",
-    "zh-CN": "默认编程语言 C++17",
-  },
-  "auth.settings.judgeFeedbackPreference": {
-    en: "Judge feedback pinned",
-    "zh-CN": "已固定评测反馈",
+  "auth.settings.preferencesEmptyTitle": { en: "Preferences are not open yet", "zh-CN": "偏好设置尚未开放" },
+  "auth.settings.preferencesEmptyDescription": {
+    en: "Theme, language, and workspace defaults will appear here once they become editable.",
+    "zh-CN": "主题、语言与工作区默认项可编辑后会出现在这里。",
   },
 } satisfies MessageCatalog;

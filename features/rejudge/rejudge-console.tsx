@@ -7,6 +7,7 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { StatusPill } from "@/components/soj/status-pill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createBrowserApiClient } from "@/lib/api/client";
 import type { RejudgeBatch, RejudgeBatchDetail, RejudgeBatchStatus } from "@/lib/api/types";
 import { useContestJudgeAccess } from "@/lib/auth/contest-access";
@@ -194,21 +195,27 @@ function RejudgeBoard({ contestId }: { contestId?: number }) {
 
   return (
     <div className="grid gap-6">
+      {/* 表单栅格与全站其它表单一致：每个控件自带「标签在正上方」，两列等宽。
+          原先是手写的 180/1fr/2fr 三列 —— 标签有的浮在第二个控件头顶，
+          有的控件下面还压着一行说明，读不出哪个标签管哪个框。 */}
       <form onSubmit={handleCreate} className="grid gap-4 rounded-soj-lg border border-soj-line/70 bg-soj-surface/50 p-5">
-        <div className="grid gap-4 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)_minmax(0,2fr)] sm:items-end">
+        <div className="grid gap-4 sm:grid-cols-2">
           {contestId === undefined ? (
             <>
-              <label className="grid gap-2 text-sm text-soj-text">
-                {t("rejudge.target")}
-                <select
-                  value={targetKind}
-                  onChange={(event) => setTargetKind(event.target.value as TargetKind)}
-                  className="h-10 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 text-sm text-soj-text focus:border-soj-accent focus:outline-none focus:ring-1 focus:ring-soj-accent"
-                >
-                  <option value="problem">{t("rejudge.targetProblem")}</option>
-                  <option value="contest">{t("rejudge.targetContest")}</option>
-                </select>
-              </label>
+              <div className="grid gap-2">
+                <span className="text-sm font-medium text-soj-text">{t("rejudge.target")}</span>
+                {/* 原生 <select> 的选项面板归系统渲染，深色页面上会弹出一块白底。
+                    全站下拉一律走共享 Select。 */}
+                <Select value={targetKind} onValueChange={(value) => setTargetKind(value as TargetKind)}>
+                  <SelectTrigger className="w-full" aria-label={t("rejudge.target")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="problem">{t("rejudge.targetProblem")}</SelectItem>
+                    <SelectItem value="contest">{t("rejudge.targetContest")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Input
                 name="rejudge-target"
                 label={targetKind === "problem" ? t("rejudge.targetProblem") : t("rejudge.targetContest")}
@@ -225,6 +232,7 @@ function RejudgeBoard({ contestId }: { contestId?: number }) {
           )}
           <Input
             name="rejudge-reason"
+            className="sm:col-span-2"
             label={t("rejudge.reason")}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
@@ -301,7 +309,10 @@ function RejudgeBoard({ contestId }: { contestId?: number }) {
                       value={cancelReason}
                       onChange={(event) => setCancelReason(event.target.value)}
                     />
-                    <Button type="button" variant="danger" loading={pending === "cancel"} onClick={() => void handleCancel()}>
+                    {/* 这是一个**次级**动作：页面的主操作是「创建批次」（扁平银）。
+                        整页唯一的一抹红如果是这枚按钮，权重就压过了主操作。
+                        红色只保留 hue，尺寸降一档。 */}
+                    <Button type="button" variant="danger" size="sm" loading={pending === "cancel"} onClick={() => void handleCancel()}>
                       {t("rejudge.cancel")}
                     </Button>
                   </div>
@@ -318,16 +329,16 @@ function RejudgeBoard({ contestId }: { contestId?: number }) {
                       <thead>
                         <tr className="text-left text-xs uppercase tracking-wide text-soj-muted">
                           <th className="border-b border-soj-line/70 py-2 pr-4 font-normal">{t("rejudge.submission")}</th>
-                          <th className="border-b border-soj-line/70 py-2 pr-4 font-normal">Task</th>
+                          <th className="border-b border-soj-line/70 py-2 pr-4 font-normal">{t("rejudge.task")}</th>
                           <th className="border-b border-soj-line/70 py-2 pr-4 font-normal">{t("home.status")}</th>
-                          <th className="border-b border-soj-line/70 py-2 font-normal">{t("review.comment")}</th>
+                          <th className="border-b border-soj-line/70 py-2 font-normal">{t("rejudge.error")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {detail.items.map((item) => (
                           <tr key={item.id}>
                             <td className="border-b border-soj-line/40 py-2 pr-4 font-mono text-soj-text">#{item.submissionId}</td>
-                            <td className="border-b border-soj-line/40 py-2 pr-4 font-mono text-soj-muted">{item.taskId}</td>
+                            <td className="border-b border-soj-line/40 py-2 pr-4 font-mono text-soj-muted">{item.taskId ?? "—"}</td>
                             <td className="border-b border-soj-line/40 py-2 pr-4">
                               <StatusPill tone={rejudgeTone(item.status)}>{t(rejudgeStatusMessageKey(item.status))}</StatusPill>
                             </td>

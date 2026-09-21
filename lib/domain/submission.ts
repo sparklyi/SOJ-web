@@ -5,31 +5,15 @@ export type SubmissionTone = "neutral" | "info" | "accent" | "success" | "warnin
 
 export type SubmissionDisplayState = {
   status: JudgeStatus;
-  label: string;
+  /** 词条 key。这里曾经放的是英文原文（"Queued" / "Wrong Answer"…），
+      于是中文界面上的竞技场事件流直接显出了 `Runtime Error`。 */
+  labelKey: MessageKey;
   tone: SubmissionTone;
   terminal: boolean;
   order: number;
 };
 
-const states: Record<JudgeStatus, Omit<SubmissionDisplayState, "status">> = {
-  queued: { label: "Queued", tone: "neutral", terminal: false, order: 10 },
-  compiling: { label: "Compiling", tone: "info", terminal: false, order: 20 },
-  running: { label: "Running", tone: "accent", terminal: false, order: 30 },
-  accepted: { label: "Accepted", tone: "success", terminal: true, order: 40 },
-  wrong_answer: { label: "Wrong Answer", tone: "danger", terminal: true, order: 40 },
-  runtime_error: { label: "Runtime Error", tone: "danger", terminal: true, order: 40 },
-  compile_error: { label: "Compile Error", tone: "warning", terminal: true, order: 40 },
-  time_limit: { label: "Time Limit Exceeded", tone: "warning", terminal: true, order: 40 },
-  memory_limit: { label: "Memory Limit Exceeded", tone: "warning", terminal: true, order: 40 },
-  canceled: { label: "Canceled", tone: "neutral", terminal: true, order: 40 },
-  system_error: { label: "System Error", tone: "danger", terminal: true, order: 40 },
-};
-
-export function getSubmissionDisplayState(status: JudgeStatus): SubmissionDisplayState {
-  return { status, ...states[status] };
-}
-
-/** JudgeStatus → i18n key（`status.*`，见 lib/i18n/messages/system.ts）。 */
+/** JudgeStatus → i18n key（`status.*`，见 lib/i18n/messages/system.ts）。词条的唯一出处。 */
 export const judgeStatusLabelKey: Record<JudgeStatus, MessageKey> = {
   queued: "status.queued",
   compiling: "status.compiling",
@@ -43,6 +27,24 @@ export const judgeStatusLabelKey: Record<JudgeStatus, MessageKey> = {
   canceled: "status.canceled",
   system_error: "status.systemError",
 };
+
+const states: Record<JudgeStatus, Omit<SubmissionDisplayState, "status" | "labelKey">> = {
+  queued: { tone: "neutral", terminal: false, order: 10 },
+  compiling: { tone: "info", terminal: false, order: 20 },
+  running: { tone: "accent", terminal: false, order: 30 },
+  accepted: { tone: "success", terminal: true, order: 40 },
+  wrong_answer: { tone: "danger", terminal: true, order: 40 },
+  runtime_error: { tone: "danger", terminal: true, order: 40 },
+  compile_error: { tone: "warning", terminal: true, order: 40 },
+  time_limit: { tone: "warning", terminal: true, order: 40 },
+  memory_limit: { tone: "warning", terminal: true, order: 40 },
+  canceled: { tone: "neutral", terminal: true, order: 40 },
+  system_error: { tone: "danger", terminal: true, order: 40 },
+};
+
+export function getSubmissionDisplayState(status: JudgeStatus): SubmissionDisplayState {
+  return { status, labelKey: judgeStatusLabelKey[status], ...states[status] };
+}
 
 export function isSubmissionTerminal(status: JudgeStatus) {
   return states[status].terminal;

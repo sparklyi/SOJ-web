@@ -1,12 +1,14 @@
+"use client";
+
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { StatusPill } from "@/components/soj/status-pill";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Stat, StatDivider, StatGroup } from "@/components/ui/stat";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { getContestDurationMinutes } from "@/lib/domain/contest";
 import type { ContestStatus, ContestSummary, ContestType } from "@/lib/api/types";
-import { getServerTranslator } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translator } from "@/lib/i18n/translate";
 import { cn } from "@/lib/ui/cn";
@@ -51,8 +53,8 @@ const typeLabel: Record<ContestType, MessageKey> = {
  *    进场是唯一的主操作，另外两个是查看入口，降为次级文字链接即可——
  *    三枚同样重的按钮并排，等于没有主次。
  */
-export async function ContestList({ contests }: ContestListProps) {
-  const t = await getServerTranslator();
+export function ContestList({ contests }: ContestListProps) {
+  const { t } = useI18n();
   const featuredContest = contests.find((contest) => contest.status === "running" || contest.status === "frozen") ?? contests[0];
 
   return (
