@@ -19,19 +19,19 @@ const statuses: JudgeStatus[] = [
 
 describe("submission lifecycle", () => {
   it("maps every judge status to a display state", () => {
-    const labels = statuses.map((status) => getSubmissionDisplayState(status).label);
-    expect(labels).toEqual([
-      "Queued",
-      "Compiling",
-      "Running",
-      "Accepted",
-      "Wrong Answer",
-      "Compile Error",
-      "Runtime Error",
-      "Time Limit Exceeded",
-      "Memory Limit Exceeded",
-      "Canceled",
-      "System Error",
+    const labelKeys = statuses.map((status) => getSubmissionDisplayState(status).labelKey);
+    expect(labelKeys).toEqual([
+      "status.queued",
+      "status.compiling",
+      "status.running",
+      "status.accepted",
+      "status.wrongAnswer",
+      "status.compileError",
+      "status.runtimeError",
+      "status.timeLimit",
+      "status.memoryLimit",
+      "status.canceled",
+      "status.systemError",
     ]);
   });
 

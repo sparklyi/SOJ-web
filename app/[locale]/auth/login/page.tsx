@@ -1,51 +1,36 @@
-import { StatusPill } from "@/components/soj/status-pill";
-import { TypeExit } from "@/components/soj/type-exit";
+import { LocalizedLink } from "@/components/i18n/localized-link";
 import { AccountSurface } from "@/features/auth/account-surface";
 import { AuthForm } from "@/features/auth/auth-form";
 import { getServerTranslator } from "@/lib/i18n/server";
 
+/**
+ * 登录页。
+ *
+ * 此前它有两栏：左边表单，右边一张「会话状态」卡片，写着
+ * 「SOJ 会在比赛、题目和账户界面之间保持一致的访问状态。」——那句话不说任何事，
+ * 而「创建账户」这个**切换入口**被放在那张卡片的末尾，跑出了表单。
+ * 上面还有一块仪表盘式的摘要（「会话路径 / 比赛已就绪 / 认证 SOJ / 访问 网页」），
+ * 其中「访问：网页」对一个网页产品毫无信息量。
+ *
+ * 现在它就是一件事：一个居中的表单，切换在页脚。
+ */
 export default async function LoginPage() {
   const t = await getServerTranslator();
 
   return (
-    <AccountSurface
-      eyebrow={t("auth.login.eyebrow")}
-      title={t("auth.login.title")}
-      description={t("auth.login.description")}
-      meta={t("auth.login.meta")}
-      aside={
-        <>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="font-mono text-xs uppercase tracking-[0.16em] text-soj-muted">{t("auth.login.sessionRoute")}</p>
-              <p className="mt-2 text-2xl font-semibold text-soj-text">{t("auth.login.contestReady")}</p>
-            </div>
-            <StatusPill tone="accent">{t("auth.login.authLabel")}</StatusPill>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="soj-submission-chip">
-              <span>{t("auth.login.authLabel")}</span>
-              <strong>SOJ</strong>
-            </div>
-            <div className="soj-submission-chip">
-              <span>{t("auth.login.access")}</span>
-              <strong>{t("auth.login.web")}</strong>
-            </div>
-          </div>
-        </>
-      }
-    >
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-        <AuthForm mode="login" />
-        <section className="soj-account-panel grid grid-cols-[minmax(0,1fr)] content-start gap-4 p-5">
-          <StatusPill tone="accent">{t("auth.login.session")}</StatusPill>
-          <h2 className="text-xl font-semibold">{t("auth.login.sessionState")}</h2>
-          <p className="max-w-xl text-sm leading-6 text-soj-muted">{t("auth.login.sessionStateDescription")}</p>
-          {/* 去注册曾经是一枚描边胶囊：描边在深底上只比背景亮一点点，
-              既不像按钮也不像链接，只是给文字加了一圈噪点。
-              它和首页弹窗里的「去注册」是同一件事，就用同一个出口形态。 */}
-          <TypeExit href="/auth/register">{t("auth.login.createAccount")}</TypeExit>
-        </section>
+    <AccountSurface eyebrow={t("auth.login.eyebrow")} title={t("auth.login.title")} description={t("auth.login.description")}>
+      <div className="mx-auto w-full max-w-md">
+        <AuthForm
+          mode="login"
+          footer={
+            <p>
+              {t("auth.form.loginFooter")}{" "}
+              <LocalizedLink href="/auth/register" className="text-soj-accent underline-offset-4 transition hover:underline">
+                {t("auth.form.createAccount")}
+              </LocalizedLink>
+            </p>
+          }
+        />
       </div>
     </AccountSurface>
   );

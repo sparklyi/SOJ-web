@@ -6,7 +6,6 @@ import { MetricFeed, type MetricFeedItem } from "@/components/soj/metric-feed";
 import { SubmissionTimeline } from "@/components/soj/submission-timeline";
 import { TestPointMatrix } from "@/components/soj/test-point-matrix";
 import { TypeExit } from "@/components/soj/type-exit";
-import { VerdictBadge } from "@/components/soj/verdict-badge";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/panel";
 import { Stat, StatDivider, StatGroup } from "@/components/ui/stat";
@@ -14,6 +13,7 @@ import type { JudgeStatus, SubmissionSummary } from "@/lib/api/types";
 import { buildSubmissionTimeline, type SubmissionTone } from "@/lib/domain/submission";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translator } from "@/lib/i18n/translate";
+import { formatDuration, formatMemory } from "@/lib/ui/number";
 import type { getSubmission } from "./api";
 import { SubmissionImpact } from "./submission-impact";
 
@@ -46,12 +46,20 @@ function formatSubmittedAt(value: string, locale: string) {
   }).format(new Date(value));
 }
 
-function formatRuntime(value: number | undefined, t: Translator) {
-  return typeof value === "number" ? `${value} ms` : t("submissions.value.pending");
+/**
+ * 还没有跑过（排队中 / 编译中 / 编译失败 / 系统错误）的提交，耗时与内存是
+ * **不存在**，不是「等待中」。原先两者都写「等待中」，于是同一列会连成
+ * 一串「等待中」——既不真实，也让人以为数值马上会来。空值就是破折号。
+ * 数值本身的换算走 `lib/ui/number` 的唯一实现。
+ */
+const dash = "—";
+
+function timeValue(value: number | undefined, locale: string) {
+  return typeof value === "number" ? formatDuration(value, locale) : dash;
 }
 
-function formatMemory(value: number | undefined, t: Translator) {
-  return typeof value === "number" ? `${value} KB` : t("submissions.value.pending");
+function memoryValue(value: number | undefined, locale: string) {
+  return typeof value === "number" ? formatMemory(value, locale) : dash;
 }
 
 function contestLabel(submission: SubmissionSummary, t: Translator) {
@@ -103,12 +111,12 @@ function feedbackLine(submission: SubmissionSummary, t: Translator) {
   return t(lines[submission.status]);
 }
 
-function runtimeItems(submission: SubmissionDetailProps["submission"], t: Translator): MetricFeedItem[] {
+function runtimeItems(submission: SubmissionDetailProps["submission"], t: Translator, locale: string): MetricFeedItem[] {
   const diagnostics = submission.adminDiagnostics;
   return [
     { id: "score", label: t("submissions.detail.score"), value: String(submission.score), tone: verdictTone(submission.displayState.tone) },
-    { id: "time", label: t("submissions.detail.time"), value: formatRuntime(submission.timeMs, t), tone: "neutral" },
-    { id: "memory", label: t("submissions.detail.memory"), value: formatMemory(submission.memoryKb, t), tone: "neutral" },
+    { id: "time", label: t("submissions.detail.time"), value: timeValue(submission.timeMs, locale), tone: "neutral" },
+    { id: "memory", label: t("submissions.detail.memory"), value: memoryValue(submission.memoryKb, locale), tone: "neutral" },
     {
       id: "compile",
       label: t("submissions.detail.compile"),
@@ -135,8 +143,8 @@ export function SubmissionDetail({ submission }: SubmissionDetailProps) {
   const points = statusPoints(submission);
   const resources = [
     { label: t("submissions.detail.score"), value: String(submission.score) },
-    { label: t("submissions.detail.time"), value: formatRuntime(submission.timeMs, t) },
-    { label: t("submissions.detail.memory"), value: formatMemory(submission.memoryKb, t) },
+    { label: t("submissions.detail.time"), value: timeValue(submission.timeMs, locale) },
+    { label: t("submissions.detail.memory"), value: memoryValue(submission.memoryKb, locale) },
   ];
 
   return (
@@ -174,12 +182,12 @@ export function SubmissionDetail({ submission }: SubmissionDetailProps) {
         </div>
 
         <aside className="grid content-start gap-5 rounded-soj-lg border border-soj-line bg-soj-bg/45 p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="font-mono text-xs uppercase tracking-[0.16em] text-soj-muted">{t("submissions.detail.verdict")}</p>
-              <p className="mt-2 text-2xl font-semibold text-soj-text">{t(statusMessageKey[submission.status])}</p>
-            </div>
-            <VerdictBadge status={submission.status} />
+          {/* 这里曾经是「结果」小标 + 2xl 状态词 + 一枚 VerdictBadge —— 同一个词
+              在一屏里说了好几遍（aside 两遍、时间线每行两遍）。状态只在这一处
+              用最大的字说一次；流程里的状态由时间线各行的徽标承担。 */}
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.16em] text-soj-muted">{t("submissions.detail.verdict")}</p>
+            <p className="mt-2 text-2xl font-semibold text-soj-text">{t(statusMessageKey[submission.status])}</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="soj-submission-chip">
@@ -219,7 +227,7 @@ export function SubmissionDetail({ submission }: SubmissionDetailProps) {
             <h2 className="text-xl font-semibold">{t("submissions.detail.runtimeSystem")}</h2>
             <p className="mt-1 text-sm text-soj-muted">{t("submissions.detail.runtimeSystemDescription")}</p>
           </div>
-          <MetricFeed items={runtimeItems(submission, t)} />
+          <MetricFeed items={runtimeItems(submission, t, locale)} />
         </Panel>
         <SubmissionImpact submission={submission} />
       </div>

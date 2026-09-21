@@ -155,7 +155,12 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
           </div>
 
           <aside className="soj-workspace-console grid content-between gap-5 p-5">
-            <ContestClock label={contest.status === "frozen" ? t("contest.freezeActive") : t("contest.freezeIn")} value="00:47:18" frozen={contest.status === "frozen"} />
+            {/* 读数曾经是写死的 `value="00:47:18"`：不管什么时候打开，
+                冻结倒计时永远停在同一个数。倒计时必须相对 now 算。 */}
+            <ContestClock
+              label={contest.status === "frozen" ? t("contest.freezeActive") : t("contest.freezeIn")}
+              until={contest.status === "frozen" ? contest.endsAt : contest.freezeAt}
+            />
             <div className="grid grid-cols-2 gap-2">
               <div className="soj-submission-chip">
                 <span>{t("contests.workspace.submit")}</span>

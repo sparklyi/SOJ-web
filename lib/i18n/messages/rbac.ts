@@ -72,6 +72,8 @@ export const rbacMessages = {
   "rejudge.needReason": { en: "A reason is required.", "zh-CN": "必须填写原因。" },
   "rejudge.progress": { en: "{completed} of {total} completed", "zh-CN": "已完成 {completed} / {total}" },
   "rejudge.submission": { en: "Submission", "zh-CN": "提交" },
+  "rejudge.task": { en: "Task", "zh-CN": "任务" },
+  "rejudge.error": { en: "Message", "zh-CN": "失败原因" },
 
   "roles.title": { en: "User roles", "zh-CN": "用户角色" },
   "roles.description": {
@@ -86,6 +88,13 @@ export const rbacMessages = {
   "roles.users": { en: "Users", "zh-CN": "用户" },
   "roles.usersEmpty": { en: "No users match this filter.", "zh-CN": "没有符合条件的用户。" },
   "roles.searchPlaceholder": { en: "Search handle or email", "zh-CN": "搜索用户名或邮箱" },
+  "roles.searchAction": { en: "Search", "zh-CN": "搜索" },
+  "roles.selectEmptyTitle": { en: "No user selected", "zh-CN": "还没有选中用户" },
+  "roles.selectEmptyDescription": {
+    en: "Pick a user on the left to view and adjust their global roles.",
+    "zh-CN": "从左侧选择一个用户，查看与调整其全局角色。",
+  },
+  "roles.grantedAt": { en: "Granted at", "zh-CN": "授予时间" },
   "roles.assignments": { en: "Assignments", "zh-CN": "已分配角色" },
   "roles.assignmentsEmpty": { en: "No contest roles assigned.", "zh-CN": "尚未分配赛事角色。" },
   "roles.held": { en: "Held roles", "zh-CN": "持有的角色" },

@@ -146,26 +146,9 @@ export function TopNav() {
                 <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/settings">
                   {t("nav.account.settings")}
                 </LocalizedLink>
-                {canOpenAuthoring ? (
-                  <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/problems">
-                    {t("nav.account.authorProblems")}
-                  </LocalizedLink>
-                ) : null}
-                {canOpenReview ? (
-                  <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/reviews">
-                    {t("nav.reviews")}
-                  </LocalizedLink>
-                ) : null}
-                {canOpenRejudge ? (
-                  <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/manage/rejudge">
-                    {t("nav.rejudge")}
-                  </LocalizedLink>
-                ) : null}
-                {canOpenAdmin ? (
-                  <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/admin/users">
-                    {t("nav.adminUsers")}
-                  </LocalizedLink>
-                ) : null}
+                {/* 管理入口不再在这里重复一遍：出题 / 审核 / 重测 / 用户管理
+                    已经在主导航里，而且那边的命名与这里还不一致（「出题」对「管理题目」）。
+                    账号菜单只放「我的东西」——我的账户、我的提交、设置、退出。 */}
                 <button
                   type="button"
                   className="rounded-soj-sm px-3 py-2 text-left text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"

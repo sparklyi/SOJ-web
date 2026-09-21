@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +16,19 @@ type AuthFormProps = {
   /**
    * 表单外壳。
    *
-   * `panel` —— 独立页面用：自带面板边框与内边距，另外带一块标题区
-   * （登录页/注册页上，读者需要知道自己站在哪一页）。
+   * `panel` —— 独立页面用：自带面板边框与内边距。
+   * `bare` —— 弹窗里用：弹窗本身已经是一块面板，外面再套一层边框就成了盒中盒。
    *
-   * `bare` —— 弹窗里用：弹窗本身已经是一块面板，外面再套一层边框就成了盒中盒；
-   * 而标题区与弹窗上的「注册 / 登录」切换页签说的是同一件事，留着就是同一句话讲两遍。
-   * 这两点在独立页面上都不存在，所以不能直接把页面版缩一缩塞进弹窗。
+   * 曾经 `panel` 还会在字段上方加一块标题区（「登录 / 使用 SOJ 账户继续」）。
+   * 独立页面上的 `PageHeader` 已经把这两行字原样说过一遍，卡片里再说一次
+   * 就是同一句话说两遍，所以那块标题区整个撤掉了。
    */
   chrome?: "panel" | "bare";
+  /**
+   * 表单页脚。登录与注册的互相切换放在这里 —— 它说的是「我点错了，换一个表单」，
+   * 属于表单本身，不该寄生在旁边另一张卡片里。
+   */
+  footer?: ReactNode;
 };
 
 type FieldErrors = {
@@ -31,7 +37,7 @@ type FieldErrors = {
   password?: string;
 };
 
-export function AuthForm({ mode, chrome = "panel" }: AuthFormProps) {
+export function AuthForm({ mode, chrome = "panel", footer }: AuthFormProps) {
   const router = useRouter();
   const { localize, t } = useI18n();
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -78,14 +84,6 @@ export function AuthForm({ mode, chrome = "panel" }: AuthFormProps) {
       }
       onSubmit={submit}
     >
-      {bare ? null : (
-        <div className="border-b border-soj-line/60 pb-4">
-          <h2 className="text-xl font-semibold text-soj-text">{isRegister ? t("auth.form.registerTitle") : t("auth.form.loginTitle")}</h2>
-          <p className="mt-1 text-sm text-soj-muted">
-            {isRegister ? t("auth.form.registerDescription") : t("auth.form.loginDescription")}
-          </p>
-        </div>
-      )}
       <Input id={mode + "-email"} name="email" label={t("auth.form.email")} type="email" autoComplete="email" error={errors.email} />
       {isRegister ? <Input id="register-username" name="username" label={t("auth.form.username")} autoComplete="username" error={errors.username} /> : null}
       <Input
@@ -107,6 +105,7 @@ export function AuthForm({ mode, chrome = "panel" }: AuthFormProps) {
       <Button type="submit" variant="solid" loading={submitting}>
         {isRegister ? t("auth.form.createAccount") : t("auth.form.login")}
       </Button>
+      {footer ? <div className="grid gap-1 border-t border-soj-line/60 pt-4 text-center text-sm text-soj-muted">{footer}</div> : null}
     </form>
   );
 }
