@@ -1,8 +1,10 @@
+"use client";
+
 import { SearchX } from "lucide-react";
 import type { ProblemSummary } from "@/lib/api/types";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { Table, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
-import { getServerLocale, getServerTranslator } from "@/lib/i18n/server";
 import { formatNumber } from "@/lib/ui/number";
 import { ProblemRow } from "./problem-row";
 
@@ -24,8 +26,8 @@ type ProblemListProps = {
  * 曾经左边还有一个「N 道题目可供练习」——它把同一个数字复述了一遍，
  * 而且读起来像运营文案，删掉之后页脚回到它该有的样子：一行坐标，不是一句话。
  */
-export async function ProblemList({ problems, totalCount }: ProblemListProps) {
-  const [t, locale] = await Promise.all([getServerTranslator(), getServerLocale()]);
+export function ProblemList({ problems, totalCount }: ProblemListProps) {
+  const { t, locale } = useI18n();
 
   if (problems.length === 0) {
     return <EmptyState icon={SearchX} title={t("problems.noMatching")} description={t("problems.noMatchingDescription")} />;

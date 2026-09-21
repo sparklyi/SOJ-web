@@ -20,6 +20,13 @@ export const problemMessages = {
   "problems.activeFilters": { en: "Active filters", "zh-CN": "已应用筛选" },
   "problems.removeFilter": { en: "Remove this filter", "zh-CN": "移除该筛选条件" },
   "problems.noMatching": { en: "No matching problems", "zh-CN": "没有匹配的题目" },
+  "problems.loadError": { en: "This content could not be loaded. Please try again later.", "zh-CN": "内容加载失败，请稍后重试。" },
+  "problems.notFoundTitle": { en: "Problem not found", "zh-CN": "题目不存在" },
+  "problems.notFoundDescription": {
+    en: "It may have been unpublished, or the link is wrong.",
+    "zh-CN": "它可能已下架，或者链接有误。",
+  },
+  "problems.backToSet": { en: "Back to problem set", "zh-CN": "返回题库" },
   "problems.noMatchingDescription": {
     en: "Adjust the search text, difficulty, status, or tag filters to reopen the training set.",
     "zh-CN": "调整搜索文本、难度、状态或标签筛选条件，重新查看练习题集。",

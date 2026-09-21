@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { injectSession } from "./helpers/session";
 
 test("contest list renders lifecycle and entry links", async ({ page }) => {
+  // 比赛内容已上登录墙：匿名只会看到登录门，先注入会话。
+  await injectSession(page);
   await page.goto("/contests");
 
   await expect(page.getByRole("heading", { name: "SOJ Weekly Contest" })).toBeVisible();
@@ -11,6 +14,7 @@ test("contest list renders lifecycle and entry links", async ({ page }) => {
 });
 
 test("contest detail renders registration state and problems", async ({ page }) => {
+  await injectSession(page);
   await page.goto("/contests/1");
 
   await expect(page.getByRole("heading", { name: "SOJ Weekly Contest" })).toBeVisible();

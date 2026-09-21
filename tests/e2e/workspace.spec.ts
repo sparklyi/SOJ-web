@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { injectSession } from "./helpers/session";
 
 test("contest problem workspace renders solve loop", async ({ page }) => {
+  await injectSession(page);
   await page.goto("/contests/1/problems/1");
 
   await expect(page.getByRole("main")).toBeVisible();

@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { injectSession } from "./helpers/session";
 
 test("problem list renders search, filters, and data rows", async ({ page }) => {
+  // 题库内容已上登录墙：匿名只会看到登录门，先注入会话。
+  await injectSession(page);
   await page.goto("/problems");
 
   await expect(page.getByRole("heading", { name: "Problem set" })).toBeVisible();
@@ -18,6 +21,7 @@ test("problem list renders search, filters, and data rows", async ({ page }) => 
 });
 
 test("problem detail renders statement and submit rail", async ({ page }) => {
+  await injectSession(page);
   await page.goto("/problems/1");
 
   await expect(page.getByRole("heading", { name: "Shortest Path" })).toBeVisible();

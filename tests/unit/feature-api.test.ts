@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApiClient } from "@/lib/api/client";
-import { ApiError } from "@/lib/api/errors";
 import { getCurrentUser } from "@/features/auth/api";
 import { createMockSession, saveSession } from "@/lib/auth/session";
 import { mockUser } from "@/lib/mock/fixtures";
@@ -68,9 +67,12 @@ describe("feature api modules", () => {
   });
 
   it("filters problem lists and propagates not found errors", async () => {
-    const problems = await listProblems({ difficulty: "hard" }, client);
+    // 站点策略：题库内容只对已登录 actor 开放，取数客户端需要带上会话。
+    saveSession(window.localStorage, createMockSession(mockUser));
+    const authedClient = createApiClient({ mode: "mock" });
+    const problems = await listProblems({ difficulty: "hard" }, authedClient);
     expect(problems.items.every((problem) => problem.difficulty === "hard")).toBe(true);
-    await expect(getProblem(404, client)).rejects.toBeInstanceOf(ApiError);
+    await expect(getProblem(404, authedClient)).rejects.toMatchObject({ code: "not_found", status: 404 });
   });
 
   it("filters problems against page-facing solve status", async () => {
@@ -122,16 +124,19 @@ describe("feature api modules", () => {
   });
 
   it("returns contest state, scoreboard, and arena events", async () => {
-    const contests = await listContests(client);
+    // 站点策略：比赛内容只对已登录 actor 开放，取数客户端需要带上会话。
+    saveSession(window.localStorage, createMockSession(mockUser));
+    const authedClient = createApiClient({ mode: "mock" });
+    const contests = await listContests(authedClient);
     expect(contests.items.map((contest) => contest.phase)).toEqual(expect.arrayContaining(["open", "frozen"]));
 
-    const contest = await getContest(1, client);
+    const contest = await getContest(1, authedClient);
     expect(contest.canSubmit).toBe(true);
 
-    const scoreboard = await getContestScoreboard(1, client);
+    const scoreboard = await getContestScoreboard(1, authedClient);
     expect(scoreboard.rows[0]?.rank).toBe(1);
 
-    const arena = await getContestArenaEvents(1, client);
+    const arena = await getContestArenaEvents(1, authedClient);
     expect(arena.length).toBeGreaterThan(1);
   });
 

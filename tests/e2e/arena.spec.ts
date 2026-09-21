@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { injectSession } from "./helpers/session";
 
 test("arena renders live big-screen contest state", async ({ page }) => {
+  await injectSession(page);
   await page.goto("/contests/1/arena");
 
   await expect(page.getByRole("main")).toBeVisible();
