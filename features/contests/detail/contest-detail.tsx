@@ -1,5 +1,4 @@
 import { LocalizedLink } from "@/components/i18n/localized-link";
-import { ContestClock } from "@/components/soj/contest-clock";
 import { StatusPill } from "@/components/soj/status-pill";
 import { buttonVariants } from "@/components/ui/button";
 import { getContestDurationMinutes } from "@/lib/domain/contest";
@@ -19,12 +18,12 @@ type ContestDetailProps = {
   };
 };
 
-const statusView: Record<ContestStatus, { label: MessageKey; tone: React.ComponentProps<typeof StatusPill>["tone"]; clockLabel: MessageKey; clockValue: MessageKey }> = {
-  scheduled: { label: "contests.status.scheduled", tone: "info", clockLabel: "contests.detail.startWindow", clockValue: "contests.state.standby" },
-  running: { label: "contests.status.running", tone: "accent", clockLabel: "contests.detail.contestClock", clockValue: "status.live" },
-  frozen: { label: "contests.status.frozen", tone: "warning", clockLabel: "contests.detail.scoreboardFreeze", clockValue: "contests.state.active" },
-  ended: { label: "contests.status.ended", tone: "neutral", clockLabel: "contests.detail.contestClock", clockValue: "contests.state.closed" },
-  unsealed: { label: "contests.status.unsealed", tone: "success", clockLabel: "contests.detail.finalState", clockValue: "contests.state.public" },
+const statusView: Record<ContestStatus, { label: MessageKey; tone: React.ComponentProps<typeof StatusPill>["tone"] }> = {
+  scheduled: { label: "contests.status.scheduled", tone: "info" },
+  running: { label: "contests.status.running", tone: "accent" },
+  frozen: { label: "contests.status.frozen", tone: "warning" },
+  ended: { label: "contests.status.ended", tone: "neutral" },
+  unsealed: { label: "contests.status.unsealed", tone: "success" },
 };
 
 const typeLabel: Record<ContestType, MessageKey> = {
@@ -44,10 +43,12 @@ export async function ContestDetail({ contest }: ContestDetailProps) {
       <section aria-label={t("contests.detail.command")} className="soj-panel soj-enter grid gap-6 p-5 md:p-7 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="relative z-[1] flex min-w-0 flex-col justify-between gap-8">
           <div>
+            {/* 「已报名」不再挂在这里：右侧「访问权限」卡的徽标说的就是它，
+                而且那张卡还回答了「所以我现在能做什么」。同一状态在一屏里
+                出现两次，稀释的是两处的分量。 */}
             <div className="flex flex-wrap items-center gap-3">
               <StatusPill tone={status.tone}>{t(status.label)}</StatusPill>
               <StatusPill tone="neutral">{t(typeLabel[contest.type])}</StatusPill>
-              {contest.registered ? <StatusPill tone="success">{t("contests.detail.registered")}</StatusPill> : null}
             </div>
             {/* 曾经是 text-5xl/7xl 的超大标题，绕开 soj-display 与全站页头尺度。
                 比赛详情是「正在发生的事」，标题用展示字，但回到比赛列表焦点赛事
@@ -63,13 +64,16 @@ export async function ContestDetail({ contest }: ContestDetailProps) {
             </dl>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
+          {/* 指标曾经在 lg 下被收成单列竖条，塞进右侧 220px 的槽里：
+              左边整片空着，三个数字挤成一根窄条挂在半空中。现在时间轴
+              铺满左列宽度、指标在它下面横排三格，左列没有一处是空的。 */}
+          <div className="grid gap-4">
             <div className="soj-contest-timeline">
               <span className="soj-contest-mark soj-contest-mark-start">{t("contests.detail.timeline.start")}</span>
               <span className="soj-contest-mark soj-contest-mark-freeze">{t("contests.detail.timeline.freeze")}</span>
               <span className="soj-contest-mark soj-contest-mark-end">{t("contests.detail.timeline.end")}</span>
             </div>
-            <dl className="grid grid-cols-3 gap-3 lg:grid-cols-1">
+            <dl className="grid gap-3 sm:grid-cols-3">
               <ContestMetric label={t("contests.metric.duration")} value={formatDuration(duration, t)} />
               <ContestMetric label={t("contests.metric.problems")} value={String(contest.problems.length)} tone="accent" />
               <ContestMetric label={t("contests.metric.submit")} value={contest.canSubmit ? t("status.open") : t("contests.state.closed")} tone={contest.canSubmit ? "success" : "muted"} />
@@ -77,8 +81,7 @@ export async function ContestDetail({ contest }: ContestDetailProps) {
           </div>
         </div>
 
-        <aside className="relative z-[1] grid content-between gap-4">
-          <ContestClock label={t(status.clockLabel)} value={t(status.clockValue)} frozen={contest.status === "frozen"} />
+        <aside className="relative z-[1] grid content-start gap-4">
           <ContestRegistration contest={contest} />
           <div className="grid grid-cols-2 gap-3">
             <RouteAction href={`/contests/${contest.id}/scoreboard`} label={t("contests.action.scoreboard")} />

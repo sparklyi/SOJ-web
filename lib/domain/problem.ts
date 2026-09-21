@@ -35,6 +35,18 @@ export const problemStatusLabelKey = {
   accepted: "status.solved",
 } as const;
 
+/**
+ * 可见性 → 词条 key。
+ *
+ * 之前这张表是审核工作区里的一行 `{selected.visibility}`（界面上直接出现
+ * `public`），而作者表单里另有一份手写的 if/else，两处对同一个枚举各说各话。
+ */
+export const problemVisibilityLabelKey = {
+  private: "authoring.visibility.private",
+  public: "authoring.visibility.public",
+  contest_only: "authoring.visibility.contestOnly",
+} as const;
+
 export function matchesProblemFilter(problem: ProblemSummary, filter: ProblemFilter) {
   const query = filter.query?.trim().toLowerCase();
   const matchesQuery = query ? `${problem.title} ${problem.slug} ${problem.tags.join(" ")}`.toLowerCase().includes(query) : true;

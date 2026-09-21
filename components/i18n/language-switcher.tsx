@@ -13,6 +13,9 @@ import { localizePath } from "@/lib/i18n/routing";
  * `option` 上的背景类在绝大多数浏览器里不生效，弹出来是一块系统白底——
  * 深色页面里一块刺眼的白色补丁，这就是「下拉效果不对」的根源。
  * 现在走共享的 `Select`（Radix），面板与筛选栏的下拉是同一份材料。
+ *
+ * 触发器**不带底色**：它和「登录 / 注册」并排，一只带底和描边的胶囊
+ * 会抢在未登录访客真正要做的动作前面。它是辅助开关，不是主操作。
  */
 export function LanguageSwitcher() {
   const pathname = usePathname() ?? "/";
@@ -30,7 +33,7 @@ export function LanguageSwitcher() {
     <Select value={locale} onValueChange={(value) => handleChange(value as Locale)}>
       <SelectTrigger
         aria-label={t("language.switcher")}
-        className="h-9 w-auto gap-1.5 rounded-soj-md bg-soj-surface px-2.5 text-xs"
+        className="h-9 w-auto gap-1.5 border-transparent bg-transparent px-2.5 text-xs shadow-none hover:border-soj-line/60"
       >
         <SelectValue className="font-mono text-soj-muted" />
       </SelectTrigger>

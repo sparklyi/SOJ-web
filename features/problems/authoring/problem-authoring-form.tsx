@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/components/providers/i18n-provider";
 import type { ProblemAuthoringState, ProblemDifficulty, ProblemStatementInput, ProblemUpdateInput, ProblemVisibility } from "@/lib/api/types";
@@ -120,12 +121,23 @@ function LabeledSelect({ label, value, options, onChange }: { label: string; val
   const { t } = useI18n();
 
   return (
-    <label className="grid gap-2 text-sm font-medium text-soj-text">
-      {label}
-      <select className="h-10 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 text-sm" value={value} onChange={(event) => onChange(event.target.value)}>
-        {options.map((option) => <option key={option} value={option}>{selectOptionLabel(t, option)}</option>)}
-      </select>
-    </label>
+    <div className="grid gap-2 text-sm font-medium text-soj-text">
+      <span>{label}</span>
+      {/* 原生 <select> 的选项面板由系统渲染，在深色页面上会弹出一块白底。
+          全站下拉一律走共享 Select（Radix，position="popper" 已在其 Content 里给出）。 */}
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="w-full" aria-label={label}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option} value={option}>
+              {selectOptionLabel(t, option)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 

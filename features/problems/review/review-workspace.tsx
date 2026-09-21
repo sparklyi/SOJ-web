@@ -8,10 +8,13 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { StatusPill } from "@/components/soj/status-pill";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { createBrowserApiClient } from "@/lib/api/client";
 import type { AuthoringProblem, ProblemReviewEvent, ReviewDecision } from "@/lib/api/types";
+import { problemDifficultyLabelKey, problemVisibilityLabelKey } from "@/lib/domain/problem";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translator } from "@/lib/i18n/translate";
+import { publicationStatusMessageKey } from "../authoring/publication-status";
 import { decideProblemReview, listProblemReviewEvents, listProblemReviewQueue } from "./api";
 
 type QueueState =
@@ -165,13 +168,16 @@ function ReviewQueue() {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <StatusPill tone="info">{t("authoring.publicationStatus.inReview")}</StatusPill>
-                  <StatusPill>{selected.visibility}</StatusPill>
+                  {/* 这两枚徽标此前一个把状态硬编码成「审核中」，一个直接把枚举渲染出去
+                      （界面上就出现 `public`）；下面那行难度渲染的是 `medium`。
+                      同一个页面里中文标签和英文枚举混排。 */}
+                  <StatusPill tone="info">{t(publicationStatusMessageKey(selected.publicationStatus))}</StatusPill>
+                  <StatusPill>{t(problemVisibilityLabelKey[selected.visibility])}</StatusPill>
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-4 text-xs text-soj-muted">
                 <span>
-                  {t("home.difficulty")}: <span className="font-mono text-soj-text">{selected.difficulty}</span>
+                  {t("home.difficulty")}: <span className="font-mono text-soj-text">{t(problemDifficultyLabelKey[selected.difficulty])}</span>
                 </span>
                 <span>
                   {t("roles.userId")}: <span className="font-mono text-soj-text">{selected.ownerUserId}</span>
@@ -186,16 +192,14 @@ function ReviewQueue() {
                   <p className="text-sm text-soj-warning">{t("review.selfReviewBlocked")}</p>
                 ) : (
                   <>
-                    <label className="grid gap-2 text-sm text-soj-text">
-                      {t("review.comment")}
-                      <textarea
-                        value={comment}
-                        onChange={(event) => setComment(event.target.value)}
-                        placeholder={t("review.commentPlaceholder")}
-                        rows={3}
-                        className="rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 py-2 text-sm text-soj-text transition placeholder:text-soj-faint focus:border-soj-accent focus:outline-none focus:ring-1 focus:ring-soj-accent"
-                      />
-                    </label>
+                    <Textarea
+                      name="review-comment"
+                      label={t("review.comment")}
+                      value={comment}
+                      onChange={(event) => setComment(event.target.value)}
+                      placeholder={t("review.commentPlaceholder")}
+                      rows={3}
+                    />
                     <div className="flex flex-wrap gap-3">
                       <Button loading={pending === "approve"} onClick={() => void submitDecision("approve")}>
                         {t("review.approve")}
@@ -225,7 +229,7 @@ function ReviewQueue() {
                           {decisionLabel(event.decision, t)}
                         </StatusPill>
                         <span className="font-mono text-xs text-soj-muted">
-                          {event.fromStatus} → {event.toStatus}
+                          {t(publicationStatusMessageKey(event.fromStatus))} → {t(publicationStatusMessageKey(event.toStatus))}
                         </span>
                         <span className="font-mono text-xs text-soj-muted">{formatTimestamp(event.createdAt)}</span>
                       </div>

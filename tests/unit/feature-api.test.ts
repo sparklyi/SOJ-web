@@ -115,7 +115,7 @@ describe("feature api modules", () => {
 
   it("returns submissions with display state", async () => {
     const submissions = await listSubmissions(client);
-    expect(submissions.items[0]?.displayState.label).toBeTruthy();
+    expect(submissions.items[0]?.displayState.labelKey).toBeTruthy();
 
     const submission = await getSubmission(4, client);
     expect(submission.displayState.terminal).toBe(true);

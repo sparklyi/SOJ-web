@@ -7,6 +7,7 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { StatusPill } from "@/components/soj/status-pill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createBrowserApiClient } from "@/lib/api/client";
 import type { ContestRoleAssignment } from "@/lib/api/types";
 import { useContestRoleAccess } from "@/lib/auth/contest-access";
@@ -128,20 +129,23 @@ function ContestRoleBoard({ contestId }: { contestId: number }) {
             onChange={(event) => setUserId(event.target.value)}
             inputMode="numeric"
           />
-          <label className="grid gap-2 text-sm text-soj-text">
-            {t("roles.role")}
-            <select
-              value={role}
-              onChange={(event) => setRole(event.target.value as ContestRole)}
-              className="h-10 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 text-sm text-soj-text focus:border-soj-accent focus:outline-none focus:ring-1 focus:ring-soj-accent"
-            >
-              {contestRoles.map((item) => (
-                <option key={item} value={item}>
-                  {t(roleMessageKey(item))}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="grid gap-2 text-sm text-soj-text">
+            <span>{t("roles.role")}</span>
+            {/* 原生 <select> 的选项面板归系统渲染，深色页面上会弹出一块白底。
+                全站下拉一律走共享 Select。 */}
+            <Select value={role} onValueChange={(value) => setRole(value as ContestRole)}>
+              <SelectTrigger className="w-full" aria-label={t("roles.role")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {contestRoles.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {t(roleMessageKey(item))}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Input
             name="contest-role-reason"
             label={t("roles.reasonPlaceholder")}
@@ -173,7 +177,10 @@ function ContestRoleBoard({ contestId }: { contestId: number }) {
                 <tr className="text-left text-xs uppercase tracking-wide text-soj-muted">
                   <th className="border-b border-soj-line/70 py-2 pr-4 font-normal">{t("roles.userId")}</th>
                   <th className="border-b border-soj-line/70 py-2 pr-4 font-normal">{t("roles.role")}</th>
-                  <th className="border-b border-soj-line/70 py-2 pr-4 font-normal">{t("roles.granted")}</th>
+                  {/* 这一列此前借用了 `roles.granted` ——那是「角色已授予。」这句
+                      操作成功反馈，末尾还带句号，被放到列头上就成了一行会在表格里
+                      出现两遍的句子。列头该用 `roles.grantedAt`（授予时间）。 */}
+                  <th className="border-b border-soj-line/70 py-2 pr-4 font-normal">{t("roles.grantedAt")}</th>
                   <th className="border-b border-soj-line/70 py-2 font-normal">{t("roles.revoke")}</th>
                 </tr>
               </thead>

@@ -21,9 +21,9 @@ type AccountSurfaceProps = {
  */
 export function AccountSurface({ eyebrow, title, description, meta, aside, children }: AccountSurfaceProps) {
   return (
-    <div className="min-h-dvh text-soj-text">
+    <div className="flex min-h-dvh flex-col text-soj-text">
       <TopNav />
-      <main className="mx-auto grid max-w-[1440px] gap-6 px-4 py-8 sm:px-6 lg:px-8" id="main-content">
+      <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8" id="main-content">
         <PageHeader eyebrow={eyebrow} title={title} description={description} meta={meta} aside={aside} />
         {children}
       </main>

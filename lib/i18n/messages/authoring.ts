@@ -2,6 +2,9 @@ import type { MessageCatalog } from "../types";
 
 export const authoringMessages = {
   "authoring.console": { en: "Author console", "zh-CN": "出题控制台" },
+  /* 页头左上角那行小字。全站六个页头的 eyebrow 一度都叫「…控制台」，
+     于是它不再区分页面，只是在每页重复同一个词。eyebrow 要写**页面域**。 */
+  "authoring.eyebrow": { en: "Authoring", "zh-CN": "出题" },
   "authoring.title": { en: "Problem authoring", "zh-CN": "题目编写" },
   "authoring.ownedCount": { en: "{count} owned", "zh-CN": "已拥有 {count} 道" },
   "authoring.loading": { en: "Loading", "zh-CN": "加载中" },
@@ -23,7 +26,9 @@ export const authoringMessages = {
   "authoring.newDraft": { en: "New draft", "zh-CN": "新建草稿" },
   "authoring.createProblem": { en: "Create problem", "zh-CN": "创建题目" },
   "authoring.titleLabel": { en: "Title", "zh-CN": "标题" },
-  "authoring.slug": { en: "Slug", "zh-CN": "Slug" },
+  /* 界面语言是中文时不要裸落一个英文词：Slug 是 URL 里的短标识，
+     中文界面上给「短标识」，英文界面保留业界叫法 Slug。 */
+  "authoring.slug": { en: "Slug", "zh-CN": "短标识" },
   "authoring.difficulty": { en: "Difficulty", "zh-CN": "难度" },
   "authoring.visibility": { en: "Visibility", "zh-CN": "可见性" },
   "authoring.tags": { en: "Tags", "zh-CN": "标签" },

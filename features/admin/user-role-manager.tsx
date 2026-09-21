@@ -1,13 +1,16 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { UserRoundSearch } from "lucide-react";
 import { PermissionGate, roleMessageKey } from "@/components/auth/permission-gate";
 import { PageShell } from "@/components/layout/page-shell";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { StatusPill } from "@/components/soj/status-pill";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createBrowserApiClient } from "@/lib/api/client";
 import type { AdminUser, AdminUserStatus } from "@/lib/api/types";
 import { globalRoles, type GlobalRole } from "@/lib/auth/permissions";
@@ -138,9 +141,12 @@ function UserRoleBoard() {
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
             placeholder={t("roles.searchPlaceholder")}
+            aria-label={t("roles.searchPlaceholder")}
           />
+          {/* 按钮此前复用了 placeholder 的文案（两者都是「搜索用户名或邮箱」），
+              于是同一句话在同一个表单里出现两遍：一次当提示，一次当动作。 */}
           <Button type="submit" variant="secondary" size="sm">
-            {t("roles.searchPlaceholder")}
+            {t("roles.searchAction")}
           </Button>
         </form>
 
@@ -215,20 +221,23 @@ function UserRoleBoard() {
 
             {canGrant ? (
               <form onSubmit={handleGrant} className="mt-5 grid gap-3 border-t border-soj-line/70 pt-5 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)_auto] sm:items-end">
-                <label className="grid gap-2 text-sm text-soj-text">
-                  {t("roles.role")}
-                  <select
-                    value={roleToGrant}
-                    onChange={(event) => setRoleToGrant(event.target.value as GlobalRole)}
-                    className="h-10 rounded-soj-md border border-soj-line bg-soj-bg-raised px-3 text-sm text-soj-text focus:border-soj-accent focus:outline-none focus:ring-1 focus:ring-soj-accent"
-                  >
-                    {globalRoles.map((role) => (
-                      <option key={role} value={role}>
-                        {t(roleMessageKey(role))}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="grid gap-2">
+                  <span className="text-sm text-soj-text">{t("roles.role")}</span>
+                  {/* 原生 <select> 的选项面板由系统渲染，在深色页面上会弹出一块白底。
+                      全站下拉一律走共享 Select（Radix，position="popper" 已在其 Content 里给出）。 */}
+                  <Select value={roleToGrant} onValueChange={(value) => setRoleToGrant(value as GlobalRole)}>
+                    <SelectTrigger className="w-full" aria-label={t("roles.role")}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {globalRoles.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {t(roleMessageKey(role))}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Input
                   name="role-reason"
                   label={t("roles.reasonPlaceholder")}
@@ -248,8 +257,10 @@ function UserRoleBoard() {
             ) : null}
           </div>
         ) : (
-          <div className="rounded-soj-lg border border-soj-line/70 bg-soj-surface/50 px-6 py-10 text-center text-sm text-soj-muted">
-            {t("roles.users")}
+          /* 未选中用户时，这里此前渲染的是左栏那个卡片标题本身（「用户」）——
+             一块 700×360 的空面板里只有一个词，等于没有空态。 */
+          <div className="rounded-soj-lg border border-soj-line/70 bg-soj-surface/50">
+            <EmptyState icon={UserRoundSearch} title={t("roles.selectEmptyTitle")} description={t("roles.selectEmptyDescription")} />
           </div>
         )}
       </section>

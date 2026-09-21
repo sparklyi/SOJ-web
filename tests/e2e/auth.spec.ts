@@ -48,12 +48,18 @@ test("account pages render after a valid mock session is saved", async ({ page }
     expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   });
 
+  // 页头是页面名（Me / 我的账户），身份由摘要块回答——显示名不再兼任 h1，
+  // 否则同一个名字会在一屏里出现三次。
   await page.goto("/me");
-  await expect(page.getByRole("heading", { name: "Lin Chen" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Me" })).toBeVisible();
+  await expect(page.getByText("Lin Chen").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Author" })).toHaveCount(0);
 
+  // 资料区是只读的键值行，不再是「长得像能改」的输入框。
   await page.goto("/settings");
-  await expect(page.getByLabel("Handle")).toHaveValue("lin-chen");
+  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+  await expect(page.getByText("Handle", { exact: true })).toBeVisible();
+  await expect(page.getByText("lin-chen", { exact: true }).first()).toBeVisible();
 });
 
 test("expired sessions are cleared before account UI is shown", async ({ page }) => {

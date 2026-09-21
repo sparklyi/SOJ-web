@@ -93,7 +93,7 @@ export async function ContestScoreboardPage({ contest, scoreboard }: ContestScor
               {scoreboard.rows.map((row) => (
                 <tr key={row.id} className="soj-score-row border-b border-soj-line/55">
                   <td className="sticky left-0 z-[1] bg-soj-bg-raised/95 px-4 py-4">
-                    <span className="grid h-10 w-10 place-items-center rounded-[14px_4px_12px_4px] border border-soj-accent/40 bg-soj-accent/10 font-mono text-lg font-semibold text-soj-accent">
+                    <span className="grid h-10 w-10 place-items-center rounded-soj-md border border-soj-accent/40 bg-soj-accent/10 font-mono text-lg font-semibold text-soj-accent">
                       {row.rank}
                     </span>
                   </td>
