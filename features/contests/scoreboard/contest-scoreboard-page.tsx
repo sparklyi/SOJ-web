@@ -1,8 +1,10 @@
+"use client";
+
 import { RankMovement } from "@/components/soj/rank-movement";
 import { StatusPill } from "@/components/soj/status-pill";
+import { useI18n } from "@/components/providers/i18n-provider";
 import type { ContestSummary } from "@/lib/api/types";
 import type { ScoreboardModel, ScoreboardProblemCell } from "@/lib/domain/scoreboard";
-import { getServerTranslator } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
 
 type ContestScoreboardPageProps = {
@@ -19,8 +21,8 @@ const statusLabel: Record<ScoreboardProblemCell["status"], MessageKey> = {
   first_blood: "contests.scoreboard.firstBlood",
 };
 
-export async function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboardPageProps) {
-  const t = await getServerTranslator();
+export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboardPageProps) {
+  const { t } = useI18n();
   const problemColumns = scoreboard.rows[0]?.problems ?? [];
   const leader = scoreboard.rows[0];
   const movementTotal = scoreboard.rows.reduce((sum, row) => sum + Math.abs(row.movement ?? 0), 0);

@@ -1,3 +1,5 @@
+"use client";
+
 import type { JudgeLanguage, ProblemDetail } from "@/lib/api/types";
 import { getAcceptanceRate, problemStatusLabelKey } from "@/lib/domain/problem";
 import { AcceptanceAxis } from "@/components/soj/acceptance-axis";
@@ -5,8 +7,8 @@ import { DifficultyLabel } from "@/components/soj/difficulty-composition";
 import { ProblemStatement } from "@/components/soj/problem-statement";
 import { ProblemStatus } from "@/components/soj/problem-status";
 import { PageHeader } from "@/components/ui/page-header";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { Stat, StatDivider, StatGroup } from "@/components/ui/stat";
-import { getServerLocale, getServerTranslator } from "@/lib/i18n/server";
 import { formatDuration, formatMemory, formatNumber } from "@/lib/ui/number";
 import { ProblemSubmitPanelLoader } from "./problem-submit-panel-loader";
 
@@ -30,8 +32,8 @@ type ProblemDetailViewProps = {
  * 每个页头带且只带一个数据图形。它让页面在「一堆文字行」之外有一个
  * 能被视觉记住的锚点，也让抽象百分比有了位置感。
  */
-export async function ProblemDetailView({ problem, languages = [] }: ProblemDetailViewProps) {
-  const [t, locale] = await Promise.all([getServerTranslator(), getServerLocale()]);
+export function ProblemDetailView({ problem, languages = [] }: ProblemDetailViewProps) {
+  const { t, locale } = useI18n();
   const acceptance = getAcceptanceRate(problem);
 
   return (

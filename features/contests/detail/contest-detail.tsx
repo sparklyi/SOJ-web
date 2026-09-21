@@ -1,9 +1,11 @@
+"use client";
+
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { StatusPill } from "@/components/soj/status-pill";
 import { buttonVariants } from "@/components/ui/button";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { getContestDurationMinutes } from "@/lib/domain/contest";
 import type { ContestStatus, ContestSummary, ContestType } from "@/lib/api/types";
-import { getServerLocale, getServerTranslator } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translator } from "@/lib/i18n/translate";
 import { cn } from "@/lib/ui/cn";
@@ -31,9 +33,8 @@ const typeLabel: Record<ContestType, MessageKey> = {
   oi: "contests.type.oiScoring",
 };
 
-export async function ContestDetail({ contest }: ContestDetailProps) {
-  const t = await getServerTranslator();
-  const locale = await getServerLocale();
+export function ContestDetail({ contest }: ContestDetailProps) {
+  const { t, locale } = useI18n();
   const status = statusView[contest.status];
   const duration = getContestDurationMinutes(contest);
   const firstProblemId = contest.problems[0]?.problemId;

@@ -1,14 +1,16 @@
 import { notFound } from "next/navigation";
+import { SessionGate } from "@/components/auth/session-gate";
 import { PageShell } from "@/components/layout/page-shell";
-import { ContestDetail } from "@/features/contests/detail/contest-detail";
-import { getContest } from "@/features/contests/api";
-import { ApiError } from "@/lib/api/errors";
+import { ContestDetailClient } from "@/features/contests/detail/contest-detail-client";
 
-type ContestDetailPageProps = {
-  params: Promise<{ id: string }>;
-};
-
-export default async function ContestDetailPage({ params }: ContestDetailPageProps) {
+/**
+ * 比赛详情页。
+ *
+ * 比赛内容已全部要求登录：`SessionGate` 在会话落定前不渲染内容
+ * （匿名 → 登录墙），取数由客户端带 token 完成，见 `ContestDetailClient`。
+ * 非数字 id 仍然在路由层直接 notFound，这个判断不需要会话。
+ */
+export default async function ContestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const contestId = Number(id);
 
@@ -16,23 +18,11 @@ export default async function ContestDetailPage({ params }: ContestDetailPagePro
     notFound();
   }
 
-  const contest = await loadContest(contestId);
-
   return (
     <PageShell>
-      <ContestDetail contest={contest} />
+      <SessionGate>
+        <ContestDetailClient contestId={contestId} />
+      </SessionGate>
     </PageShell>
   );
-}
-
-async function loadContest(contestId: number) {
-  try {
-    return await getContest(contestId);
-  } catch (error) {
-    if (error instanceof ApiError && error.code === "not_found") {
-      notFound();
-    }
-
-    throw error;
-  }
 }

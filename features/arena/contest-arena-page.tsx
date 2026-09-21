@@ -1,10 +1,12 @@
+"use client";
+
 import { ContestCountdown } from "@/components/soj/contest-countdown";
 import { RankMovement } from "@/components/soj/rank-movement";
 import { StatusPill } from "@/components/soj/status-pill";
+import { useI18n } from "@/components/providers/i18n-provider";
 import type { ContestSummary } from "@/lib/api/types";
 import type { ArenaEvent } from "@/lib/domain/arena";
 import type { ScoreboardModel } from "@/lib/domain/scoreboard";
-import { getServerTranslator } from "@/lib/i18n/server";
 import type { Translator } from "@/lib/i18n/translate";
 
 type ContestArenaPageProps = {
@@ -13,8 +15,8 @@ type ContestArenaPageProps = {
   scoreboard: ScoreboardModel;
 };
 
-export async function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPageProps) {
-  const t = await getServerTranslator();
+export function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPageProps) {
+  const { t } = useI18n();
   const acceptedEvents = events.filter((event) => event.tone === "success");
   const keyEvents = events.slice(0, 5);
   const leader = scoreboard.rows[0];
