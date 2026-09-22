@@ -50,12 +50,11 @@ export function LanguageSwitcher() {
           <Languages aria-hidden className="h-4 w-4" />
         </IconButton>
       </SelectTrigger>
-      {/* p-1 不是装饰：面板的 `overflow-hidden` 会把聚焦项的焦点环齐头切掉，
-          剩下的正好是一条横贯面板的蓝杠（截图里像一条下划线）。
-          留出 4px 内边距，2px 描边 + 2px 偏移就能完整落在面板里。 */}
-      <SelectContent align="end" className="p-1">
+      {/* 高亮项的圆角与面板内边距已经由 `select.tsx` 统一提供（见那里的注释），
+          这里不再重复传。 */}
+      <SelectContent align="end">
         {locales.map((item) => (
-          <SelectItem key={item} value={item} className="rounded-soj-sm">
+          <SelectItem key={item} value={item}>
             <span className="flex items-center justify-between gap-6">
               <span>{localeLabels[item]}</span>
               {item === locale ? <Check aria-hidden className="h-3.5 w-3.5" /> : null}
