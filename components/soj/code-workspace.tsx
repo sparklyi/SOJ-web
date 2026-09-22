@@ -149,6 +149,10 @@ export function CodeWorkspace({ languages, initialLanguageId, value, onChange, a
   // 的值去问「源码是不是模板」会得到「是」，于是把刚敲的那几行覆盖回模板——用户看到
   // 自己打的字凭空消失。这里记下用户刚产生的值，effect 发现自己看到的不是它时就
   // 不动手，等下一次提交带着新值再来判断。
+  //
+  // 这是给竞态打的补丁，没有消除竞态本身：只要模板还由 effect 向上写回，就总有
+  // 「effect 看到的不是用户看到的那一帧」的窗口。根治办法是把种模板交给拥有状态的
+  // 父组件（数据只向下流），见 https://github.com/sparklyi/SOJ-web/issues/47。
   const latestInputRef = useRef<WorkspaceValue | null>(null);
 
   useEffect(() => {
