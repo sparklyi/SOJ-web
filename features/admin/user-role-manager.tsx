@@ -124,6 +124,10 @@ function UserRoleBoard() {
   }
 
   const selected = state.status === "ready" ? (state.users.find((item) => item.id === selectedId) ?? null) : null;
+  /* 后端 grant 和 revoke 用的是同一条守卫（`actor.UserID == userID` →
+     `role.invalid_target`），所以两者都得挡在自己身上：只挡 grant 的话，
+     revoke 点下去拿到的是「没填理由」——而理由框正是被自己这条规则禁用的。 */
+  const isSelf = selected !== null && selected.id === viewer?.id;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
@@ -207,7 +211,7 @@ function UserRoleBoard() {
                         <button
                           type="button"
                           onClick={() => void handleRevoke(role)}
-                          disabled={pending === `revoke-${role}`}
+                          disabled={isSelf || pending === `revoke-${role}`}
                           className="font-mono text-xs text-soj-muted transition hover:text-soj-danger disabled:opacity-45"
                         >
                           {t("roles.revoke")}
@@ -243,14 +247,20 @@ function UserRoleBoard() {
                   label={t("roles.reasonPlaceholder")}
                   value={reason}
                   onChange={(event) => setReason(event.target.value)}
-                  disabled={selected.id === viewer?.id}
-                  helperText={selected.id === viewer?.id ? t("roles.selfGrantBlocked") : undefined}
+                  disabled={isSelf}
                 />
-                <Button type="submit" loading={pending === `grant-${roleToGrant}`} disabled={selected.id === viewer?.id}>
+                <Button type="submit" loading={pending === `grant-${roleToGrant}`} disabled={isSelf}>
                   {t("roles.grant")}
                 </Button>
               </form>
             ) : null}
+
+            {/* 这条说明放在表单外面，而不是理由框的 `helperText`：helper 长在
+                理由框那一格里面，会把整行撑高，而表单是 `items-end` 底部对齐的，
+                多出来的一行会把 Role 下拉和 Grant 按钮一起往下推 24px——
+                选到自己时右侧就“漂”一下。说明本身也是针对整块面板（grant +
+                revoke）的，不是某一个字段的注解。 */}
+            {isSelf ? <p className="mt-4 text-sm text-soj-muted">{t("roles.selfGrantBlocked")}</p> : null}
 
             {feedback ? (
               <p className={feedback.tone === "danger" ? "mt-4 text-sm text-soj-danger" : "mt-4 text-sm text-soj-success"}>{feedback.message}</p>
