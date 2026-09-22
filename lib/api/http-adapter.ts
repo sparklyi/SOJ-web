@@ -491,6 +491,10 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
           accessToken: options.accessToken,
           method: "POST",
           headers: { "content-type": "application/json" },
+          // `JSON.stringify` 会丢掉值为 undefined 的键，所以练习场不传
+          // problemId 时请求体里真的没有 problem_id，服务端因此走自由运行。
+          // 这条行为有测试盯着（tests/unit/http-adapter.test.ts）——
+          // 改成显式构造 body 就会静默多发一个 problem_id: undefined。
           body: JSON.stringify({
             problem_id: input.problemId,
             language_id: input.languageId,

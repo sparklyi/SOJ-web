@@ -230,7 +230,12 @@ export type SubmissionAdminDiagnostics = {
 };
 
 export type CreateRunInput = {
-  problemId: number;
+  /**
+   * 省略即为自由运行（练习场）：不绑定任何题目，服务端也不做题目校验。
+   * `JSON.stringify` 会丢掉值为 `undefined` 的键，所以省略它时请求体里
+   * 真的不会有 `problem_id`——这条行为有测试盯着，别改成显式构造 body。
+   */
+  problemId?: number;
   languageId: number;
   sourceCode: string;
   stdin?: string;
@@ -247,7 +252,8 @@ export type RunResult = {
 
 export type RunSummary = RunResult & {
   id: number;
-  problemId: number;
+  /** 自由运行（练习场）时为 undefined。 */
+  problemId?: number;
   languageId: number;
   status: JudgeStatus;
   createdAt: string;
