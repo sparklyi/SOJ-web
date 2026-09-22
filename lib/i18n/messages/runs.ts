@@ -6,6 +6,7 @@
  * （`components/soj/code-workspace.tsx`）使用，不在这里重复一份。
  */
 export const runMessages = {
+  "runs.finished": { en: "Finished", "zh-CN": "运行完成" },
   "runs.stillRunningElapsed": { en: "still running ({elapsed})", "zh-CN": "仍在运行（已 {elapsed}）" },
   "runs.stillRunningHint": {
     en: "This run has not finished within the wait window. It may still be executing on the judge; ask again to check.",

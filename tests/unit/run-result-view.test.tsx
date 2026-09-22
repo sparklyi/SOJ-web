@@ -32,7 +32,7 @@ describe("RunResultView", () => {
   it("shows the program output and cost for a finished run", () => {
     renderState({ status: "success", run: runFixture({ stdout: "42\n", timeMs: 12, memoryKb: 3_400 }) });
 
-    expect(screen.getByText("Accepted")).toBeVisible();
+    expect(screen.getByText("Finished")).toBeVisible();
     expect(screen.getByText("42")).toBeVisible();
     expect(screen.getByText(/Time/)).toBeVisible();
     expect(screen.getByText(/Memory/)).toBeVisible();
