@@ -9,8 +9,8 @@ export const runMessages = {
   "runs.finished": { en: "Finished", "zh-CN": "运行完成" },
   "runs.stillRunningElapsed": { en: "still running ({elapsed})", "zh-CN": "仍在运行（已 {elapsed}）" },
   "runs.stillRunningHint": {
-    en: "This run has not finished within the wait window. It may still be executing on the judge; ask again to check.",
-    "zh-CN": "这次运行在等待窗口内没有结束。判题端可能仍在执行，可以再查一次。",
+    en: "Still running on the judge. Check again.",
+    "zh-CN": "仍在判题端执行，可以再查一次。",
   },
   "runs.continuePolling": { en: "Check again", "zh-CN": "继续查询" },
 } as const;

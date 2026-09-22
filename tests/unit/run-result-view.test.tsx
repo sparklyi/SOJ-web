@@ -65,8 +65,9 @@ describe("RunResultView", () => {
     const onContinuePolling = vi.fn();
     renderState({ status: "stillRunning", run: runFixture({ status: "running" }), elapsedMs: 31_000 }, onContinuePolling);
 
-    expect(screen.getByText(/still running/i)).toBeVisible();
-    expect(screen.getByText(/may still be executing/i)).toBeVisible();
+    // 只断言状态标签本身：/still running/i 也会命中下面那句解释。
+    expect(screen.getByText(/still running \(/i)).toBeVisible();
+    expect(screen.getByText("Still running on the judge. Check again.")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
     expect(onContinuePolling).toHaveBeenCalledTimes(1);
