@@ -145,6 +145,9 @@ describe("playground client", () => {
     await waitFor(() => expect(screen.getByLabelText("Source code")).toBeVisible());
 
     fireEvent.change(screen.getByLabelText("Source code"), { target: { value: "// first language edit" } });
+    // 种模板的 effect 属于更早那次提交。它若拿旧值回写，这里就会看到模板——
+    // 用户的编辑凭空消失，下面存的草稿自然也是模板。先钉住这一刻。
+    expect(screen.getByLabelText("Source code")).toHaveValue("// first language edit");
     fireEvent.change(screen.getByLabelText("Language"), { target: { value: String(second?.id) } });
 
     await waitFor(() => expect(screen.getByLabelText("Source code")).toHaveValue("// second language draft"));
