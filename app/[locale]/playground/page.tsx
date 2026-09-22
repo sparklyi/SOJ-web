@@ -18,12 +18,7 @@ export default async function PlaygroundPage() {
 
   return (
     <PageShell>
-      <PageHeader
-        eyebrow={t("playground.eyebrow")}
-        title={t("playground.title")}
-        description={t("playground.description")}
-        className="mb-6"
-      />
+      <PageHeader title={t("playground.title")} className="mb-6" />
       <PlaygroundClient />
     </PageShell>
   );
