@@ -81,7 +81,55 @@ type CodeWorkspaceProps = {
   onChange: (value: WorkspaceValue) => void;
   /** 面板底部的动作行（运行 / 提交按钮），由调用方组装。 */
   actions?: React.ReactNode;
+  /**
+   * 编辑器高度。默认 384px 是提交页的比例；练习场只有一个动作、
+   * 下方也没有题面要抢位置，所以给得更大。
+   */
+  editorHeight?: string;
+  /**
+   * 撑满父容器高度（练习场用）。
+   * 打开后编辑器不再是固定高度，而是吃掉面板剩下的全部空间——
+   * 固定高度配一个撑满高度的右列，两者一旦对不上就会在页面里留一大块空白。
+   * 此时忽略 `editorHeight`。
+   */
+  fill?: boolean;
+  /**
+   * 是否在本面板底部渲染 stdin 输入框。默认渲染（提交页要它）。
+   * 练习场把输入挪到了右列，自己渲染 `StdinField`。
+   */
+  showStdin?: boolean;
 };
+
+/**
+ * stdin 输入框。抽出来是因为练习场要把它放到右列——
+ * 两个地方必须长得一模一样（同一个标签、同一份说明、同一套等宽字体），
+ * 否则「输入」在两个页面上会是两种东西。
+ */
+export function StdinField({
+  value,
+  onChange,
+  className,
+  showHint = true,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+  /** 窄列里放不下那行说明时关掉。 */
+  showHint?: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <Textarea
+      id="problem-run-stdin"
+      label={t("problems.stdinLabel")}
+      helperText={showHint ? t("problems.stdinHint") : undefined}
+      className={cn("font-mono text-[13px]", className)}
+      spellCheck={false}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  );
+}
 
 function languageLabel(language: JudgeLanguage, t: Translator) {
   const languageKey =
@@ -124,7 +172,16 @@ export function isPristineSource(sourceCode: string, lastStarter: string, everSe
  * 编辑器是 CodeMirror 6：括号匹配、行号、语法高亮、方向键导航，
  * 主题色全部走设计令牌（.soj-code-editor 在 globals.css）。
  */
-export function CodeWorkspace({ languages, initialLanguageId, value, onChange, actions }: CodeWorkspaceProps) {
+export function CodeWorkspace({
+  languages,
+  initialLanguageId,
+  value,
+  onChange,
+  actions,
+  editorHeight = "384px",
+  fill = false,
+  showStdin = true,
+}: CodeWorkspaceProps) {
   const { t } = useI18n();
   const initial = initialLanguageId ?? languages[0]?.id;
   const [selectedLanguageId, setSelectedLanguageId] = useState(initial ? String(initial) : "");
@@ -178,7 +235,7 @@ export function CodeWorkspace({ languages, initialLanguageId, value, onChange, a
   }
 
   return (
-    <section className="soj-panel overflow-hidden">
+    <section className={cn("soj-panel overflow-hidden", fill && "flex h-full min-h-0 flex-col")}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-soj-line px-4 py-2">
         <h2 className="font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">
           {t("problems.codeWorkspace")}
@@ -210,14 +267,14 @@ export function CodeWorkspace({ languages, initialLanguageId, value, onChange, a
         </Select>
       </div>
       {/* 凹陷井延续 textarea 时代的做法：编辑区是侧栏里最暗、最聚焦的一块。 */}
-      <div className={cn("bg-soj-bg", languages.length === 0 && "opacity-60")}>
+      <div className={cn("bg-soj-bg", fill && "min-h-0 flex-1", languages.length === 0 && "opacity-60")}>
         <CodeMirror
-          className="soj-code-editor"
+          className={cn("soj-code-editor", fill && "soj-code-editor-fill")}
           // 模板由种入 effect 写进受控状态后随 props 回流，渲染层只信 value——
           // 渲染期读 ref 被 react-hooks 禁止，而且显示与状态一旦分叉，
           // 「用户清空」就会被模板顶回来。
           value={value.sourceCode}
-          height="384px"
+          height={fill ? "100%" : editorHeight}
           theme="none"
           extensions={extensions}
           editable={languages.length > 0}
@@ -228,17 +285,11 @@ export function CodeWorkspace({ languages, initialLanguageId, value, onChange, a
           aria-label={t("problems.sourceCode")}
         />
       </div>
-      <div className="border-t border-soj-line px-4 py-3">
-        <Textarea
-          id="problem-run-stdin"
-          label={t("problems.stdinLabel")}
-          helperText={t("problems.stdinHint")}
-          className="min-h-20 font-mono text-[13px]"
-          spellCheck={false}
-          value={value.stdin}
-          onChange={(event) => update({ stdin: event.target.value })}
-        />
-      </div>
+      {showStdin ? (
+        <div className="border-t border-soj-line px-4 py-3">
+          <StdinField value={value.stdin} onChange={(stdin) => update({ stdin })} className="min-h-20" />
+        </div>
+      ) : null}
       {actions ? (
         <div className="flex items-center gap-2.5 border-t border-soj-line px-4 py-3">{actions}</div>
       ) : null}

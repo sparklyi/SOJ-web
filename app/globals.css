@@ -797,6 +797,14 @@ p {
   --soj-code-activeline: rgb(var(--soj-surface) / 0.5);
 }
 
+/* 撑满模式（练习场）：wrapper 自身也必须有确定高度。
+   CodeMirror 的 `height="100%"` 只写到 `.cm-editor` 上，而百分比高度是相对
+   父元素解析的——父元素 auto 高度时 100% 会退回内容高度，编辑器就被压成
+   几行。这里把 wrapper 拉满，`.cm-editor` 的 100% 才有东西可参照。 */
+.soj-code-editor-fill {
+  height: 100%;
+}
+
 .soj-code-editor .cm-editor {
   background: transparent;
   color: rgb(var(--soj-text));

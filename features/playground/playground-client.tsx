@@ -5,7 +5,7 @@ import type { JudgeLanguage } from "@/lib/api/types";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { useBrowserSessionAvailable } from "@/components/auth/use-browser-session";
-import { CodeWorkspace, type WorkspaceValue } from "@/components/soj/code-workspace";
+import { CodeWorkspace, StdinField, type WorkspaceValue } from "@/components/soj/code-workspace";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { Button } from "@/components/ui/button";
 import { createBrowserApiClient } from "@/lib/api/client";
@@ -144,53 +144,75 @@ export function PlaygroundClient() {
   }, [catalogMessage, catalogState, languages.length, t]);
 
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-4">
       {catalogNotice ? (
         <p className="rounded-soj-md border border-soj-warning/35 bg-soj-warning/10 px-3 py-2 text-sm text-soj-muted">
           {catalogNotice}
         </p>
       ) : null}
 
-      <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
-        <div className="min-w-0">
+      {/*
+        左编辑器、右操作列，整块撑满视口。
+
+        宽度：编辑器拿「全部剩余宽度」，不再套一层 max-width——
+        这个页面就是来看代码的，任何居中留白都是从编辑器身上割走的。
+        右列固定 340px：只装运行按钮、stdin 和输出，不需要更宽。
+
+        高度：`100dvh - 215px`（导航 69 + 壳内边距 64 + 页头 82）而不是固定
+        像素。固定高度配不固定高度的窗口，要么底下留一大块空白，要么把编辑器
+        截掉；右列同时是满高 flex 列、输出面板 `flex-1`，两边高度自然对齐。
+      */}
+      <section className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:h-[calc(100dvh-215px)] lg:min-h-[520px] lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="h-[420px] min-h-0 min-w-0 lg:h-full">
           {workspace ? (
             <CodeWorkspace
               languages={languages}
               initialLanguageId={workspace.languageId}
               value={workspace}
               onChange={handleWorkspaceChange}
-              actions={
-                <Button type="button" size="lg" className="flex-1" disabled={!canRun} onClick={handleRun}>
-                  {needsSession
-                    ? t("playground.signInToRun")
-                    : isRunning
-                      ? t("playground.running")
-                      : t("playground.runAction")}
-                </Button>
-              }
+              fill
+              showStdin={false}
             />
           ) : null}
-          {needsSession ? (
-            <p className="mt-3 text-sm text-soj-muted">
-              <LocalizedLink className="text-soj-accent underline-offset-4 hover:underline" href="/auth/login">
-                {t("problems.signIn")}
-              </LocalizedLink>{" "}
-              {t("playground.signInHint")}
-            </p>
-          ) : null}
-          <p className="mt-3 text-xs text-soj-muted">{t("playground.draftHint")}</p>
         </div>
 
-        <Panel variant="flush" className="min-w-0 self-start" aria-label={t("playground.output")}>
-          <PanelHeader title={t("playground.output")} />
-          <PanelBody>
-            {runState.status === "idle" ? (
-              <p className="text-sm text-soj-muted">{t("playground.outputIdle")}</p>
-            ) : (
-              <RunResultView state={runState} onContinuePolling={() => void continuePolling()} />
-            )}
-          </PanelBody>
-        </Panel>
+        <div className="flex min-h-0 min-w-0 flex-col gap-3">
+          <Button type="button" size="lg" className="w-full" disabled={!canRun} onClick={handleRun}>
+            {needsSession
+              ? t("playground.signInToRun")
+              : isRunning
+                ? t("playground.running")
+                : t("playground.runAction")}
+          </Button>
+
+          {needsSession ? (
+            <p className="text-sm text-soj-muted">
+              <LocalizedLink className="text-soj-accent underline-offset-4 hover:underline" href="/auth/login">
+                {t("problems.signIn")}
+              </LocalizedLink>
+            </p>
+          ) : null}
+
+          {workspace ? (
+            <StdinField
+              value={workspace.stdin}
+              onChange={(stdin) => handleWorkspaceChange({ ...workspace, stdin })}
+              className="min-h-24"
+              showHint={false}
+            />
+          ) : null}
+
+          <Panel variant="flush" className="flex min-h-0 flex-1 flex-col" aria-label={t("playground.output")}>
+            <PanelHeader title={t("playground.output")} className="shrink-0" />
+            <PanelBody className="min-h-0 flex-1 overflow-auto">
+              {runState.status === "idle" ? (
+                <p className="text-sm text-soj-muted">{t("playground.outputIdle")}</p>
+              ) : (
+                <RunResultView state={runState} onContinuePolling={() => void continuePolling()} />
+              )}
+            </PanelBody>
+          </Panel>
+        </div>
       </section>
     </div>
   );
