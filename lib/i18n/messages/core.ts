@@ -8,6 +8,7 @@ export const coreMessages = {
   },
   "nav.home": { en: "Home", "zh-CN": "首页" },
   "nav.problems": { en: "Problems", "zh-CN": "题目" },
+  "nav.playground": { en: "Playground", "zh-CN": "练习场" },
   "nav.contests": { en: "Contests", "zh-CN": "比赛" },
   "nav.author": { en: "Author", "zh-CN": "出题" },
   "nav.brandTagline": { en: "Online Judge", "zh-CN": "在线评测" },

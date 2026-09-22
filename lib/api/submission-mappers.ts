@@ -73,7 +73,7 @@ function mapSubmissionDiagnostics(input: NonNullable<SubmissionResponse["admin_d
 export function mapRunSummary(input: RunResponse): RunSummary {
   return {
     id: input.id,
-    problemId: input.problem_id,
+    problemId: input.problem_id ?? undefined,
     languageId: input.language_id,
     status: input.status,
     stdout: input.stdout ?? undefined,

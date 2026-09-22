@@ -1325,6 +1325,61 @@ function scoreboardResponse() {
   };
 }
 
+  it("omits problem_id from a playground run instead of sending it as undefined", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        data: {
+          id: 9,
+          user_id: 1,
+          problem_id: null,
+          language_id: 60,
+          status: "accepted",
+          stdout: "42\n",
+          created_at: "2026-07-11T10:00:00Z",
+          updated_at: "2026-07-11T10:00:00Z",
+        },
+        error: null,
+        request_id: "req-run",
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const run = await createHttpAdapter().runs.create({ languageId: 60, sourceCode: "package main" });
+
+    // 练习场不带 problemId，靠 JSON.stringify 丢掉 undefined 键。
+    // 这条隐式行为一旦被改成显式构造 body，就会静默多发一个
+    // problem_id: undefined —— 后端会当成非法输入。
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.body).not.toContain("problem_id");
+    expect(JSON.parse(String(init.body))).toEqual({ language_id: 60, source_code: "package main" });
+    expect(run.problemId).toBeUndefined();
+  });
+
+  it("still sends problem_id for a problem-attached run", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        data: {
+          id: 10,
+          user_id: 1,
+          problem_id: 44,
+          language_id: 60,
+          status: "accepted",
+          created_at: "2026-07-11T10:00:00Z",
+          updated_at: "2026-07-11T10:00:00Z",
+        },
+        error: null,
+        request_id: "req-run",
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const run = await createHttpAdapter().runs.create({ problemId: 44, languageId: 60, sourceCode: "package main" });
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toMatchObject({ problem_id: 44 });
+    expect(run.problemId).toBe(44);
+  });
+
 function problemCheckResponse(overrides: { id: number; problemId: number; testcaseSetId: number; valid: boolean }) {
   return {
     id: overrides.id,
