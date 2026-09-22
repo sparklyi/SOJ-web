@@ -34,6 +34,17 @@ describe("api mode", () => {
     expect(contests.items.map((contest) => contest.type)).toEqual(expect.arrayContaining(["acm", "oi"]));
   });
 
+  it("returns a finished run for a playground run with no problem", async () => {
+    const client = createMockAdapter({ currentUser: mockUser });
+    const run = await client.runs.create({ languageId: 60, sourceCode: "package main", stdin: "7\n" });
+
+    // 夹具必须回终态：回 queued 的话练习场在 mock 模式下会一路轮询到截止，
+    // 评审看到的是一个永远转圈的页面。
+    expect(run.status).toBe("accepted");
+    expect(run.problemId).toBeUndefined();
+    expect(run.stdout).toContain("7");
+  });
+
   it("raises typed not found errors", async () => {
     const client = createMockAdapter({ currentUser: mockUser });
     await expect(client.problems.get(404)).rejects.toMatchObject({ code: "not_found", status: 404 });

@@ -308,17 +308,30 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       },
     },
     runs: {
+      // 演示夹具直接回一个终态结果。
+      //
+      // 以前这里返回 `queued` 且 get 永远回同一个 queued，于是任何轮询运行
+      // 的界面都会一路等到截止时间——练习场在 mock 模式下就是一个永远转圈
+      // 的页面。那不是「后端没接」，是夹具坏了。
+      //
+      // 也没有 requireMockUser：mock 模式是给评审和后端未就绪时开发用的，
+      // 练习场被登录墙挡住的话，评审根本看不到这个模块长什么样。
+      // 这是**故意**比 http 模式宽松，不是漏判。
       create: async (input) => {
+        const now = new Date().toISOString();
         const run: RunSummary = {
           id: nextRunId++,
           problemId: input.problemId,
           languageId: input.languageId,
-          status: "queued",
-          stdout: "",
+          status: "accepted",
+          stdout: mockRunStdout(input.stdin),
           stderr: "",
           compileOutput: undefined,
           errorMessage: undefined,
-          createdAt: new Date().toISOString(),
+          timeMs: 12,
+          memoryKb: 3_400,
+          createdAt: now,
+          finishedAt: now,
         };
         createdRuns.unshift(run);
         return run;
@@ -660,4 +673,10 @@ function demoteAuthoredProblem(id: number) {
   if (index >= 0 && authoredProblems[index].publicationStatus !== "draft") {
     authoredProblems[index] = { ...authoredProblems[index], publicationStatus: "draft" };
   }
+}
+
+/** 演示运行输出：回显 stdin，让「输入 → 输出」这条链路肉眼可见。 */
+function mockRunStdout(stdin: string | undefined) {
+  const text = stdin?.trim();
+  return text ? `${text}\n` : "(demo run) hello from the mock judge\n";
 }
