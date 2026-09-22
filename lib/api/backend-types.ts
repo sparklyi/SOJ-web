@@ -224,7 +224,8 @@ export type SubmissionAdminDiagnostics = {
 export type RunResponse = {
   id: number;
   user_id: number;
-  problem_id: number;
+  /** 自由运行（练习场）时为 null。 */
+  problem_id: number | null;
   language_id: number;
   status: JudgeStatus;
   stdout?: string | null;
@@ -328,7 +329,8 @@ export type SubmissionCreateRequest = {
 };
 
 export type RunCreateRequest = {
-  problem_id: number;
+  /** 省略即为自由运行：不绑定题目。 */
+  problem_id?: number;
   language_id: number;
   source_code: string;
   stdin?: string;

@@ -142,8 +142,23 @@ export function CodeWorkspace({ languages, initialLanguageId, value, onChange, a
   const everSeededRef = useRef(false);
   const starter = selectedLanguage ? starterSource(selectedLanguage, t) : "";
 
+  // 「用户最后一次亲手产生的工作区值」。
+  //
+  // 受控组件的 props 会落后于状态：种模板的 effect 属于更早的那次提交，它闭包里的
+  // `value.sourceCode` 还是空串。用户若在 effect 落地之前敲了字，effect 拿这份落后
+  // 的值去问「源码是不是模板」会得到「是」，于是把刚敲的那几行覆盖回模板——用户看到
+  // 自己打的字凭空消失。这里记下用户刚产生的值，effect 发现自己看到的不是它时就
+  // 不动手，等下一次提交带着新值再来判断。
+  //
+  // 这是给竞态打的补丁，没有消除竞态本身：只要模板还由 effect 向上写回，就总有
+  // 「effect 看到的不是用户看到的那一帧」的窗口。根治办法是把种模板交给拥有状态的
+  // 父组件（数据只向下流），见 https://github.com/sparklyi/SOJ-web/issues/47。
+  const latestInputRef = useRef<WorkspaceValue | null>(null);
+
   useEffect(() => {
     if (!selectedLanguage || starter === "") return;
+    const input = latestInputRef.current;
+    if (input && input.sourceCode !== value.sourceCode) return;
     if (!isPristineSource(value.sourceCode, lastStarterRef.current, everSeededRef.current)) return;
     if (value.sourceCode === starter) return;
     everSeededRef.current = true;
@@ -157,7 +172,9 @@ export function CodeWorkspace({ languages, initialLanguageId, value, onChange, a
   }, [selectedLanguage?.engineLanguageId]);
 
   function update(patch: Partial<WorkspaceValue>) {
-    onChange({ ...value, ...patch });
+    const next = { ...value, ...patch };
+    latestInputRef.current = next;
+    onChange(next);
   }
 
   return (

@@ -98,6 +98,34 @@ describe("soj product components", () => {
     );
   });
 
+  it("does not seed the starter over a keystroke it has not seen yet", () => {
+    // 语言目录还没到、模板还没种入时用户就先敲了字。种模板的 effect 属于更早那次
+    // 提交，它闭包里的 sourceCode 还是空串——若拿这份落后的值做判断，会认定「源码
+    // 就是空模板」并把用户刚敲的字覆盖掉。
+    const handleChange = vi.fn();
+    const { rerender } = renderWithLocale(
+      <CodeWorkspace
+        languages={[]}
+        value={{ languageId: undefined, sourceCode: "", stdin: "" }}
+        onChange={handleChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Source code"), { target: { value: "// typed before the catalog arrived" } });
+
+    rerender(
+      <I18nProvider locale="en">
+        <CodeWorkspace
+          languages={mockLanguages}
+          value={{ languageId: mockLanguages[0]?.id, sourceCode: "", stdin: "" }}
+          onChange={handleChange}
+        />
+      </I18nProvider>,
+    );
+
+    expect(handleChange).not.toHaveBeenCalledWith(expect.objectContaining({ sourceCode: expect.stringContaining("#include") }));
+  });
+
   it("treats the unmodified starter as pristine and user code as not", () => {
     const starter = "#include <bits/stdc++.h>";
     // 从未种入的初始空态：该种。

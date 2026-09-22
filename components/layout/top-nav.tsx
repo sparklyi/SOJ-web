@@ -14,7 +14,9 @@ import { cn } from "@/lib/ui/cn";
 /**
  * 主导航只放「场所」，而且只放真的存在的场所。
  *
- * 首页 / 题库 / 比赛 —— 这三个是站内的目的地，任何访客都可能去。
+ * 首页 / 题库 / 练习场 / 比赛 —— 这四个是站内的目的地，任何访客都可能去。
+ * 练习场放在题库之后、比赛之前：它的门槛与题库同档（入口公开），
+ * 但比比赛轻——比赛是有日程的"事件"，练习场是随时可去的"场所"。
  * 「提交记录」不在这里：它是**我的**东西（我的提交、我的设置），
  * 不是站内的一个场所；未登录的人点进去只会看到一个空页面。
  * 所以它和设置、退出一起收进右上角的账号菜单。
@@ -28,6 +30,7 @@ import { cn } from "@/lib/ui/cn";
 const navItems = [
   { href: "/", labelKey: "nav.home" },
   { href: "/problems", labelKey: "nav.problems" },
+  { href: "/playground", labelKey: "nav.playground" },
   { href: "/contests", labelKey: "nav.contests" },
 ] as const;
 
