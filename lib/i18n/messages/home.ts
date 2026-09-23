@@ -18,6 +18,12 @@ export const homeMessages = {
   // 它一句话回答「这是什么站」，读者不需要滚动就能知道。
   "home.plinth.category": { en: "Online judge", "zh-CN": "在线测评平台" },
 
+  // 这里曾有 `home.plinth.markCjk`（中文名「日晷」），2026-09-23 已撤回，原因是被测出来的：
+  // 拉丁字标的大写高度只占 0.70em，而汉字方块几乎占满 em（约 0.88em），**同一 font-size 下
+  // 汉字视觉高度大 25%**。两段并排读成「两个字标硬拼一行」，而不是「一个名字」。
+  // 中文译名没有丢，它仍在 `meta.title` / 页脚版权行 / 各页正文里出现，
+  // 只是不再进界面字标。详见 docs/design-system/soj-visual-language.md 的锁定式条款。
+
   // 定位句。锁定式已经把「这是什么」说完了，这句只补「给谁用」。
   // 不写「分层题库、逐测试点判题」这类机制说明——机制是产品常识，不是卖点。
   "home.plinth.lead": {

@@ -16,13 +16,18 @@ import { expect, test, type Locator } from "@playwright/test";
  *     所以 `getByRole("tab", …)` 换成页脚按钮；并新增两条几何断言
  *     （居中）与一条文本断言（全大写）。
  * 这些都在当面向用户说明过，不是把旧断言偷偷改绿。
+ *
+ * 2026-09-23 改的是**被测对象的取值**，断言结构一条没动：站名由 SOJ 改为 Sundial，
+ * 下面原先钉 `/SOJ/` 的无障碍名匹配跟着换成 `/Sundial/`——正则仍然只钉站名打头。
+ * （同日试过的**双语锁定式**当天撤回，原因记在 smoke.spec.ts；锁定式仍是两级
+ * 「名字 + 品类」，名字那一级只有一段，中文名不进字标。）
  */
 
 test("the homepage is a plinth, not a catalogue of other pages", async ({ page }) => {
   await page.goto("/");
 
   // 锁定式：站名 + 品类词。读者不用滚动就该知道这是什么站。
-  await expect(page.getByRole("heading", { name: /SOJ/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Sundial/ })).toBeVisible();
 
   // 主导航只放「场所」。
   const primaryNav = page.getByRole("navigation", { name: "Primary" });
@@ -33,7 +38,7 @@ test("the homepage is a plinth, not a catalogue of other pages", async ({ page }
   await expect(primaryNav.getByRole("link", { name: "My submissions" })).toHaveCount(0);
 
   // 铭牌：站级数字回答「这站有多大、我用得上吗」，并只给一个出口。
-  const plinth = page.getByRole("region", { name: /SOJ/ });
+  const plinth = page.getByRole("region", { name: /Sundial/ });
   await expect(plinth.getByText("Problems", { exact: true })).toBeVisible();
   await expect(plinth.getByText("Submissions", { exact: true })).toBeVisible();
   await expect(plinth.getByText("Languages", { exact: true })).toBeVisible();
@@ -130,7 +135,7 @@ async function labelReadability(locator: Locator) {
 test("the homepage labels stay above the readability line", async ({ page }) => {
   await page.goto("/");
 
-  const plinth = page.getByRole("region", { name: /SOJ/ });
+  const plinth = page.getByRole("region", { name: /Sundial/ });
   const join = page.getByRole("region", { name: "Join us" });
 
   // 铭牌上的三个标签 + 收束句 + 出口链接：这些字都不大，
@@ -166,7 +171,7 @@ test("the homepage labels stay above the readability line", async ({ page }) => 
 test("the homepage does not re-add directories, tutorials, or data listings", async ({ page }) => {
   await page.goto("/");
 
-  const plinth = page.getByRole("region", { name: /SOJ/ });
+  const plinth = page.getByRole("region", { name: /Sundial/ });
 
   const removedRegions = [
     // 别页的副本：题库样张、焦点比赛、推荐题目。

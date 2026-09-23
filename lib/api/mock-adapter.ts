@@ -91,7 +91,7 @@ for (const problem of authoredProblems) {
     outputDescription: "Expected output.",
     samples: [{ input: "1", output: "1" }],
     hint: "",
-    source: "SOJ",
+    source: "Sundial",
   };
   const testcaseSet: AuthoringTestcaseSet = {
     id: nextTestcaseSetId++,
