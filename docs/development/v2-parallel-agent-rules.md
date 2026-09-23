@@ -7,7 +7,7 @@ Use these rules when assigning page work after the foundation gates are complete
 Page workers must not start until these chunks are complete:
 
 - Foundation app and CI.
-- SOJ visual language tokens, fonts, material primitives, data visuals, product components, style guide, and style lint.
+- Sundial visual language tokens, fonts, material primitives, data visuals, product components, style guide, and style lint.
 - Domain models and mock fixtures.
 - App shell and auth boundary.
 

@@ -1,7 +1,11 @@
 import type { MessageCatalog } from "../types";
 
 export const coreMessages = {
-  "meta.title": { en: "SOJ", "zh-CN": "SOJ" },
+  // 站名只有一种写法：`Sundial`。中文分支也写拉丁字标，这是**有意的**——
+  // 浏览器标签页上「日晷」两个字既不是字标、也不是本站对外用的名字，
+  // 跟首页 h1（`Sundial 在线测评平台`）、导航栏标记三处对不上。
+  // 中文名只活在文档与口头称呼里，不进界面。
+  "meta.title": { en: "Sundial", "zh-CN": "Sundial" },
   "meta.description": {
     en: "Online judge for practice, contests, submissions, and live scoreboards.",
     "zh-CN": "面向练习、竞赛、提交与实时榜单的在线评测系统。",
@@ -45,8 +49,8 @@ export const coreMessages = {
   // `footer.label` 是这个地标的无障碍名：没有名字的 contentinfo 在地标列表里读不出来。
   "footer.label": { en: "Site footer", "zh-CN": "站点页脚" },
   "footer.copyright": {
-    en: "© {year} SOJ. All rights reserved.",
-    "zh-CN": "© {year} SOJ 版权所有",
+    en: "© {year} Sundial. All rights reserved.",
+    "zh-CN": "© {year} Sundial 版权所有",
   },
   "footer.source": { en: "Source code", "zh-CN": "开源仓库" },
   "footer.issues": { en: "Issues", "zh-CN": "问题反馈" },

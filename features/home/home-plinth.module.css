@@ -58,33 +58,47 @@
 
 /* 锁定式：站名 + 品类词，基线对齐。
    名字大、品类小，两者之间只靠字号与颜色拉开层级——不加分隔符、不加竖线：
-   多一根线就让「名字 + 品类」读成「两个字段」。 */
+   多一根线就让「名字 + 品类」读成「两个字段」。
+
+   间距取 2.4vw（上限 40px）而不是更小的值，是名字变长之后的结果：
+   站名由三个字母（SOJ）变成 `Sundial`，名字那一级长了近一倍，
+   间距压太窄会让品类词被吸进名字里。 */
 .lockup {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: center;
-  gap: 0 clamp(12px, 1.6vw, 24px);
+  gap: 0 clamp(20px, 2.4vw, 40px);
   margin: 0;
 }
 
 /* 站名。这是**排字**，不是图形：不描摹、不变形、不做字距粘连。
    上一版是手绘 SVG 且按列宽撑满，1440 视口上光字标就 400px 高——
    三个字母占满第一屏，读者要滚动才知道这是干什么的。
-   现在字号收到三分之一上下（clamp 上限 124px），省下的高度还给留白。 */
+   现在字号收到三分之一上下（clamp 上限 124px），省下的高度还给留白。
+
+   这里**只有一段字标**。2026-09-23 试过把中文名「日晷」并排放在它右边，当天撤回，
+   理由是被量出来的：拉丁的大写高度只占 0.70em，而汉字方块几乎占满 em（约 0.88em），
+   同一 font-size 下汉字视觉高度大 25%，两段并排读成「两个字标硬拼一行」，
+   不是一个名字。中文译名仍在正文与页脚版权行里。
+
+   `nowrap` 是防御性的：名字将来若再变长，也绝不能在锁定式内部折行——
+   一折行，锁定式就散成两段。 */
 .mark {
+  white-space: nowrap;
   font-family: var(--font-soj-display), ui-sans-serif, system-ui, "PingFang SC", sans-serif;
   font-size: clamp(56px, 8.6vw, 124px);
   font-weight: 620;
   line-height: 1;
   letter-spacing: 0.01em;
+  /* 完整可见的兜底色。拿不到 background-clip 的浏览器由它得到一块实心银字。 */
   color: var(--color-soj-text);
 }
 
 /* 大字号的受光。**绝不收到透明**：透明收尾正是更早一版字面消失的原因
    （下半截虚化到 46%，整块读成占位符）。这里只是自上而下轻微压暗，
    两端分别是 226 与 72% 的混合值，整块始终是「银」。
-   默认那条 color 声明就是完整可见的兜底，拿不到 background-clip 的浏览器得到一块实心银字。 */
+   `.mark` 上那条 color 声明就是完整可见的兜底，拿不到 background-clip 的浏览器得到一块实心银字。 */
 @supports ((background-clip: text) or (-webkit-background-clip: text)) {
   .mark {
     color: transparent;

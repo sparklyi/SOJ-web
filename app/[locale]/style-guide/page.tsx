@@ -150,7 +150,7 @@ export default async function StyleGuidePage() {
             <div className="grid divide-y divide-soj-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
               <div className="grid content-start gap-3 px-4 py-5">
                 <span className="font-mono text-xs text-soj-muted">{t("style.primitiveDisplay")}</span>
-                <p className="soj-display text-4xl">SOJ 2026</p>
+                <p className="soj-display text-4xl">Sundial 2026</p>
               </div>
               <div className="grid content-start gap-3 px-4 py-5">
                 <span className="font-mono text-xs text-soj-muted">{t("style.primitiveEyebrow")}</span>

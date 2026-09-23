@@ -4,28 +4,28 @@ export const authMessages = {
   "auth.login.eyebrow": { en: "Account access", "zh-CN": "账户访问" },
   "auth.login.title": { en: "Login", "zh-CN": "登录" },
   "auth.login.description": {
-    en: "Enter SOJ for contests, problems, and submissions.",
-    "zh-CN": "进入 SOJ，参与比赛、练习题目并查看提交记录。",
+    en: "Enter Sundial for contests, problems, and submissions.",
+    "zh-CN": "进入 Sundial，参与比赛、练习题目并查看提交记录。",
   },
   "auth.login.meta": { en: "Session", "zh-CN": "会话" },
 
   "auth.register.eyebrow": { en: "Create account", "zh-CN": "创建账户" },
   "auth.register.title": { en: "Register", "zh-CN": "注册" },
   "auth.register.description": {
-    en: "Create an SOJ account for the contest workspace.",
-    "zh-CN": "创建 SOJ 账户，进入比赛工作区。",
+    en: "Create a Sundial account for the contest workspace.",
+    "zh-CN": "创建 Sundial 账户，进入比赛工作区。",
   },
   "auth.register.meta": { en: "Onboarding", "zh-CN": "入门" },
 
   "auth.form.loginTitle": { en: "Login", "zh-CN": "登录" },
   "auth.form.registerTitle": { en: "Create account", "zh-CN": "创建账户" },
   "auth.form.loginDescription": {
-    en: "Use your SOJ account to continue.",
-    "zh-CN": "使用 SOJ 账户继续。",
+    en: "Use your Sundial account to continue.",
+    "zh-CN": "使用 Sundial 账户继续。",
   },
   "auth.form.registerDescription": {
-    en: "Create your SOJ identity for problems and contests.",
-    "zh-CN": "创建你的 SOJ 身份，用于题目和比赛。",
+    en: "Create your Sundial identity for problems and contests.",
+    "zh-CN": "创建你的 Sundial 身份，用于题目和比赛。",
   },
   "auth.form.email": { en: "Email", "zh-CN": "邮箱" },
   "auth.form.username": { en: "Username", "zh-CN": "用户名" },
@@ -58,8 +58,8 @@ export const authMessages = {
   "auth.me.eyebrow": { en: "Account", "zh-CN": "账户" },
   "auth.me.title": { en: "Me", "zh-CN": "我的账户" },
   "auth.me.description": {
-    en: "Account state, problem progress, and recent SOJ activity.",
-    "zh-CN": "账户状态、题目进度与最近的 SOJ 活动。",
+    en: "Account state, problem progress, and recent Sundial activity.",
+    "zh-CN": "账户状态、题目进度与最近的 Sundial 活动。",
   },
   "auth.me.guest": { en: "Guest", "zh-CN": "访客" },
   "auth.me.guestRole": { en: "guest", "zh-CN": "guest" },

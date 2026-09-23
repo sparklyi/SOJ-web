@@ -135,7 +135,7 @@ export const mockProblems: ProblemDetail[] = [
 ];
 
 export const mockContests: ContestSummary[] = [
-  buildContest({ id: 1, title: "SOJ Weekly Contest", type: "acm", status: "running" }),
+  buildContest({ id: 1, title: "Sundial Weekly Contest", type: "acm", status: "running" }),
   buildContest({
     id: 2,
     title: "OI Calibration Round",
