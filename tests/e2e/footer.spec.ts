@@ -21,8 +21,8 @@ test("every page family carries the site footer", async ({ page }) => {
     const footer = page.getByRole("contentinfo", { name: "Site footer" });
     await expect(footer, `${route} 上找不到页脚地标`).toBeVisible();
 
-    // 版权句。用正则钉「© + 年份 + SOJ」，不钉整句——措辞属于文案。
-    await expect(footer.getByText(/©\s*\d{4}\s*SOJ/)).toBeVisible();
+    // 版权句。用正则钉「© + 年份 + 站名」，不钉整句——措辞属于文案。
+    await expect(footer.getByText(/©\s*\d{4}\s*Sundial/)).toBeVisible();
 
     // 页脚只放真实落点：仓库与 issue 各一条，不许多也不许少。
     // 「关于我们」「服务条款」这类没有页面的链接，比缺一个页脚糟得多。

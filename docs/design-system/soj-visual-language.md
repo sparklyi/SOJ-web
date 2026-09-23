@@ -1,4 +1,8 @@
-# SOJ Visual Language
+# Sundial Visual Language
+
+> **Renamed 2026-09-23: SOJ → Sundial.** The site calls itself `Sundial` everywhere, on both locales: the wordmark, the browser title, the footer copyright line and page copy all use the Latin name. 日晷 is a translation kept for documentation and conversation, never set in the interface — see "The wordmark is typeset, and the hero is centred". Below, the old name is kept only inside entries that record decisions taken *before* the rename — those are history, not the current contract.
+>
+> The `soj-*` identifiers are untouched on purpose. The design tokens, the CSS variables, the class prefix, the `/soj-api` route prefix, the `SOJ_*` environment variables, the internal ids in markup, both repository names and this file's own name all sit on the **contract layer**, not the brand layer. Renaming them buys nothing a reader can see and costs a coordinated release across the frontend repo, the backend repo, and the live deployment.
 
 This document is the visual contract for SOJ-web. Page work must consume these tokens, primitives, and patterns instead of inventing page-local styles. Where this document and an existing page disagree, **this document wins and the page is the bug**.
 
@@ -327,7 +331,9 @@ It failed twice over:
 
 The fix is not a different font. It is to treat the station's name as **typesetting rather than as artwork**:
 
-- **A lockup, not a logotype.** `SOJ` set in Space Grotesk, followed by a category word (在线测评平台 / Online judge), baseline-aligned. Name + category is the standard company lockup, and it answers "what is this" without a scroll.
+- **A lockup, not a logotype.** `Sundial` set in Space Grotesk, followed by a category word (在线测评平台 / Online judge), baseline-aligned. Name + category is the standard company lockup, and it answers "what is this" without a scroll.
+- **The name tier is one wordmark, not two.** A bilingual lockup (Latin `Sundial` beside the Chinese name 日晷, same size, same colour, same baseline) was tried on 2026-09-23 and withdrawn the same day. The reason is metric, not taste: the Latin cap height is **0.70em**, while a CJK square fills roughly **0.88em** of its em box, so at one `font-size` the Chinese name renders **25% taller** than the wordmark beside it. The two read as two wordmarks jammed onto one line, not as one name. There is consequently no "gap inside the name tier" to tune — the only gap is the one between the name and the category.
+- **The Chinese name is not set in the interface at all.** 日晷 is a translation for documentation and conversation. It *was* rendered in `meta.title`, the footer copyright line and page copy until 2026-09-23, when the browser tab was found showing 「日晷」 while the site's own name is `Sundial` — the tab contradicted the h1 and the nav mark. Removing it costs a Chinese reader nothing: the interface is fully localised, it simply calls itself by the same name in both locales, the way LeetCode's Chinese site calls itself LeetCode.
 - **Size and colour carry the hierarchy; no divider.** A rule or a dot between the two turns "name + category" into "two fields". The gap and the type scale already say they belong together.
 - **The lockup is a wrap-tolerant flex row.** On narrow viewports the category drops to its own line, centred, with no breakpoint and no hand-set type size.
 - **Display-size type still gets a vertical light — but never to transparent** (see the rule above). The gradient ends at a 72% mix with the background, not at 0 alpha. A flat `color` declaration is the opaque fallback for browsers without `background-clip: text`.

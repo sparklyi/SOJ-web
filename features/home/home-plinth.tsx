@@ -34,10 +34,19 @@ type PlinthFact = {
  *     读者要滚动才能看到这个站是干什么的——主次反了。
  *
  * 现在的做法是把站名当**排字**处理，而不是当图形：
- *   `SOJ` 用展示字排出来（不描摹、不变形），右边接一个品类词「在线测评平台」。
+ *   站名用展示字排出来（不描摹、不变形），右边接一个品类词「在线测评平台」。
  * 名字 + 品类，这是任何一家公司最标准的锁定式（lockup），
  * 也是它最该长的样子：**读者一眼知道这是什么，同时不需要滚动。**
  * 字号收到原来的三分之一上下，省下的高度还给留白。
+ *
+ * ── 改名（2026-09-23 SOJ → Sundial）───────────────────────────────────────
+ *
+ * 站名不再是三个字母。中间试过一版**双语名**（拉丁字标 `Sundial` 与中文名「日晷」
+ * 同级同字号并排），当天撤回，理由是被量出来的：拉丁的大写高度只占 **0.70em**，
+ * 而汉字方块几乎占满 em（约 **0.88em**）——同一 font-size 下汉字视觉高度大 25%，
+ * 两段并排读成「两个字标硬拼一行」，不是一个名字。
+ * 中文译名没有丢：它仍在 `meta.title`、页脚版权行与各页正文里出现，只是不进界面字标。
+ * 锁定式因此回到它本来的两级（名字 / 品类），名字那一级只有一段。
  *
  * ── 构图：整页居中 ────────────────────────────────────────────────────────
  *
@@ -64,8 +73,10 @@ export async function HomePlinth({ facts = [] }: { facts?: PlinthFact[] }) {
 
       {/* data-plinth-stage 供度量脚本确认滚动联动是否真的挂上了 */}
       <div className={styles.stage} data-plinth-stage>
+        {/* id 里的 soj- 是内部标识（度量脚本与 aria 都在引用它），属于契约层，
+            不属于品牌层——站名改它不跟着改，见 docs/design-system 顶部的改名说明。 */}
         <h1 className={styles.lockup} id="soj-plinth-title">
-          <span className={styles.mark}>SOJ</span>
+          <span className={styles.mark}>Sundial</span>
           <span className={styles.category}>{t("home.plinth.category")}</span>
         </h1>
         <p className={styles.lead}>{t("home.plinth.lead")}</p>
