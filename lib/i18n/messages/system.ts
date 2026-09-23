@@ -68,8 +68,8 @@ export const systemMessages = {
   // 首页的收尾标语。它由 JoinUs 使用；放在这里是因为「以算法思考，用答案证明」是这家站的态度，
   // 不属于任何一个页面段落。
   "home.statement": { en: "Think in algorithms. Prove every answer.", "zh-CN": "以算法思考，用答案证明。" },
-  "style.designSystem": { en: "SOJ visual contract", "zh-CN": "SOJ 视觉契约" },
-  "style.interfaceBaseline": { en: "SOJ interface baseline", "zh-CN": "SOJ 界面基线" },
+  "style.designSystem": { en: "Sundial visual contract", "zh-CN": "Sundial 视觉契约" },
+  "style.interfaceBaseline": { en: "Sundial interface baseline", "zh-CN": "Sundial 界面基线" },
   "style.description": {
     en: "This page is the visual contract for every route. Cold silver plus obsidian blue, material surfaces, and a motion layer that only explains state. Anything on a page that disagrees with this page is the page's bug.",
     "zh-CN": "本页是全部路由的视觉契约：冷银 + 曜石蓝、实体材质表面，以及只用来解释状态的动效层。页面上的任何元素只要与本页对不上，都算页面自己的缺陷。",

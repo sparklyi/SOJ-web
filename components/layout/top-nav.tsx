@@ -6,6 +6,7 @@ import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { SundialMark } from "@/components/soj/sundial-mark";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { buttonVariants } from "@/components/ui/button";
 import { unlocalizePath } from "@/lib/i18n/routing";
@@ -88,17 +89,17 @@ export function TopNav() {
           href="/"
           className="group flex shrink-0 items-center gap-3 rounded-soj-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
         >
-          {/* 标记用「三根递增的柱子」：它画的就是这个站要做的事（榜单与爬升），
-              比一个放在方框里的发光圆点更具体——后者是任何 SaaS 模板都能套的图形。 */}
-          <span className="soj-inset-light grid h-7 w-7 shrink-0 place-items-center rounded-soj-sm border border-soj-line bg-soj-surface transition-colors group-hover:border-soj-line-strong">
-            <svg aria-hidden className="h-3.5 w-3.5" viewBox="0 0 16 16">
-              <rect className="fill-soj-muted/45" height="6" rx="1" width="3" x="1" y="9" />
-              <rect className="fill-soj-muted/80" height="10" rx="1" width="3" x="6.5" y="5" />
-              <rect className="fill-soj-accent" height="14" rx="1" width="3" x="12" y="1" />
-            </svg>
+          {/* 标记是日晷晷面（几何与取舍见 components/soj/sundial-mark.tsx）。
+              它替代的是原来「三根递增的柱子」——那组柱子画的是榜单与爬升，
+              是 SOJ 时代的语义，跟站名已经没有关系了。
+              方框从 28 放到 30：字形取 22px 才读得出（见 sundial-mark.tsx 的笔宽说明），
+              而 22px 的字形塞进 28px 方框只剩 2px 余量，环会贴上边框。
+              30 是「环与边框之间还留着 3px」的最小值，不是随手挑的。 */}
+          <span className="soj-inset-light grid h-[30px] w-[30px] shrink-0 place-items-center rounded-soj-sm border border-soj-line bg-soj-surface transition-colors group-hover:border-soj-line-strong">
+            <SundialMark />
           </span>
           <span className="grid leading-none">
-            <span className="font-display text-[15px] font-semibold tracking-[0.06em] text-soj-text">SOJ</span>
+            <span className="font-display text-[15px] font-semibold tracking-[0.06em] text-soj-text">Sundial</span>
             <span className="mt-1.5 hidden font-mono text-xs uppercase tracking-[0.14em] text-soj-muted sm:block">{t("nav.brandTagline")}</span>
           </span>
         </LocalizedLink>

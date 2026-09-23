@@ -73,7 +73,7 @@ export function buildContest(overrides: Partial<ContestSummary> = {}): ContestSu
   return {
     id: overrides.id ?? 1,
     ownerUserId: overrides.ownerUserId ?? 1,
-    title: "SOJ Weekly Contest",
+    title: "Sundial Weekly Contest",
     type: "acm",
     status: "running",
     startsAt: at(-2),
@@ -95,7 +95,7 @@ export function buildSubmission(overrides: Partial<SubmissionSummary> = {}): Sub
     id: overrides.id ?? 1,
     problemId: 1,
     problemTitle: "Shortest Path",
-    contestTitle: "SOJ Weekly Contest",
+    contestTitle: "Sundial Weekly Contest",
     contestId: 1,
     status: "running",
     score: 0,

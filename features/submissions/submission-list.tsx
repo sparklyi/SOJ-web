@@ -52,7 +52,7 @@ function contestLabel(submission: SubmissionListProps["submissions"][number], t:
  * 而这两项对绝大多数行是空的或常量——练习提交没有比赛，待判的提交没有分数。
  * 空列比空行更刺眼：它让表格看起来像没填完。
  *
- * 现在把它们折进题名格，作为题名下方的第二行元信息（`P5 · SOJ Weekly Contest · 得分 35`），
+ * 现在把它们折进题名格，作为题名下方的第二行元信息（`P5 · Sundial Weekly Contest · 得分 35`），
  * 有才显示。列数从八降到六，1280 宽度下一屏放得下，
  * 而排查问题真正需要的耗时、内存、提交时间全部保留。
  */

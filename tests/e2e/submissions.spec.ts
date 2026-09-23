@@ -9,7 +9,7 @@ test("submission list renders judge rows and verdict states", async ({ page }) =
   await expect(page.getByRole("row").filter({ hasText: "#5" })).toContainText("Wrong Answer");
   await expect(page.getByRole("row").filter({ hasText: "#7" })).toContainText("Compile Error");
   await expect(page.getByRole("row").filter({ hasText: "#8" })).toContainText("System Error");
-  await expect(page.getByText("SOJ Weekly Contest").first()).toBeVisible();
+  await expect(page.getByText("Sundial Weekly Contest").first()).toBeVisible();
   // 耗时/内存走 lib/ui/number 的唯一实现：42 ms 不足一秒原样给毫秒，
   // 8192 KB 折成读者单位 8 MB（此前这里直接拼 `${value} KB`）。
   await expect(page.getByText("42 ms").first()).toBeVisible();

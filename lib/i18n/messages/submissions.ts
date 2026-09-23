@@ -2,7 +2,7 @@ import type { MessageCatalog } from "../types";
 
 export const submissionMessages = {
   "submissions.page.badge": { en: "Verdicts", "zh-CN": "评测记录" },
-  "submissions.page.runsThrough": { en: "{count} runs routed through SOJ", "zh-CN": "{count} 次运行已进入 SOJ" },
+  "submissions.page.runsThrough": { en: "{count} runs routed through Sundial", "zh-CN": "{count} 次运行已进入 Sundial" },
   "submissions.page.title": { en: "Submissions", "zh-CN": "提交记录" },
   "submissions.page.description": {
     en: "Track judge intake, resource usage, and final verdicts without leaving the Web workspace.",
