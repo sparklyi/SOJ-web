@@ -6,9 +6,7 @@ English | [简体中文](README.zh-CN.md)
 
 The v2 frontend for **Sundial**, an online judge for practice, contests, submissions, scoreboards, and live contest broadcast: a Next.js app with a mockable API boundary.
 
-> Renamed from SOJ on 2026-09-23. The product calls itself `Sundial` in both locales; the repository name, the `soj-*` design tokens, and the `SOJ_*` environment variables deliberately keep the old name — none of them are visible to a reader.
->
-> The legacy Vue app is preserved on the `archive/vue-v1` branch.
+> Renamed from SOJ on 2026-09-23. The product calls itself `Sundial` in both locales; the repository name, the `soj-*` design tokens, and the `SOJ_*` environment variables keep the short name.
 
 ## Quick start
 
