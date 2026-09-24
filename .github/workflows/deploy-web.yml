@@ -1,7 +1,7 @@
 name: Deploy Web
 
 # 打 web-v* tag 时构建 standalone 产物并发布到 GitHub Release。
-# 服务器端（<deploy-host>）由 soj-web-deploy.timer 每 5 分钟轮询新 tag，
+# 服务器端由 soj-web-deploy.timer 每 5 分钟轮询新 tag（部署脚本在部署机上维护），
 # 下载本 Job 产出的 soj-web-<ver>.tar.gz 完成部署——服务器上不做任何构建（2G 内存）。
 
 on:

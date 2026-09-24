@@ -84,7 +84,7 @@ Tag-driven, and the server never builds:
 git tag web-v1.2.0 && git push origin web-v1.2.0
 ```
 
-Actions builds the standalone output and attaches it to a release; the server polls for new `web-v*` tags, swaps versions behind an atomic symlink, health-checks, and rolls back on failure. See [`scripts/deploy/README.md`](scripts/deploy/README.md).
+Actions builds the standalone output and attaches it to a release; the server polls for new `web-v*` tags, swaps versions behind an atomic symlink, health-checks, and rolls back on failure. The server-side deploy scripts live on the deploy host.
 
 ## Documentation
 
