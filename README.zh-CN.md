@@ -84,7 +84,7 @@ npm run ci
 git tag web-v1.2.0 && git push origin web-v1.2.0
 ```
 
-Actions 构建 standalone 产物并挂到 Release；服务器轮询新的 `web-v*` tag，原子切换软链、健康检查，失败自动回退。详见 [`scripts/deploy/README.md`](scripts/deploy/README.md)。
+Actions 构建 standalone 产物并挂到 Release；服务器轮询新的 `web-v*` tag，原子切换软链、健康检查，失败自动回退。部署脚本在部署机上维护，不在本仓库。
 
 ## 相关文档
 
