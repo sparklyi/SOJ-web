@@ -84,7 +84,10 @@ export function TopNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-soj-line/70 bg-soj-bg/82 backdrop-blur-xl">
-      <div className="mx-auto flex h-[68px] max-w-[1440px] items-center gap-5 px-4 sm:px-6 lg:px-8">
+      {/* 390px 下横向预算本来就满（导航内容 332px，给它剩不到 70px）。品类词
+          「Online Judge」比站名还宽 27px，所以最窄档必须把行间距收回来补给它——
+          `gap-2 sm:gap-5`。一行里 3 个 gap，20px 时共占 60px，收到 8px 还回 36px。 */}
+      <div className="mx-auto flex h-[68px] max-w-[1440px] items-center gap-2 px-4 sm:gap-5 sm:px-6 lg:px-8">
         <LocalizedLink
           href="/"
           className="group flex shrink-0 items-center gap-3 rounded-soj-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-soj-accent"
@@ -98,9 +101,18 @@ export function TopNav() {
           <span className="soj-inset-light grid h-[30px] w-[30px] shrink-0 place-items-center rounded-soj-sm border border-soj-line bg-soj-surface transition-colors group-hover:border-soj-line-strong">
             <SundialMark />
           </span>
+          {/* 品牌锁定式：站名 + 品类词，两行，**两行都始终可见**。
+              2026-09-23 之前品类词是第二行一条 12px mono 大写小字，且带 `hidden sm:block`——
+              640px 以下整条被藏掉（实测 390px 视口下它的盒子是 0×0），头部只剩 `Sundial`，
+              读者看不出这是个什么站。它用的还是 eyebrow 那套处理（等宽 / 大写 / 大字距），
+              而 eyebrow 在视觉语言里是「段落名、单位、刻度」的标记，不是名字的一部分。
+              现在它跟着站名走 display 字体、去掉大写，靠字号与颜色拉开层级——
+              与首页 h1 的锁定式同一套做法。
+              不并成同一行：390px 下头部横向已经榨干（导航只剩 62px，本身还带 overflow-x-auto），
+              并成一行会先把主导航挤没。 */}
           <span className="grid leading-none">
             <span className="font-display text-[15px] font-semibold tracking-[0.06em] text-soj-text">Sundial</span>
-            <span className="mt-1.5 hidden font-mono text-xs uppercase tracking-[0.14em] text-soj-muted sm:block">{t("nav.brandTagline")}</span>
+            <span className="mt-1 font-display text-xs font-medium tracking-[0.08em] text-soj-muted">{t("nav.brandTagline")}</span>
           </span>
         </LocalizedLink>
         <nav ref={navRef} aria-label={t("nav.primary")} className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
