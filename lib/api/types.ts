@@ -154,6 +154,7 @@ export type JudgeStatus =
   | "compile_error"
   | "time_limit"
   | "memory_limit"
+  | "output_limit"
   | "canceled"
   | "system_error";
 

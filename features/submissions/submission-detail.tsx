@@ -83,6 +83,7 @@ function failureDetail(submission: SubmissionSummary, t: Translator): string | n
     compile_error: undefined,
     time_limit: "submissions.feedback.timeLimit",
     memory_limit: "submissions.feedback.memoryLimit",
+    output_limit: "submissions.feedback.outputLimit",
     canceled: "submissions.feedback.canceled",
     system_error: undefined,
   };

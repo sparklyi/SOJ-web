@@ -18,12 +18,15 @@ export const verdictLabels: Record<JudgeStatus, string> = {
   compile_error: "Compile Error",
   time_limit: "Time Limit Exceeded",
   memory_limit: "Memory Limit Exceeded",
+  output_limit: "Output Limit Exceeded",
   canceled: "Canceled",
   system_error: "System Error",
 };
 
 export function verdictLabel(status: JudgeStatus): string {
-  return verdictLabels[status];
+  // 后端可能先于前端新增一个判定（`output_limit` 就是这样漏进来的）。
+  // 未知值原样透出，而不是让页面在 `undefined.terminal` 上白屏。
+  return verdictLabels[status] ?? status;
 }
 
 export type SubmissionDisplayState = {
@@ -43,16 +46,20 @@ const states: Record<JudgeStatus, Omit<SubmissionDisplayState, "status">> = {
   compile_error: { tone: "warning", terminal: true, order: 40 },
   time_limit: { tone: "warning", terminal: true, order: 40 },
   memory_limit: { tone: "warning", terminal: true, order: 40 },
+  output_limit: { tone: "warning", terminal: true, order: 40 },
   canceled: { tone: "neutral", terminal: true, order: 40 },
   system_error: { tone: "danger", terminal: true, order: 40 },
 };
 
+/** 未知判定的兵底：当成终态，轮询停下来，用危险色引起注意。 */
+const unknownState: Omit<SubmissionDisplayState, "status"> = { tone: "danger", terminal: true, order: 40 };
+
 export function getSubmissionDisplayState(status: JudgeStatus): SubmissionDisplayState {
-  return { status, ...states[status] };
+  return { status, ...(states[status] ?? unknownState) };
 }
 
 export function isSubmissionTerminal(status: JudgeStatus) {
-  return states[status].terminal;
+  return (states[status] ?? unknownState).terminal;
 }
 
 export function sortSubmissionsByNewest<T extends Pick<SubmissionSummary, "submittedAt" | "id">>(submissions: T[]) {
