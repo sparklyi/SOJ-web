@@ -55,6 +55,30 @@ describe("RunResultView", () => {
     expect(screen.getByText(/panic: boom/)).toBeVisible();
   });
 
+  it("does not repeat an error that is already in the output block", () => {
+    // 后端把同一份编译器 stderr 同时放进 compileOutput 与 errorMessage。
+    const compileError = "# command-line-arguments\n./main.go:11:19: invalid operation";
+    const { container } = renderState({
+      status: "success",
+      run: runFixture({ status: "compile_error", compileOutput: compileError, errorMessage: compileError }),
+    });
+
+    expect(screen.getByText("Compiler output")).toBeVisible();
+    // 已经逐字显示过，就不该再有一条红字重复。
+    expect(container.querySelectorAll("p.text-soj-danger")).toHaveLength(0);
+  });
+
+  it("still shows a short error that has no output block", () => {
+    const { container } = renderState({
+      status: "success",
+      run: runFixture({ status: "output_limit", errorMessage: "output limit exceeded" }),
+    });
+
+    // 「输出超限」没有对应的输出块，这条必须单独显示，否则用户看不到原因。
+    expect(container.querySelectorAll("p.text-soj-danger")).toHaveLength(1);
+    expect(screen.getByText("output limit exceeded")).toBeVisible();
+  });
+
   it("treats a request failure as an error message", () => {
     renderState({ status: "error", message: "too many runs in flight" });
 
