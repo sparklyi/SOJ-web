@@ -4,11 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { cpp } from "@codemirror/lang-cpp";
 import { go } from "@codemirror/lang-go";
+import { java } from "@codemirror/lang-java";
+import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
+import { rust } from "@codemirror/lang-rust";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import type { JudgeLanguage } from "@/lib/api/types";
 import { useI18n } from "@/components/providers/i18n-provider";
+import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translator } from "@/lib/i18n/translate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +34,15 @@ int main() {
 
   return 0;
 }`,
+  c: `#include <stdio.h>
+
+int main(void) {
+  int x;
+  while (scanf("%d", &x) == 1) {
+    // TODO: compute and print the answer
+  }
+  return 0;
+}`,
   go: `package main
 
 import (
@@ -43,6 +56,25 @@ func main() {
   _ = in
   fmt.Println()
 }`,
+  java: `import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.util.StringTokenizer;
+
+public class Main {
+  public static void main(String[] args) throws Exception {
+    BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+    PrintWriter out = new PrintWriter(System.out);
+    StringTokenizer tokens = new StringTokenizer(in.readLine());
+
+    out.println();
+    out.flush();
+  }
+}`,
+  nodejs: `const input = require("fs").readFileSync(0, "utf8").trim().split(/\\s+/).map(Number);
+
+// TODO: compute and print the answer
+console.log();`,
   python3: `import sys
 
 def main() -> None:
@@ -50,6 +82,18 @@ def main() -> None:
     print()
 
 main()`,
+  rust: `use std::io::{self, Read};
+
+fn main() {
+    let mut input = String::new();
+    io::stdin().read_to_string(&mut input).unwrap();
+    let _numbers: Vec<i64> = input
+        .split_whitespace()
+        .filter_map(|value| value.parse().ok())
+        .collect();
+
+    println!();
+}`,
 };
 
 /** 语法色引用 globals.css 的 --soj-code-* 变量，组件里不出现字面量颜色。 */
@@ -61,14 +105,36 @@ const sojHighlight = HighlightStyle.define([
   { tag: [tags.definition(tags.variableName), tags.function(tags.variableName), tags.definition(tags.propertyName)], color: "var(--soj-text)" },
 ]);
 
+// The label for a language the interface knows by name; anything else falls back
+// to the name the API returns, so a language added on the backend is usable
+// before its translation exists.
+const languageLabelKeys: Record<string, MessageKey> = {
+  c: "problems.language.c",
+  cpp17: "problems.language.cpp17",
+  go: "problems.language.go",
+  java: "problems.language.java",
+  nodejs: "problems.language.nodejs",
+  python3: "problems.language.python3",
+  rust: "problems.language.rust",
+};
+
 function languageExtension(engineLanguageId: string | undefined) {
   switch (engineLanguageId) {
+    case "c":
+      // The C++ grammar covers C.
+      return cpp();
     case "cpp17":
       return cpp();
     case "go":
       return go();
+    case "java":
+      return java();
+    case "nodejs":
+      return javascript();
     case "python3":
       return python();
+    case "rust":
+      return rust();
     default:
       return [];
   }
@@ -132,14 +198,7 @@ export function StdinField({
 }
 
 function languageLabel(language: JudgeLanguage, t: Translator) {
-  const languageKey =
-    language.engineLanguageId === "cpp17"
-      ? "problems.language.cpp17"
-      : language.engineLanguageId === "go"
-        ? "problems.language.go"
-        : language.engineLanguageId === "python3"
-          ? "problems.language.python3"
-          : null;
+  const languageKey = languageLabelKeys[language.engineLanguageId];
   const name = languageKey ? t(languageKey) : language.name;
   if (!language.version || name.toLowerCase().includes(language.version.toLowerCase())) return name;
   return `${name} ${language.version}`;
