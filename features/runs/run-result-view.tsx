@@ -1,6 +1,6 @@
 "use client";
 
-import type { JudgeStatus } from "@/lib/api/types";
+import type { JudgeStatus, RunSummary } from "@/lib/api/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
@@ -82,9 +82,20 @@ export function RunResultView({ state, onContinuePolling, className }: RunResult
       {run.compileOutput ? outputBlock(t("problems.compileOutput"), run.compileOutput) : null}
       {outputBlock(t("problems.runOutput"), run.stdout)}
       {outputBlock(t("problems.runErrorOutput"), run.stderr)}
-      {run.errorMessage ? <p className="text-sm text-soj-danger">{run.errorMessage}</p> : null}
+      {errorAlreadyShown(run) ? null : <p className="text-sm text-soj-danger">{run.errorMessage}</p>}
     </div>
   );
+}
+
+/**
+ * 后端把运行失败的 stderr 同时放进 `errorMessage` 与 `stderr`（编译错误则放进 `compileOutput`），
+ * 于是同一段文字在输出块下面又以红字重复一遍。已经逐字展示过的就不要再展示；
+ * 只有「输出超限」「运行超时」这类**没有对应输出块**的短句才需要单独一行。
+ */
+function errorAlreadyShown(run: RunSummary): boolean {
+  const message = run.errorMessage?.trim();
+  if (!message) return true;
+  return [run.compileOutput, run.stdout, run.stderr].some((text) => text?.includes(message));
 }
 
 function outputBlock(label: string, text: string | undefined) {
