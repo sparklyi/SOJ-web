@@ -82,4 +82,8 @@ export const problemMessages = {
   "problems.language.cpp17": { en: "C++17", "zh-CN": "C++17" },
   "problems.language.go": { en: "Go", "zh-CN": "Go" },
   "problems.language.python3": { en: "Python", "zh-CN": "Python" },
+  "problems.language.c": { en: "C", "zh-CN": "C" },
+  "problems.language.java": { en: "Java", "zh-CN": "Java" },
+  "problems.language.nodejs": { en: "JavaScript", "zh-CN": "JavaScript" },
+  "problems.language.rust": { en: "Rust", "zh-CN": "Rust" },
 } satisfies MessageCatalog;
