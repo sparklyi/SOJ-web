@@ -4,6 +4,8 @@
 
 English | [简体中文](README.zh-CN.md)
 
+**Live demo: <http://43.172.84.99/>**
+
 The v2 frontend for **Sundial**, an online judge for practice, contests, submissions, scoreboards, and live contest broadcast: a Next.js app with a mockable API boundary.
 
 > Renamed from SOJ on 2026-09-23. The product calls itself `Sundial` in both locales; the repository name, the `soj-*` design tokens, and the `SOJ_*` environment variables keep the short name.
