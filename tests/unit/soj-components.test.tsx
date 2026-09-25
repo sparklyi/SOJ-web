@@ -126,16 +126,20 @@ describe("soj product components", () => {
     expect(handleChange).not.toHaveBeenCalledWith(expect.objectContaining({ sourceCode: expect.stringContaining("#include") }));
   });
 
-  it("treats the unmodified starter as pristine and user code as not", () => {
-    const starter = "#include <bits/stdc++.h>";
+  it("treats any language's unmodified starter as pristine and user code as not", () => {
+    const cpp = "#include <bits/stdc++.h>";
+    const python = "print()";
+    const starters = new Set([cpp, python]);
     // 从未种入的初始空态：该种。
-    expect(isPristineSource("", "", false)).toBe(true);
-    // 用户一个字没写就换了语言：上一份模板还在编辑器里，该换新模板。
-    expect(isPristineSource(starter, starter, true)).toBe(true);
+    expect(isPristineSource("", starters, false)).toBe(true);
+    // 用户一个字没写就换了语言，编辑器里是上一门语言的模板：该换新模板。
+    expect(isPristineSource(cpp, starters, true)).toBe(true);
+    // 练习场刷新后源码来自草稿，草稿正是当初的模板：同样算没写，该换。
+    expect(isPristineSource(python, starters, true)).toBe(true);
     // 用户写过的代码：换语言也不动。
-    expect(isPristineSource("int main() { return 1; }", starter, true)).toBe(false);
+    expect(isPristineSource("int main() { return 1; }", starters, true)).toBe(false);
     // 用户亲手清空的空串：尊重清空，不强行回填。
-    expect(isPristineSource("", starter, true)).toBe(false);
+    expect(isPristineSource("", starters, true)).toBe(false);
   });
 
   it("disables HTTP submit without a browser session and posts edited source with one", async () => {

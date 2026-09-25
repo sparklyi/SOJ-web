@@ -2,7 +2,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { I18nProvider } from "@/components/providers/i18n-provider";
+import { starterSource } from "@/components/soj/code-workspace";
 import { PlaygroundClient } from "@/features/playground/playground-client";
+import { createTranslator } from "@/lib/i18n/translate";
 import { playgroundDraftKey } from "@/features/playground/draft-store";
 import { createMockSession, saveSession } from "@/lib/auth/session";
 import { mockLanguages, mockUser } from "@/lib/mock/fixtures";
@@ -154,5 +156,24 @@ describe("playground client", () => {
 
     const stored = JSON.parse(window.localStorage.getItem(playgroundDraftKey) ?? "{}");
     expect(stored.drafts[String(first?.id)]).toEqual({ sourceCode: "// first language edit", stdin: "" });
+  });
+
+  it("seeds the new starter when the restored draft is itself a template", async () => {
+    process.env.NEXT_PUBLIC_SOJ_API_MODE = "mock";
+    const [first, second] = mockLanguages;
+    const t = createTranslator("en");
+    // 上一次访问没写一个字，草稿里存下的就是模板本身。刷新后源码由草稿恢复，
+    // 这条路径不经过种模板逻辑，所以组件手里的「上一份模板」是空的——只认它的话，
+    // 下面这次切换不会发生，用户看到的是「换语言没反应」。
+    seedDraft(first?.id ?? 0, starterSource(first, t));
+
+    renderWithLocale(<PlaygroundClient />);
+    await waitFor(() => expect(screen.getByLabelText("Source code")).toBeVisible());
+
+    fireEvent.change(screen.getByLabelText("Language"), { target: { value: String(second?.id) } });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Source code")).toHaveValue(starterSource(second, t)),
+    );
   });
 });

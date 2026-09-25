@@ -216,9 +216,14 @@ export function starterSource(language: JudgeLanguage | undefined, t: Translator
 /**
  * 换语言时源码是不是「还没动过的模板」。导出纯函数是为了把这条判据测死：
  * 用户没写一个字就换语言 → 换成新语言的模板；写过或亲手清空过 → 一个字符都不动。
+ *
+ * 判据是「源码等于**任一**语言的模板」，而不是「等于组件上一份种下的模板」：
+ * 练习场刷新后源码是从 localStorage 草稿恢复的，它可能正是当初种下的模板，
+ * 但这条恢复路径不经过种模板逻辑，组件手里没有「上一份模板」可认。只认一份的话，
+ * 用户一个字没写、换个语言，代码却纹丝不动。
  */
-export function isPristineSource(sourceCode: string, lastStarter: string, everSeeded: boolean): boolean {
-  return sourceCode === lastStarter || (!everSeeded && sourceCode === "");
+export function isPristineSource(sourceCode: string, starterSources: ReadonlySet<string>, everSeeded: boolean): boolean {
+  return starterSources.has(sourceCode) || (!everSeeded && sourceCode === "");
 }
 
 /**
@@ -248,15 +253,19 @@ export function CodeWorkspace({
   const selectedLanguage = languages.find((item) => String(item.id) === effectiveSelectedLanguageId);
   // 语言目录可能是异步到达的，模板要等选型就绪才能种入受控状态。
   //
-  // 「还没动过」的判据不是「用户碰没碰过编辑器」，而是**源码此刻是不是上一份模板**：
+  // 「还没动过」的判据不是「用户碰没碰过编辑器」，而是**源码此刻是不是某个语言的模板**：
   //   · 空串且从未种入 —— 目录未就绪的初始态，种入；
-  //   · 源码恰好等于上一份选型对应的模板 —— 用户没写一个字就换了语言，
-  //     换成新语言的模板（这正是成熟 OJ 的行为：C++ 空壳切到 Go 就给 Go 壳）；
+  //   · 源码恰好等于任一语言的模板 —— 用户没写一个字就换了语言，换成新语言的模板
+  //     （这正是成熟 OJ 的行为：C++ 空壳切到 Python 就给 Python 壳）。认「任一语言」
+  //     而不是「上一份」是因为练习场的源码可能来自恢复的草稿，组件没亲手种过它；
   //   · 源码是别的内容 —— 用户写过的代码，一个字符都不动，换语言也不清空；
   //   · 源码是用户亲手清空的空串 —— 尊重清空，不强行回填。
-  const lastStarterRef = useRef("");
   const everSeededRef = useRef(false);
   const starter = selectedLanguage ? starterSource(selectedLanguage, t) : "";
+  const starterSources = useMemo(
+    () => new Set(languages.map((language) => starterSource(language, t))),
+    [languages, t],
+  );
 
   // 「用户最后一次亲手产生的工作区值」。
   //
@@ -275,12 +284,11 @@ export function CodeWorkspace({
     if (!selectedLanguage || starter === "") return;
     const input = latestInputRef.current;
     if (input && input.sourceCode !== value.sourceCode) return;
-    if (!isPristineSource(value.sourceCode, lastStarterRef.current, everSeededRef.current)) return;
+    if (!isPristineSource(value.sourceCode, starterSources, everSeededRef.current)) return;
     if (value.sourceCode === starter) return;
     everSeededRef.current = true;
-    lastStarterRef.current = starter;
     onChange({ ...value, sourceCode: starter });
-  }, [onChange, selectedLanguage, starter, value]);
+  }, [onChange, selectedLanguage, starter, starterSources, value]);
 
   const extensions = useMemo(() => {
     const lang = languageExtension(selectedLanguage?.engineLanguageId);
