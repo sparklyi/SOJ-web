@@ -16,6 +16,7 @@ const statusClass: Record<JudgeStatus, string> = {
   compile_error: "border-soj-warning/50 bg-soj-warning/10 text-soj-warning",
   time_limit: "border-soj-warning/50 bg-soj-warning/10 text-soj-warning",
   memory_limit: "border-soj-warning/50 bg-soj-warning/10 text-soj-warning",
+  output_limit: "border-soj-warning/50 bg-soj-warning/10 text-soj-warning",
   canceled: "border-soj-line bg-soj-surface text-soj-muted",
   system_error: "border-soj-danger/50 bg-soj-danger/10 text-soj-danger",
 };
@@ -35,6 +36,7 @@ const statusCode: Record<JudgeStatus, string> = {
   compile_error: "CE",
   time_limit: "TLE",
   memory_limit: "MLE",
+  output_limit: "OLE",
   canceled: "—",
   system_error: "SE",
 };
@@ -43,9 +45,9 @@ export function TestPointMatrix({ points }: { points: TestPoint[] }) {
   return (
     <div className="grid content-start grid-cols-[repeat(auto-fill,minmax(78px,1fr))] gap-2">
       {points.map((point) => (
-        <div key={point.index} className={cn("soj-test-point px-2 py-2 text-center font-mono text-xs", statusClass[point.status])}>
+        <div key={point.index} className={cn("soj-test-point px-2 py-2 text-center font-mono text-xs", statusClass[point.status] ?? "border-soj-line bg-soj-surface text-soj-muted")}>
           <div>#{point.index}</div>
-          <div className="mt-1">{statusCode[point.status]}</div>
+          <div className="mt-1">{statusCode[point.status] ?? "?"}</div>
         </div>
       ))}
     </div>

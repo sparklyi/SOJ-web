@@ -16,6 +16,7 @@ const tones: Record<JudgeStatus, VerdictTone> = {
   compile_error: "warning",
   time_limit: "warning",
   memory_limit: "warning",
+  output_limit: "warning",
   canceled: "neutral",
   system_error: "danger",
 };
@@ -25,7 +26,7 @@ type VerdictBadgeProps = {
 };
 
 export function VerdictBadge({ status }: VerdictBadgeProps) {
-  return <StatusPill tone={tones[status]}>{verdictLabels[status]}</StatusPill>;
+  return <StatusPill tone={tones[status] ?? "neutral"}>{verdictLabels[status] ?? status}</StatusPill>;
 }
 
 const textTone: Record<VerdictTone, string> = {
@@ -54,10 +55,10 @@ const surfaceTone: Record<VerdictTone, string> = {
  * 它应当自己带着颜色说话。
  */
 export function VerdictHeadline({ status, className }: { status: JudgeStatus; className?: string }) {
-  return <span className={`font-semibold ${textTone[tones[status]]} ${className ?? ""}`}>{verdictLabels[status]}</span>;
+  return <span className={`font-semibold ${textTone[tones[status] ?? "neutral"]} ${className ?? ""}`}>{verdictLabels[status] ?? status}</span>;
 }
 
 /** 与判定同色调的底板类，供结果卡/详情页把结论框起来。 */
 export function verdictSurfaceClass(status: JudgeStatus): string {
-  return surfaceTone[tones[status]];
+  return surfaceTone[tones[status] ?? "neutral"];
 }

@@ -161,6 +161,7 @@ export type JudgeStatus =
   | "runtime_error"
   | "time_limit"
   | "memory_limit"
+  | "output_limit"
   | "system_error"
   | "canceled";
 

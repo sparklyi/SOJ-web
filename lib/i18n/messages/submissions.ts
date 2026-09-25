@@ -91,6 +91,7 @@ export const submissionMessages = {
   "submissions.feedback.compileError": { en: "Compiler rejected the submitted source.", "zh-CN": "编译器拒绝了提交的源代码。" },
   "submissions.feedback.timeLimit": { en: "Execution exceeded the configured time limit.", "zh-CN": "执行超出了配置的时间限制。" },
   "submissions.feedback.memoryLimit": { en: "Execution exceeded the configured memory limit.", "zh-CN": "执行超出了配置的内存限制。" },
+  "submissions.feedback.outputLimit": { en: "Program wrote more output than the limit allows.", "zh-CN": "程序输出超过了允许的上限。" },
   "submissions.feedback.canceled": { en: "Judging was canceled before completion.", "zh-CN": "评测在完成前被取消。" },
   "submissions.feedback.systemError": { en: "Judge worker reported an internal system error.", "zh-CN": "评测工作进程报告了内部系统错误。" },
   "submissions.impact.ariaLabel": { en: "Contest impact", "zh-CN": "比赛影响" },
