@@ -55,3 +55,24 @@ test("playground keeps a draft across a reload", async ({ page }) => {
 
   await expect(page.getByLabel("Custom input")).toHaveValue("1 2 3");
 });
+
+test("playground resets the editor back to the language default", async ({ page }) => {
+  await page.goto("/playground");
+
+  const reset = page.getByRole("button", { name: "Reset to default code" });
+  await expect(reset).toBeVisible();
+  // 起始就是默认模板：没有可重置的东西，按钮禁用。
+  await expect(reset).toBeDisabled();
+
+  // 在编辑器里写一行，重置按钮解禁；点它回到当前语言的模板。
+  const editor = page.getByLabel("Source code");
+  await editor.click();
+  await page.keyboard.type("// scratch");
+  await expect(reset).toBeEnabled();
+  await expect(editor).toContainText("// scratch");
+
+  await reset.click();
+  await expect(editor).toContainText("#include <bits/stdc++.h>");
+  await expect(editor).not.toContainText("// scratch");
+  await expect(reset).toBeDisabled();
+});

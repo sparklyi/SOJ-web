@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
+import { RotateCcw } from "lucide-react";
 import { cpp } from "@codemirror/lang-cpp";
 import { go } from "@codemirror/lang-go";
 import { java } from "@codemirror/lang-java";
@@ -307,31 +308,47 @@ export function CodeWorkspace({
         <h2 className="font-mono text-xs uppercase tracking-[0.14em] text-soj-muted">
           {t("problems.codeWorkspace")}
         </h2>
-        <Select
-          value={effectiveSelectedLanguageId}
-          onValueChange={(next) => {
-            setSelectedLanguageId(next);
-            update({ languageId: Number(next) });
-          }}
-          disabled={languages.length === 0}
-        >
-          <SelectTrigger className="h-8 w-auto min-w-36 gap-1.5 px-2.5 text-xs" aria-label={t("problems.language")}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {languages.length === 0 ? (
-              <SelectItem value="none" disabled>
-                {t("problems.noLanguages")}
-              </SelectItem>
-            ) : (
-              languages.map((item) => (
-                <SelectItem key={item.id} value={String(item.id)}>
-                  {languageLabel(item, t)}
+        <div className="flex items-center gap-1.5">
+          <Select
+            value={effectiveSelectedLanguageId}
+            onValueChange={(next) => {
+              setSelectedLanguageId(next);
+              update({ languageId: Number(next) });
+            }}
+            disabled={languages.length === 0}
+          >
+            <SelectTrigger className="h-8 w-auto min-w-36 gap-1.5 px-2.5 text-xs" aria-label={t("problems.language")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {languages.length === 0 ? (
+                <SelectItem value="none" disabled>
+                  {t("problems.noLanguages")}
                 </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
+              ) : (
+                languages.map((item) => (
+                  <SelectItem key={item.id} value={String(item.id)}>
+                    {languageLabel(item, t)}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          {/* 重置为当前语言的默认代码。
+              换语言不清空用户代码是刻意的行为，但这意味着「我用 C 改了代码，
+              切到 Go 还是那份 C 代码」。这个按钮给出一条明确的回头路：
+              把编辑器换回当前语言的起始模板。已经在默认态时禁用，避免无意义点击。 */}
+          <button
+            type="button"
+            onClick={() => update({ sourceCode: starter })}
+            disabled={!selectedLanguage || starter === "" || value.sourceCode === starter}
+            aria-label={t("problems.resetCode")}
+            title={t("problems.resetCode")}
+            className="grid h-8 w-8 place-items-center rounded-soj-md border border-soj-line bg-soj-bg-raised/60 text-soj-muted transition hover:border-soj-line-strong hover:text-soj-text disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <RotateCcw aria-hidden className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
       {/* 凹陷井延续 textarea 时代的做法：编辑区是侧栏里最暗、最聚焦的一块。 */}
       <div className={cn("bg-soj-bg", fill && "min-h-0 flex-1", languages.length === 0 && "opacity-60")}>
