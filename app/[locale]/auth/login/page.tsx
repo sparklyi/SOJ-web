@@ -25,7 +25,7 @@ export default async function LoginPage() {
           footer={
             <p>
               {t("auth.form.loginFooter")}{" "}
-              <LocalizedLink href="/auth/register" className="text-soj-accent underline-offset-4 transition hover:underline">
+              <LocalizedLink href="/auth/register" className="text-soj-accent transition hover:opacity-80">
                 {t("auth.form.createAccount")}
               </LocalizedLink>
             </p>

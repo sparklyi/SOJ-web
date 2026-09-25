@@ -20,7 +20,6 @@ import type {
   ProblemReviewEventResponse,
   ProblemReviewQueueResponse,
   ProblemStatementResponse,
-  ProblemStatsResponse,
   RejudgeBatchCancelRequest,
   RejudgeBatchCreateRequest,
   RejudgeBatchDetailResponse,
@@ -38,6 +37,7 @@ import type {
   ScoreboardResponse,
   SubmissionCreateRequest,
   SubmissionResponse,
+  SubmissionSourceResponse,
   UserPageResponse,
   UserResponse,
 } from "./backend-types";
@@ -309,29 +309,19 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
             page_size: 100,
           },
         });
-        const statsByProblem = await Promise.all(
-          data.items.map((problem) =>
-            request<ProblemStatsResponse>(`/api/v1/problems/${problem.id}/stats`, {
-              accessToken: options.accessToken,
-            }),
-          ),
-        );
-        const items = data.items.map((problem, index) => mapProblemSummary(problem, statsByProblem[index]));
+        const items = data.items.map(mapProblemSummary);
         return { items, total: data.total };
       },
       get: async (id) => {
-        const [problem, statement, stats] = await Promise.all([
+        const [problem, statement] = await Promise.all([
           request<ProblemResponse>(`/api/v1/problems/${id}`, {
             accessToken: options.accessToken,
           }),
           request<ProblemStatementResponse>(`/api/v1/problems/${id}/statement`, {
             accessToken: options.accessToken,
           }),
-          request<ProblemStatsResponse>(`/api/v1/problems/${id}/stats`, {
-            accessToken: options.accessToken,
-          }),
         ]);
-        return mapProblemDetail(problem, statement, stats);
+        return mapProblemDetail(problem, statement);
       },
       listMine: async () => {
         const data = await request<PageResponse<ProblemResponse>>("/api/v1/problems", {
@@ -469,6 +459,12 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
           accessToken: options.accessToken,
         });
         return mapSubmissionSummary(data);
+      },
+      source: async (id) => {
+        const data = await request<SubmissionSourceResponse>(`/api/v1/submissions/${id}/source`, {
+          accessToken: options.accessToken,
+        });
+        return { sourceCode: data.source_code, languageId: data.language_id };
       },
       create: async (input) => {
         const data = await request<SubmissionResponse>("/api/v1/submissions", {

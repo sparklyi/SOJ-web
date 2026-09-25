@@ -31,7 +31,7 @@ const buttonVariants = cva(
           "border-soj-line bg-transparent text-soj-muted hover:border-soj-line-strong hover:bg-soj-surface hover:text-soj-text",
         ghost: "border-transparent bg-transparent text-soj-muted hover:bg-soj-surface hover:text-soj-text",
         danger: "border-soj-danger/45 bg-soj-danger/10 text-soj-danger hover:bg-soj-danger/16",
-        link: "border-transparent bg-transparent px-0 text-soj-accent underline-offset-4 hover:underline",
+        link: "border-transparent bg-transparent px-0 text-soj-accent transition hover:opacity-80",
         /**
          * 无外观：可点，但**不长成按钮**。
          * 给「整块可点」的区域用——首页的「加入我们」就是这种：那一整行本身就是动作，

@@ -1,5 +1,6 @@
 "use client";
 
+import { useBrowserSessionAvailable } from "@/components/auth/use-browser-session";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "@/components/providers/i18n-provider";
@@ -37,12 +38,12 @@ const timelineItems = [
 ];
 
 const testPoints = [
-  { index: 1, status: "accepted" as const, score: 10 },
-  { index: 2, status: "accepted" as const, score: 10 },
-  { index: 3, status: "running" as const, score: 0 },
-  { index: 4, status: "queued" as const, score: 0 },
-  { index: 5, status: "queued" as const, score: 0 },
-  { index: 6, status: "queued" as const, score: 0 },
+  { index: 1, status: "accepted" as const },
+  { index: 2, status: "accepted" as const },
+  { index: 3, status: "running" as const },
+  { index: 4, status: "queued" as const },
+  { index: 5, status: "queued" as const },
+  { index: 6, status: "queued" as const },
 ];
 
 const contestStatusLabel: Record<ContestStatus, MessageKey> = {
@@ -81,7 +82,7 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
   >({ status: "idle" });
   const hasSession = useBrowserSessionAvailable();
   const locallyRegistered = useLocalContestRegistration(contest.id, apiMode === "mock");
-  const needsSession = apiMode === "http" && !hasSession;
+  const needsSession = !hasSession;
   const lifecycleAllowsSubmit = contest.status === "running" || contest.status === "frozen";
   const effectiveCanSubmit = contest.canSubmit || (apiMode === "mock" && locallyRegistered && lifecycleAllowsSubmit);
   const canSubmit = !needsSession && effectiveCanSubmit && Boolean(languageId && workspace.sourceCode.trim()) && submitState.status !== "pending";
@@ -133,7 +134,7 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
                   {t("contests.workspace.back")}
                 </TypeExit>
                 <Badge tone="accent">{t("contests.workspace.problem", { alias })}</Badge>
-                <StatusPill tone={contest.type === "acm" ? "info" : "warning"}>{t(contest.type === "acm" ? "status.acm" : "status.oi")}</StatusPill>
+                <StatusPill tone="info">{t("status.acm")}</StatusPill>
                 <StatusPill tone={contest.status === "frozen" ? "warning" : "accent"}>{t(contestStatusLabel[contest.status])}</StatusPill>
               </div>
               <div className="grid gap-3">
@@ -262,7 +263,7 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
             </div>
             {needsSession ? (
               <p className="text-sm text-soj-muted">
-                <LocalizedLink className="text-soj-accent underline-offset-4 hover:underline" href="/auth/login">
+                <LocalizedLink className="text-soj-accent transition hover:opacity-80" href="/auth/login">
                   {t("contests.registration.signIn")}
                 </LocalizedLink>{" "}
                 {t("contests.workspace.signInHint")}
@@ -306,30 +307,9 @@ export function ContestWorkspacePage({ contest, problem, languages: initialLangu
   );
 }
 
-function browserHasSession() {
-  if (typeof window === "undefined") return false;
-  return Boolean(restoreSession(window.localStorage));
-}
-
 function browserUserKey() {
   if (typeof window === "undefined") return null;
   return contestRegistrationUserKey(restoreSession(window.localStorage)?.user);
-}
-
-function useBrowserSessionAvailable() {
-  const [available, setAvailable] = useState(() => getApiMode() === "mock");
-
-  useEffect(() => {
-    function update() {
-      setAvailable(getApiMode() === "mock" || browserHasSession());
-    }
-
-    update();
-    window.addEventListener("storage", update);
-    return () => window.removeEventListener("storage", update);
-  }, []);
-
-  return available;
 }
 
 function useLocalContestRegistration(contestId: number, enabled: boolean) {
@@ -368,7 +348,7 @@ function ContestSubmissionResult({
     return (
       <p className="text-sm text-soj-muted">
         {t("contests.workspace.submissionQueued")} {" "}
-        <LocalizedLink className="text-soj-accent underline-offset-4 hover:underline" href={`/submissions/${state.submissionId}`}>
+        <LocalizedLink className="text-soj-accent transition hover:opacity-80" href={`/submissions/${state.submissionId}`}>
           {t("contests.workspace.viewDetails")}
         </LocalizedLink>
       </p>

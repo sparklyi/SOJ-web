@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { JudgeStatus } from "@/lib/api/types";
-import { buildSubmissionTimeline, getSubmissionDisplayState, isSubmissionTerminal } from "@/lib/domain/submission";
+import { buildSubmissionTimeline, isSubmissionTerminal, verdictLabel } from "@/lib/domain/submission";
 import { buildSubmission } from "@/lib/mock/builders";
 
 const statuses: JudgeStatus[] = [
@@ -18,20 +18,19 @@ const statuses: JudgeStatus[] = [
 ];
 
 describe("submission lifecycle", () => {
-  it("maps every judge status to a display state", () => {
-    const labelKeys = statuses.map((status) => getSubmissionDisplayState(status).labelKey);
-    expect(labelKeys).toEqual([
-      "status.queued",
-      "status.compiling",
-      "status.running",
-      "status.accepted",
-      "status.wrongAnswer",
-      "status.compileError",
-      "status.runtimeError",
-      "status.timeLimit",
-      "status.memoryLimit",
-      "status.canceled",
-      "status.systemError",
+  it("maps every judge status to its universal verdict label", () => {
+    expect(statuses.map(verdictLabel)).toEqual([
+      "Queued",
+      "Compiling",
+      "Running",
+      "Accepted",
+      "Wrong Answer",
+      "Compile Error",
+      "Runtime Error",
+      "Time Limit Exceeded",
+      "Memory Limit Exceeded",
+      "Canceled",
+      "System Error",
     ]);
   });
 

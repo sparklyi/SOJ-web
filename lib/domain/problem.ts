@@ -1,9 +1,8 @@
-import type { ProblemDetail, ProblemDifficulty, ProblemStatus, ProblemSummary } from "@/lib/api/types";
+import type { ProblemDetail, ProblemDifficulty, ProblemSummary } from "@/lib/api/types";
 
 export type ProblemFilter = {
   query?: string;
   difficulty?: ProblemDifficulty;
-  status?: ProblemStatus;
   tag?: string;
 };
 
@@ -51,10 +50,9 @@ export function matchesProblemFilter(problem: ProblemSummary, filter: ProblemFil
   const query = filter.query?.trim().toLowerCase();
   const matchesQuery = query ? `${problem.title} ${problem.slug} ${problem.tags.join(" ")}`.toLowerCase().includes(query) : true;
   const matchesDifficulty = filter.difficulty ? problem.difficulty === filter.difficulty : true;
-  const matchesStatus = filter.status ? problem.status === filter.status : true;
   const matchesTag = filter.tag ? problem.tags.includes(filter.tag) : true;
 
-  return matchesQuery && matchesDifficulty && matchesStatus && matchesTag;
+  return matchesQuery && matchesDifficulty && matchesTag;
 }
 
 export function summarizeProblem(problem: ProblemDetail): ProblemSummary {

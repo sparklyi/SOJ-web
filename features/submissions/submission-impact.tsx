@@ -12,13 +12,6 @@ type SubmissionWithState = SubmissionSummary & {
 };
 
 function buildImpactItems(submission: SubmissionWithState, t: Translator): MetricFeedItem[] {
-  if (!submission.contestId) {
-    return [
-      { id: "scope", label: t("submissions.impact.scope"), value: t("submissions.impact.practiceRun"), tone: "neutral" },
-      { id: "rank", label: t("submissions.impact.rankMovement"), value: t("submissions.impact.none"), tone: "neutral" },
-    ];
-  }
-
   const state = submission.status === "accepted" ? t("submissions.impact.solved") : submission.displayState.terminal ? t("submissions.impact.notSolved") : t("submissions.impact.notFinal");
   const stateTone = submission.status === "accepted" ? "success" : submission.displayState.terminal ? "danger" : "neutral";
   const penaltyLabel = submission.contestImpact?.penalty
@@ -41,7 +34,6 @@ export function SubmissionImpact({ submission }: { submission: SubmissionWithSta
     <section aria-label={t("submissions.impact.ariaLabel")} className="soj-submission-detail-panel grid content-start grid-cols-[minmax(0,1fr)] gap-4 p-5">
       <div>
         <h2 className="text-xl font-semibold">{t("submissions.impact.title")}</h2>
-        <p className="mt-1 text-sm text-soj-muted">{t("submissions.impact.description")}</p>
       </div>
       <MetricFeed items={buildImpactItems(submission, t)} />
     </section>

@@ -88,7 +88,6 @@ export function SubmissionList({ submissions }: SubmissionListProps) {
           <tbody>
             {submissions.map((submission) => {
               const meta = [`P${submission.problemId}`, contestLabel(submission, t)];
-              if (submission.score > 0) meta.push(`${t("submissions.list.score")} ${submission.score}`);
 
               return (
                 <TableRow key={submission.id}>
@@ -96,7 +95,7 @@ export function SubmissionList({ submissions }: SubmissionListProps) {
                     {/* 行内编号链接就是一行等宽字：不加底色、不加描边、
                         不做成「无按钮外观的小按钮」。 */}
                     <LocalizedLink
-                      className="font-mono text-soj-accent underline-offset-4 transition hover:underline focus-visible:underline"
+                      className="font-mono text-soj-accent transition hover:opacity-80 focus-visible:opacity-80"
                       href={`/submissions/${submission.id}`}
                     >
                       #{submission.id}

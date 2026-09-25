@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { LockKeyhole } from "lucide-react";
 import type { JudgeLanguage } from "@/lib/api/types";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { useBrowserSessionAvailable } from "@/components/auth/use-browser-session";
 import { CodeWorkspace, StdinField, type WorkspaceValue } from "@/components/soj/code-workspace";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { getApiMode } from "@/lib/api/mode";
 import { listEnabledLanguages } from "@/features/languages/api";
@@ -35,7 +37,7 @@ type CatalogState = "loading" | "ready" | "error";
 export function PlaygroundClient() {
   const { t } = useI18n();
   const hasSession = useBrowserSessionAvailable();
-  const needsSession = getApiMode() === "http" && !hasSession;
+  const needsSession = !hasSession;
 
   const [languages, setLanguages] = useState<JudgeLanguage[]>([]);
   const [catalogState, setCatalogState] = useState<CatalogState>("loading");
@@ -185,14 +187,6 @@ export function PlaygroundClient() {
                 : t("playground.runAction")}
           </Button>
 
-          {needsSession ? (
-            <p className="text-sm text-soj-muted">
-              <LocalizedLink className="text-soj-accent underline-offset-4 hover:underline" href="/auth/login">
-                {t("problems.signIn")}
-              </LocalizedLink>
-            </p>
-          ) : null}
-
           {workspace ? (
             <StdinField
               value={workspace.stdin}
@@ -205,7 +199,19 @@ export function PlaygroundClient() {
           <Panel variant="flush" className="flex min-h-0 flex-1 flex-col" aria-label={t("playground.output")}>
             <PanelHeader title={t("playground.output")} className="shrink-0" />
             <PanelBody className="min-h-0 flex-1 overflow-auto">
-              {runState.status === "idle" ? (
+              {needsSession ? (
+                <EmptyState
+                  className="h-full"
+                  icon={LockKeyhole}
+                  title={t("playground.signInToRun")}
+                  description={t("playground.signInHint")}
+                  action={
+                    <LocalizedLink className={buttonVariants({ variant: "solid", size: "sm" })} href="/auth/login">
+                      {t("problems.signIn")}
+                    </LocalizedLink>
+                  }
+                />
+              ) : runState.status === "idle" ? (
                 <p className="text-sm text-soj-muted">{t("playground.outputIdle")}</p>
               ) : (
                 <RunResultView state={runState} onContinuePolling={() => void continuePolling()} />

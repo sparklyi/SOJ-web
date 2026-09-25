@@ -3,9 +3,9 @@
 import { FormEvent, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
-import type { ProblemDifficulty, ProblemStatus } from "@/lib/api/types";
+import type { ProblemDifficulty } from "@/lib/api/types";
 import { DifficultyScale, type DifficultyCount } from "@/components/soj/difficulty-composition";
-import { problemDifficultyLabelKey, problemStatusLabelKey } from "@/lib/domain/problem";
+import { problemDifficultyLabelKey } from "@/lib/domain/problem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,7 +15,6 @@ import { cn } from "@/lib/ui/cn";
 type ProblemFilterBarProps = {
   query?: string;
   difficulty?: ProblemDifficulty;
-  status?: ProblemStatus;
   tag?: string;
   tags: string[];
   /** 各难度档位的题量。它同时是分布信息，也是这一排按钮上的计数。 */
@@ -43,25 +42,18 @@ type ProblemFilterBarProps = {
  * 工具栏用比面板更暗的一层底（bg-soj-bg/35），读起来像表格上沿的一条控制带，
  * 而不是又一张卡片——所以它只有下边界，没有圆角与描边。
  */
-export function ProblemFilterBar({ query = "", difficulty, status, tag, tags, difficultyCounts }: ProblemFilterBarProps) {
+export function ProblemFilterBar({ query = "", difficulty, tag, tags, difficultyCounts }: ProblemFilterBarProps) {
   const { t, localize } = useI18n();
   const [search, setSearch] = useState(query);
   const [isPending, startTransition] = useTransition();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const statusOptions: Array<{ value: ProblemStatus | "all"; label: string }> = [
-    { value: "all", label: t("problems.allStatuses") },
-    { value: "todo", label: t("status.todo") },
-    { value: "attempted", label: t("status.attempted") },
-    { value: "accepted", label: t("status.solved") },
-  ];
   const difficultyTotal = difficultyCounts.reduce((sum, item) => sum + item.count, 0);
-  const hasFilters = Boolean(query || difficulty || status || tag);
+  const hasFilters = Boolean(query || difficulty || tag);
 
   const activeFilters: Array<{ key: string; label: string }> = [];
   if (query) activeFilters.push({ key: "q", label: `${t("problems.search")} · ${query}` });
-  if (status) activeFilters.push({ key: "status", label: t(problemStatusLabelKey[status]) });
   if (tag) activeFilters.push({ key: "tag", label: tag });
 
   function replaceFilter(key: string, value: string) {
@@ -96,7 +88,7 @@ export function ProblemFilterBar({ query = "", difficulty, status, tag, tags, di
   return (
     <div className="grid gap-3 border-b border-soj-line bg-soj-bg/35 px-4 py-3.5" aria-busy={isPending}>
       <form className="grid gap-3" onSubmit={submitSearch} aria-label={t("problems.findNext")} role="search">
-        <div className={cn("grid gap-3 transition-opacity lg:grid-cols-[minmax(200px,1fr)_auto_minmax(140px,168px)_minmax(140px,168px)] lg:items-end", isPending && "pointer-events-none opacity-60")}>
+        <div className={cn("grid gap-3 transition-opacity lg:grid-cols-[minmax(200px,1fr)_auto_minmax(140px,168px)] lg:items-end", isPending && "pointer-events-none opacity-60")}>
           <Input
             id="problem-search"
             label={t("problems.search")}
@@ -124,21 +116,6 @@ export function ProblemFilterBar({ query = "", difficulty, status, tag, tags, di
                 </FilterChip>
               ))}
             </div>
-          </div>
-          <div className="grid gap-1.5">
-            <span className="text-xs text-soj-muted">{t("problems.status")}</span>
-            <Select value={status ?? "all"} onValueChange={(value) => replaceFilter("status", value)}>
-              <SelectTrigger className="w-full" aria-label={t("problems.status")}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
           <div className="grid gap-1.5">
             <span className="text-xs text-soj-muted">{t("problems.tag")}</span>

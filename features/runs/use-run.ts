@@ -5,6 +5,7 @@ import type { RunSummary } from "@/lib/api/types";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { isSubmissionTerminal } from "@/lib/domain/submission";
+import { pollToTerminal } from "@/lib/domain/poll";
 
 export const RUN_POLL_INTERVAL_MS = 1200;
 export const RUN_POLL_DEADLINE_MS = 30_000;
@@ -34,8 +35,6 @@ export type RunState =
   | { status: "success"; run: RunSummary }
   | { status: "stillRunning"; run: RunSummary; elapsedMs: number }
   | { status: "error"; message: string };
-
-type PollOutcome = { run: RunSummary; timedOut: boolean };
 
 export type UseRunOptions = {
   pollIntervalMs?: number;
@@ -74,18 +73,20 @@ export function useRun(options: UseRunOptions = {}): UseRunResult {
     async (created: RunSummary) => {
       const startedAt = Date.now();
       const outcome = await pollToTerminal(created, {
-        pollIntervalMs,
+        intervalMs: pollIntervalMs,
         deadlineMs,
         isAlive: () => aliveRef.current,
+        isTerminal: (run) => isSubmissionTerminal(run.status),
+        read: (run) => createBrowserApiClient().runs.get(run.id),
       });
       // 组件已卸载：不要 setState，也不要覆盖新一次运行的状态。
       if (outcome === null) return;
 
       if (outcome.timedOut) {
-        setState({ status: "stillRunning", run: outcome.run, elapsedMs: Date.now() - startedAt });
+        setState({ status: "stillRunning", run: outcome.value, elapsedMs: Date.now() - startedAt });
         return;
       }
-      setState({ status: "success", run: outcome.run });
+      setState({ status: "success", run: outcome.value });
     },
     [deadlineMs, pollIntervalMs],
   );
@@ -125,29 +126,4 @@ export function useRun(options: UseRunOptions = {}): UseRunResult {
   const reset = useCallback(() => setState({ status: "idle" }), []);
 
   return { state, run, continuePolling, reset };
-}
-
-/**
- * 轮询到终态，或直到截止时间。返回 `timedOut` 让调用方区分
- * 「跑完了」和「不等了」——这两种情况对用户的意义完全不同。
- */
-async function pollToTerminal(
-  initial: RunSummary,
-  options: { pollIntervalMs: number; deadlineMs: number; isAlive: () => boolean },
-): Promise<PollOutcome | null> {
-  const client = createBrowserApiClient();
-  const deadline = Date.now() + options.deadlineMs;
-  let current = initial;
-
-  while (!isSubmissionTerminal(current.status) && Date.now() < deadline) {
-    await sleep(options.pollIntervalMs);
-    if (!options.isAlive()) return null;
-    current = await client.runs.get(current.id);
-  }
-
-  return { run: current, timedOut: !isSubmissionTerminal(current.status) };
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

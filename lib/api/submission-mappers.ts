@@ -8,7 +8,6 @@ export function mapSubmissionSummary(input: SubmissionResponse): SubmissionSumma
     problemTitle: `Problem #${input.problem_id}`,
     contestId: input.contest_id ?? undefined,
     status: input.status,
-    score: input.score,
     timeMs: input.time_ms ?? undefined,
     memoryKb: input.memory_kb ?? undefined,
     submittedAt: input.submitted_at,
@@ -27,7 +26,6 @@ function mapSubmissionResult(input: NonNullable<SubmissionResponse["result"]>): 
   return {
     attemptId: input.attempt_id,
     status: input.status,
-    score: input.score,
     timeMs: input.time_ms ?? undefined,
     memoryKb: input.memory_kb ?? undefined,
     firstFailedCaseIndex: input.first_failed_case_index ?? undefined,
@@ -43,7 +41,6 @@ function mapSubmissionCase(input: NonNullable<SubmissionResponse["cases"]>[numbe
     caseIndex: input.case_index,
     groupName: input.group_name ?? undefined,
     status: input.status,
-    score: input.score,
     timeMs: input.time_ms ?? undefined,
     memoryKb: input.memory_kb ?? undefined,
     checkerMessage: input.checker_message ?? undefined,

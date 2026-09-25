@@ -108,7 +108,7 @@ function ProgressSection() {
     <section className="soj-account-panel grid gap-5 p-5" aria-label={t("auth.me.progress")}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h2 className="text-xl font-semibold text-soj-text">{t("auth.me.progress")}</h2>
-        <LocalizedLink href="/problems" className="font-mono text-xs text-soj-accent underline-offset-4 transition hover:underline">
+        <LocalizedLink href="/problems" className="font-mono text-xs text-soj-accent transition hover:opacity-80">
           {t("auth.me.openProblemSet")}
         </LocalizedLink>
       </div>

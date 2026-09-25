@@ -30,7 +30,7 @@ export async function SiteFooter() {
 
   const repository = "https://github.com/sparklyi/SOJ-web";
   const linkClass =
-    "text-xs text-soj-muted underline-offset-4 transition hover:text-soj-text hover:underline focus-visible:text-soj-text focus-visible:underline";
+    "text-xs text-soj-muted transition hover:text-soj-text focus-visible:text-soj-text";
 
   return (
     <footer

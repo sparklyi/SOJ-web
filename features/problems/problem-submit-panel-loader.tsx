@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import type { JudgeLanguage, ProblemDetail } from "@/lib/api/types";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { getApiMode } from "@/lib/api/mode";
 import { listEnabledLanguages } from "@/features/languages/api";
 import { useI18n } from "@/components/providers/i18n-provider";
-import { ProblemSubmitPanel } from "./problem-submit-panel";
+import { ProblemSubmitPanel, type ProblemSubmitHandle } from "./problem-submit-panel";
 
 type ProblemSubmitPanelLoaderProps = {
   problem: ProblemDetail;
@@ -18,7 +18,10 @@ type LanguageState =
   | { status: "loading"; languages: JudgeLanguage[] }
   | { status: "error"; languages: JudgeLanguage[]; message: string };
 
-export function ProblemSubmitPanelLoader({ problem, initialLanguages = [] }: ProblemSubmitPanelLoaderProps) {
+export const ProblemSubmitPanelLoader = forwardRef<ProblemSubmitHandle, ProblemSubmitPanelLoaderProps>(function ProblemSubmitPanelLoader(
+  { problem, initialLanguages = [] },
+  ref,
+) {
   const { t } = useI18n();
   const [state, setState] = useState<LanguageState>(() => ({
     status: initialLanguages.length > 0 ? "ready" : "loading",
@@ -54,7 +57,9 @@ export function ProblemSubmitPanelLoader({ problem, initialLanguages = [] }: Pro
           {t("problems.languageCatalogEmpty")}
         </p>
       ) : null}
-      <ProblemSubmitPanel problem={problem} languages={state.languages} />
+      {state.status === "ready" && state.languages.length > 0 ? (
+        <ProblemSubmitPanel ref={ref} problem={problem} languages={state.languages} />
+      ) : null}
     </div>
   );
-}
+});

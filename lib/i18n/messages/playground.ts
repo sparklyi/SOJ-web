@@ -11,6 +11,7 @@ export const playgroundMessages = {
   "playground.runAction": { en: "Run", "zh-CN": "运行" },
   "playground.running": { en: "Running...", "zh-CN": "运行中..." },
   "playground.signInToRun": { en: "Sign in to run", "zh-CN": "登录后运行" },
+  "playground.signInHint": { en: "Sign in to run code and see the output.", "zh-CN": "登录后即可运行代码并查看输出。" },
   "playground.output": { en: "Output", "zh-CN": "输出" },
   "playground.outputIdle": { en: "Nothing has run yet.", "zh-CN": "还没有运行过。" },
   "playground.loadingLanguages": { en: "Loading judge languages...", "zh-CN": "正在加载评测语言..." },

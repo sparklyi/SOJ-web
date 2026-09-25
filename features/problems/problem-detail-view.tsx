@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import type { JudgeLanguage, ProblemDetail } from "@/lib/api/types";
 import { getAcceptanceRate, problemStatusLabelKey } from "@/lib/domain/problem";
 import { AcceptanceAxis } from "@/components/soj/acceptance-axis";
@@ -11,6 +12,7 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { Stat, StatDivider, StatGroup } from "@/components/ui/stat";
 import { formatDuration, formatMemory, formatNumber } from "@/lib/ui/number";
 import { ProblemSubmitPanelLoader } from "./problem-submit-panel-loader";
+import type { ProblemSubmitHandle } from "./problem-submit-panel";
 
 type ProblemDetailViewProps = {
   problem: ProblemDetail;
@@ -35,6 +37,9 @@ type ProblemDetailViewProps = {
 export function ProblemDetailView({ problem, languages = [] }: ProblemDetailViewProps) {
   const { t, locale } = useI18n();
   const acceptance = getAcceptanceRate(problem);
+  // 题面示例的「填入自定义输入」要落到右侧编辑器，用命令式句柄把两边接起来，
+  // 不把编辑器状态提升成整页共享 state。
+  const submitRef = useRef<ProblemSubmitHandle>(null);
 
   return (
     <div className="grid gap-6">
@@ -63,8 +68,8 @@ export function ProblemDetailView({ problem, languages = [] }: ProblemDetailView
       {/* 侧栏要装下代码编辑器：lg 26rem 起，xl 30rem，阅读栏相应让位。
           编辑区是提交面板的主角，比统计块更需要水平空间。 */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-start xl:grid-cols-[minmax(0,1fr)_30rem]">
-        <ProblemStatement problem={problem} t={t} />
-        <ProblemSubmitPanelLoader initialLanguages={languages} problem={problem} />
+        <ProblemStatement problem={problem} t={t} onUseExampleInput={(text) => submitRef.current?.fillStdin(text)} />
+        <ProblemSubmitPanelLoader ref={submitRef} initialLanguages={languages} problem={problem} />
       </div>
     </div>
   );

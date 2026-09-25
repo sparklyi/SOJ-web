@@ -42,7 +42,6 @@ export function ProblemList({ problems, totalCount }: ProblemListProps) {
               <TableHeaderCell className="min-w-64">{t("problems.table.problem")}</TableHeaderCell>
               <TableHeaderCell className="w-24">{t("problems.table.difficulty")}</TableHeaderCell>
               <TableHeaderCell className="w-36 text-right">{t("problems.table.acceptance")}</TableHeaderCell>
-              <TableHeaderCell className="w-28">{t("problems.table.status")}</TableHeaderCell>
             </TableRow>
           </TableHead>
           <tbody>

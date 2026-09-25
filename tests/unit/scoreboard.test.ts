@@ -1,48 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { mapContestResponse, mapContestScoreboard } from "@/lib/api/contest-mappers";
-import { buildScoreboardModel, getScoreboardColumns } from "@/lib/domain/scoreboard";
+import { buildAcmScoreboard } from "@/lib/domain/scoreboard";
 
 describe("scoreboard model", () => {
   it("ranks ACM rows by solved count then penalty", () => {
-    const model = buildScoreboardModel({
-      type: "acm",
-      rows: [
-        { id: "a", handle: "alpha", solved: 2, penalty: 180, problems: [] },
-        { id: "b", handle: "beta", solved: 2, penalty: 120, problems: [] },
-      ],
-    });
+    const model = buildAcmScoreboard([
+      { id: "a", handle: "alpha", solved: 2, penalty: 180, problems: [] },
+      { id: "b", handle: "beta", solved: 2, penalty: 120, problems: [] },
+    ]);
 
     expect(model.rows.map((row) => row.handle)).toEqual(["beta", "alpha"]);
   });
 
-  it("ranks OI rows by score then latest improvement", () => {
-    const model = buildScoreboardModel({
-      type: "oi",
-      rows: [
-        { id: "a", handle: "alpha", score: 240, lastImprovedAt: "2026-07-07T10:03:00Z", problems: [] },
-        { id: "b", handle: "beta", score: 260, lastImprovedAt: "2026-07-07T10:01:00Z", problems: [] },
-      ],
-    });
-
-    expect(model.rows[0]?.handle).toBe("beta");
-  });
-
   it("keeps tied rows on the same rank", () => {
-    const model = buildScoreboardModel({
-      type: "acm",
-      rows: [
-        { id: "a", handle: "alpha", solved: 3, penalty: 210, problems: [] },
-        { id: "b", handle: "beta", solved: 3, penalty: 210, problems: [] },
-        { id: "c", handle: "cyra", solved: 2, penalty: 120, problems: [] },
-      ],
-    });
+    const model = buildAcmScoreboard([
+      { id: "a", handle: "alpha", solved: 3, penalty: 210, problems: [] },
+      { id: "b", handle: "beta", solved: 3, penalty: 210, problems: [] },
+      { id: "c", handle: "cyra", solved: 2, penalty: 120, problems: [] },
+    ]);
 
     expect(model.rows.map((row) => row.rank)).toEqual([1, 1, 3]);
-  });
-
-  it("exposes contest type specific columns", () => {
-    expect(getScoreboardColumns("acm")).toContain("Penalty");
-    expect(getScoreboardColumns("oi")).toContain("Score");
   });
 
   it("maps backend contest lifecycle and timestamps safely", () => {
@@ -77,7 +54,6 @@ describe("scoreboard model", () => {
       }),
     );
 
-    expect(contest.type).toBe("acm");
     expect(contest.registered).toBe(true);
     expect(contest.problems).toEqual([
       { problemId: 101, alias: "A", title: "Problem A" },
@@ -85,7 +61,7 @@ describe("scoreboard model", () => {
     ]);
   });
 
-  it("maps backend ACM scoreboard rows into the existing scoreboard model shape", () => {
+  it("maps backend scoreboard rows into the ACM model shape", () => {
     const model = mapContestScoreboard({
       contest_id: 1,
       view: "frozen",
@@ -124,7 +100,6 @@ describe("scoreboard model", () => {
     });
 
     expect(model).toEqual({
-      type: "acm",
       view: "frozen",
       rows: [
         {
@@ -159,7 +134,6 @@ function contestResponse(overrides: {
     description: null,
     visibility: "public" as const,
     status: overrides.status ?? "published",
-    scoring_mode: "acm" as const,
     registered: overrides.registered ?? false,
     current_user_roles: overrides.currentUserRoles ?? [],
     start_at: overrides.startAt ?? "2026-07-08T10:00:00Z",

@@ -64,6 +64,10 @@ const COLLECT = () => {
     const classes = (typeof el.className === "string" ? el.className : "").slice(0, 56);
     const label = `${tag}.${classes}`;
 
+    // KaTeX 是数学排版，自带一套缩放（上标约 0.7em）；12px 地板管的是界面文字，
+    // 不该把公式的上标也算进来。
+    if (el.closest(".katex")) continue;
+
     // 1. 字号地板。只看元素**自己的**文字节点：父容器不该替子元素背锅。
     const ownText = Array.from(el.childNodes)
       .filter((node) => node.nodeType === 3)
@@ -125,38 +129,4 @@ test("the retired materials do not come back", async ({ page }) => {
 
   const radii = await scan(page, "radius");
   expect(radii, `不对称切角又出现了：\n${radii.join("\n")}`).toEqual([]);
-});
-
-/**
- * 「我的状态」的正向契约锁。
- *
- * 状态的颜色铺在**整行**上（problemRowTone），而不是一枚小胶囊——
- * 「哪些题我做过了」是扫整列的问题，不是逐格找色块的问题。
- * 这条锁防的是两类回退：
- *   1. 有人把行染色删掉、退回「只有状态列一个彩色小点」——三行底色就会变成同一种；
- *   2. 有人给「未开始」也刷上底色——默认态一染色，整张表就全有底，信号即消失。
- */
-test("my status tints the whole row, and the default state stays un-tinted", async ({ page }) => {
-  await injectSession(page);
-  await page.goto("/problems");
-
-  const tintOf = (statusWord: string) =>
-    page
-      .getByRole("table")
-      .locator("tbody tr")
-      .filter({ hasText: statusWord })
-      .first()
-      .evaluate((node) => getComputedStyle(node).backgroundColor);
-
-  const solved = await tintOf("Solved");
-  const attempted = await tintOf("Attempted");
-  const untouched = await tintOf("Not started");
-
-  // 未开始是默认态：不染色。染色本身就是「我对它做过什么」的信号。
-  expect(untouched, "未开始的行不该有底色——默认态一染色，整张表就全有底了").toBe("rgba(0, 0, 0, 0)");
-  // 三种状态三种底：扫一遍行就知道哪些做过、哪些试过。
-  expect(
-    new Set([solved, attempted, untouched]).size,
-    `三种状态的行底色应该互不相同，实际：solved=${solved} attempted=${attempted} untouched=${untouched}`,
-  ).toBe(3);
 });

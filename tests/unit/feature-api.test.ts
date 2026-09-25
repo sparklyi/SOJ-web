@@ -67,15 +67,13 @@ describe("feature api modules", () => {
   });
 
   it("filters problem lists and propagates not found errors", async () => {
-    // 站点策略：题库内容只对已登录 actor 开放，取数客户端需要带上会话。
-    saveSession(window.localStorage, createMockSession(mockUser));
-    const authedClient = createApiClient({ mode: "mock" });
-    const problems = await listProblems({ difficulty: "hard" }, authedClient);
+    // 题目是公共资产：匿名也能读 published+public，取数不再需要会话。
+    const problems = await listProblems({ difficulty: "hard" }, client);
     expect(problems.items.every((problem) => problem.difficulty === "hard")).toBe(true);
-    await expect(getProblem(404, authedClient)).rejects.toMatchObject({ code: "not_found", status: 404 });
+    await expect(getProblem(404, client)).rejects.toMatchObject({ code: "not_found", status: 404 });
   });
 
-  it("filters problems against page-facing solve status", async () => {
+  it("filters problems by tag", async () => {
     const apiClient = {
       ...client,
       problems: {
@@ -108,7 +106,7 @@ describe("feature api modules", () => {
       },
     };
 
-    const problems = await listProblems({ status: "todo" }, apiClient);
+    const problems = await listProblems({ tag: "math" }, apiClient);
 
     expect(problems.items).toHaveLength(1);
     expect(problems.items[0]?.slug).toBe("alpha");
@@ -117,7 +115,7 @@ describe("feature api modules", () => {
 
   it("returns submissions with display state", async () => {
     const submissions = await listSubmissions(client);
-    expect(submissions.items[0]?.displayState.labelKey).toBeTruthy();
+    expect(submissions.items[0]?.displayState.tone).toBeTruthy();
 
     const submission = await getSubmission(4, client);
     expect(submission.displayState.terminal).toBe(true);
