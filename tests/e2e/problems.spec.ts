@@ -29,6 +29,7 @@ test("problem detail is public and renders statement and submit rail", async ({ 
   // 提交侧栏对匿名访客也在，但两个动作是禁用的、转成登录引导。
   await expect(page.getByRole("heading", { name: "Code workspace" })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Custom input", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reset to default code" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in to run" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Sign in to submit" })).toBeDisabled();
 });
