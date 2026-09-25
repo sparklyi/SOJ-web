@@ -4,7 +4,7 @@ import { injectSession } from "./helpers/session";
 /**
  * 练习场是「入口」而不是「内容详情」，所以前两个用例**故意**不注入会话：
  * 匿名访客必须能打开页面、看到语言目录、在编辑器里写字。
- * 只有「运行」需要登录（在 mock 模式下夹具不做这个门禁，见 mock-adapter）。
+ * 只有「运行」需要登录，输出面板因此给出登录空态。
  */
 test("playground opens for a visitor and seeds a starter template", async ({ page }) => {
   await page.goto("/playground");
@@ -17,9 +17,9 @@ test("playground opens for a visitor and seeds a starter template", async ({ pag
   // 编辑器不是空的：CodeWorkspace 会种入当前语言的起始模板。
   await expect(page.getByLabel("Source code")).toContainText("#include <bits/stdc++.h>");
 
-  // 输出面板在没跑过之前是设计过的空态，不是一片空白。
+  // 未登录能看到编辑器，但运行需要登录：输出面板是登录空态，不是「还没运行」。
   await expect(page.getByRole("region", { name: "Output" })).toBeVisible();
-  await expect(page.getByText(/Nothing has run yet/i)).toBeVisible();
+  await expect(page.getByText("Sign in to run code and see the output.")).toBeVisible();
 });
 
 test("playground is reachable from the primary navigation", async ({ page }) => {

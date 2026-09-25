@@ -1,6 +1,4 @@
-import type { ContestType } from "@/lib/api/types";
-
-export type ScoreboardProblemStatus = "none" | "pending" | "accepted" | "wrong_answer" | "partial" | "first_blood";
+export type ScoreboardProblemStatus = "none" | "pending" | "accepted" | "wrong_answer";
 
 export type ScoreboardProblemCell = {
   problemId: number;
@@ -8,7 +6,6 @@ export type ScoreboardProblemCell = {
   status: ScoreboardProblemStatus;
   attempts?: number;
   penalty?: number;
-  score?: number;
 };
 
 export type AcmScoreboardRow = {
@@ -20,70 +17,32 @@ export type AcmScoreboardRow = {
   problems: ScoreboardProblemCell[];
 };
 
-export type OiScoreboardRow = {
-  id: string;
-  handle: string;
-  score: number;
-  lastImprovedAt: string;
-  movement?: number;
-  problems: ScoreboardProblemCell[];
-};
-
-export type ScoreboardInput =
-  | {
-      type: "acm";
-      rows: AcmScoreboardRow[];
-    }
-  | {
-      type: "oi";
-      rows: OiScoreboardRow[];
-    };
-
-export type RankedScoreboardRow<T extends AcmScoreboardRow | OiScoreboardRow> = T & {
+export type RankedScoreboardRow = AcmScoreboardRow & {
   rank: number;
 };
 
-export type ScoreboardModel =
-  | {
-      type: "acm";
-      rows: Array<RankedScoreboardRow<AcmScoreboardRow>>;
-      view?: "live" | "frozen" | "final";
-      nextCursor?: string;
-    }
-  | {
-      type: "oi";
-      rows: Array<RankedScoreboardRow<OiScoreboardRow>>;
-      view?: "live" | "frozen" | "final";
-      nextCursor?: string;
-    };
+export type ScoreboardModel = {
+  rows: RankedScoreboardRow[];
+  view?: "live" | "frozen" | "final";
+  nextCursor?: string;
+};
 
-export function buildScoreboardModel(input: ScoreboardInput): ScoreboardModel {
-  if (input.type === "acm") {
-    return {
-      type: "acm",
-      rows: rankRows(
-        input.rows,
-        (a, b) => b.solved - a.solved || a.penalty - b.penalty || a.handle.localeCompare(b.handle),
-        (a, b) => a.solved === b.solved && a.penalty === b.penalty,
-      ),
-    };
-  }
-
+/** 榜单只有一个赛制：ACM（题数 + 罚时）。排序与并列规则集中在这里。 */
+export function buildAcmScoreboard(rows: AcmScoreboardRow[]): ScoreboardModel {
   return {
-    type: "oi",
     rows: rankRows(
-      input.rows,
-      (a, b) => b.score - a.score || Date.parse(b.lastImprovedAt) - Date.parse(a.lastImprovedAt) || a.handle.localeCompare(b.handle),
-      (a, b) => a.score === b.score && a.lastImprovedAt === b.lastImprovedAt,
+      rows,
+      (a, b) => b.solved - a.solved || a.penalty - b.penalty || a.handle.localeCompare(b.handle),
+      (a, b) => a.solved === b.solved && a.penalty === b.penalty,
     ),
   };
 }
 
-export function getScoreboardColumns(type: ContestType) {
-  return type === "acm" ? ["Rank", "Handle", "Solved", "Penalty"] : ["Rank", "Handle", "Score", "Movement"];
-}
-
-function rankRows<T extends AcmScoreboardRow | OiScoreboardRow>(rows: T[], compare: (a: T, b: T) => number, sameRank: (a: T, b: T) => boolean) {
+function rankRows<T extends AcmScoreboardRow>(
+  rows: T[],
+  compare: (a: T, b: T) => number,
+  sameRank: (a: T, b: T) => boolean,
+) {
   const sorted = [...rows].sort(compare);
   let lastRank = 0;
 

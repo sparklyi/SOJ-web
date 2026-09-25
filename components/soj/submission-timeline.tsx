@@ -3,7 +3,8 @@
 import { useI18n } from "@/components/providers/i18n-provider";
 import type { JudgeStatus } from "@/lib/api/types";
 import type { MessageKey } from "@/lib/i18n/messages";
-import { VerdictBadge, verdictLabelKey } from "./verdict-badge";
+import { VerdictBadge } from "./verdict-badge";
+import { verdictLabel } from "@/lib/domain/submission";
 
 type SubmissionTimelineItem = {
   id: string;
@@ -23,7 +24,7 @@ export function SubmissionTimeline({ items }: { items: SubmissionTimelineItem[] 
         // 否则一行会读成「排队中 排队中」；只有当标签是**另一句话**
         // （「正在运行测试点」「已进入评测队列」）时它才提供新信息。
         const label = item.labelKey ? t(item.labelKey) : item.label;
-        const redundant = item.labelKey ? item.labelKey === verdictLabelKey(item.status) : label === t(verdictLabelKey(item.status));
+        const redundant = label === verdictLabel(item.status);
 
         return (
           <li key={item.id} className="soj-submission-timeline-item">

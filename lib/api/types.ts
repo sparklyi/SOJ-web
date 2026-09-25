@@ -113,14 +113,12 @@ export type ProblemAuthoringState = {
   blockers: Array<{ code: string; message: string }>;
 };
 
-export type ContestType = "acm" | "oi";
 export type ContestStatus = "scheduled" | "running" | "frozen" | "ended" | "unsealed";
 
 export type ContestSummary = {
   id: number;
   ownerUserId: number;
   title: string;
-  type: ContestType;
   status: ContestStatus;
   startsAt: string;
   endsAt: string;
@@ -173,7 +171,6 @@ export type SubmissionSummary = {
   contestTitle?: string;
   contestId?: number;
   status: JudgeStatus;
-  score: number;
   timeMs?: number;
   memoryKb?: number;
   errorMessage?: string;
@@ -191,7 +188,6 @@ export type SubmissionSummary = {
 export type SubmissionResult = {
   attemptId: number;
   status: JudgeStatus;
-  score: number;
   timeMs?: number;
   memoryKb?: number;
   firstFailedCaseIndex?: number;
@@ -205,11 +201,16 @@ export type SubmissionCase = {
   caseIndex: number;
   groupName?: string;
   status: JudgeStatus;
-  score: number;
   timeMs?: number;
   memoryKb?: number;
   checkerMessage?: string;
   outputDiffSummary?: string;
+};
+
+/** 提交源码。仅本人、全局管理员、以及本场比赛的 owner/judge 可读。 */
+export type SubmissionSource = {
+  sourceCode: string;
+  languageId: number;
 };
 
 export type SubmissionAdminDiagnostics = {
@@ -399,6 +400,7 @@ export type ApiClient = {
   submissions: {
     list: () => Promise<PageResult<SubmissionSummary>>;
     get: (id: number) => Promise<SubmissionSummary>;
+    source: (id: number) => Promise<SubmissionSource>;
     create: (input: CreateSubmissionInput) => Promise<SubmissionSummary>;
   };
   runs: {

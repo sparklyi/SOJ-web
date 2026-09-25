@@ -11,7 +11,7 @@ import type {
   SubmissionSummary,
 } from "@/lib/api/types";
 import { permissionsForRoles } from "@/lib/auth/permissions";
-import { buildAcmScoreboardRow, buildContest, buildOiScoreboardRow, buildProblem, buildSubmission, hoursFromNow, minutesFromNow } from "./builders";
+import { buildAcmScoreboardRow, buildContest, buildProblem, buildSubmission, hoursFromNow, minutesFromNow } from "./builders";
 
 export const mockUser: CurrentUser = {
   id: 7,
@@ -135,11 +135,10 @@ export const mockProblems: ProblemDetail[] = [
 ];
 
 export const mockContests: ContestSummary[] = [
-  buildContest({ id: 1, title: "Sundial Weekly Contest", type: "acm", status: "running" }),
+  buildContest({ id: 1, title: "Sundial Weekly Contest", status: "running" }),
   buildContest({
     id: 2,
     title: "OI Calibration Round",
-    type: "oi",
     status: "frozen",
     registered: false,
     startsAt: hoursFromNow(-5),
@@ -162,12 +161,11 @@ export const mockContests: ContestSummary[] = [
  * ③`running` 行给的是「到目前为止的峰值」，这是评测机本来就会报的量。
  */
 export const mockSubmissions: SubmissionSummary[] = [
-  buildSubmission({ id: 1, status: "queued", score: 0, problemId: 8, problemTitle: "Arena Clock", submittedAt: minutesFromNow(-79) }),
-  buildSubmission({ id: 2, status: "compiling", score: 0, problemId: 3, problemTitle: "Frozen Matrix", submittedAt: minutesFromNow(-66) }),
+  buildSubmission({ id: 1, status: "queued", problemId: 8, problemTitle: "Arena Clock", submittedAt: minutesFromNow(-79) }),
+  buildSubmission({ id: 2, status: "compiling", problemId: 3, problemTitle: "Frozen Matrix", submittedAt: minutesFromNow(-66) }),
   buildSubmission({
     id: 3,
     status: "running",
-    score: 0,
     timeMs: 118,
     memoryKb: 12288,
     problemId: 5,
@@ -177,7 +175,6 @@ export const mockSubmissions: SubmissionSummary[] = [
   buildSubmission({
     id: 4,
     status: "accepted",
-    score: 100,
     timeMs: 42,
     memoryKb: 8192,
     problemId: 1,
@@ -187,7 +184,6 @@ export const mockSubmissions: SubmissionSummary[] = [
   buildSubmission({
     id: 5,
     status: "wrong_answer",
-    score: 35,
     timeMs: 39,
     memoryKb: 6400,
     problemId: 7,
@@ -196,24 +192,21 @@ export const mockSubmissions: SubmissionSummary[] = [
     result: {
       attemptId: 105,
       status: "wrong_answer",
-      score: 35,
       firstFailedCaseIndex: 4,
       updatedAt: minutesFromNow(-26),
     },
     cases: Array.from({ length: 8 }, (_, index) => ({
       caseIndex: index + 1,
       status: (index < 3 ? "accepted" : index === 3 ? "wrong_answer" : "queued") as "accepted" | "wrong_answer" | "queued",
-      score: index < 3 ? 10 : index === 3 ? 5 : 0,
     })),
     contestImpact: { penalty: "+20 min", rankMovement: "Pending" },
   }),
-  buildSubmission({ id: 6, status: "runtime_error", score: 0, timeMs: 12, memoryKb: 4096, problemId: 3, problemTitle: "Frozen Matrix", submittedAt: minutesFromNow(-18) }),
-  buildSubmission({ id: 7, status: "compile_error", score: 0, problemId: 6, problemTitle: "Binary Beacon", submittedAt: minutesFromNow(-11) }),
-  buildSubmission({ id: 8, status: "system_error", score: 0, problemId: 5, problemTitle: "Rank Delta", submittedAt: minutesFromNow(-3) }),
+  buildSubmission({ id: 6, status: "runtime_error", timeMs: 12, memoryKb: 4096, problemId: 3, problemTitle: "Frozen Matrix", submittedAt: minutesFromNow(-18) }),
+  buildSubmission({ id: 7, status: "compile_error", problemId: 6, problemTitle: "Binary Beacon", submittedAt: minutesFromNow(-11) }),
+  buildSubmission({ id: 8, status: "system_error", problemId: 5, problemTitle: "Rank Delta", submittedAt: minutesFromNow(-3) }),
   buildSubmission({
     id: 9,
     status: "time_limit",
-    score: 60,
     timeMs: 1000,
     memoryKb: 262144,
     problemId: 4,
@@ -223,7 +216,6 @@ export const mockSubmissions: SubmissionSummary[] = [
   buildSubmission({
     id: 10,
     status: "accepted",
-    score: 100,
     timeMs: 27,
     memoryKb: 5632,
     problemId: 8,
@@ -404,7 +396,7 @@ export const mockRejudgeBatchItems: RejudgeBatchItem[] = [
  *
  * 三支队伍的每一格必须**彼此不同**——旧数据里三个人在 B 题上全是
  * 「答案错误 2」，同一列三个一模一样的单元格比空着更假。
- * `solved` / `penalty` / `score` 与各自单元格自洽：比赛只有 A/B/C 三道题，
+ * `solved` / `penalty` 与各自单元格自洽：比赛只有 A/B/C 三道题，
  * 通过题数不可能出现 4、5。
  */
 export const mockAcmScoreboardRows = [
@@ -446,41 +438,3 @@ export const mockAcmScoreboardRows = [
   }),
 ];
 
-export const mockOiScoreboardRows = [
-  buildOiScoreboardRow({
-    id: "team-1",
-    handle: "lin-chen",
-    score: 300,
-    lastImprovedAt: minutesFromNow(-8),
-    movement: 2,
-    problems: [
-      { problemId: 1, alias: "A", status: "accepted", score: 100 },
-      { problemId: 2, alias: "B", status: "accepted", score: 100 },
-      { problemId: 3, alias: "C", status: "accepted", score: 100 },
-    ],
-  }),
-  buildOiScoreboardRow({
-    id: "team-2",
-    handle: "mira",
-    score: 270,
-    lastImprovedAt: minutesFromNow(-14),
-    movement: 1,
-    problems: [
-      { problemId: 1, alias: "A", status: "accepted", score: 100 },
-      { problemId: 2, alias: "B", status: "partial", score: 70 },
-      { problemId: 3, alias: "C", status: "accepted", score: 100 },
-    ],
-  }),
-  buildOiScoreboardRow({
-    id: "team-3",
-    handle: "ravi",
-    score: 170,
-    lastImprovedAt: minutesFromNow(-31),
-    movement: -2,
-    problems: [
-      { problemId: 1, alias: "A", status: "accepted", score: 100 },
-      { problemId: 2, alias: "B", status: "partial", score: 70 },
-      { problemId: 3, alias: "C", status: "wrong_answer", score: 0 },
-    ],
-  }),
-];

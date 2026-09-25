@@ -1,13 +1,12 @@
 import { ApiError, notFound } from "./errors";
 import { createMockSession } from "@/lib/auth/session";
-import { buildScoreboardModel } from "@/lib/domain/scoreboard";
+import { buildAcmScoreboard } from "@/lib/domain/scoreboard";
 import {
   mockAcmScoreboardRows,
   mockAdminUsers,
   mockContests,
   mockContestRoleAssignments,
   mockLanguages,
-  mockOiScoreboardRows,
   mockProblems,
   mockProblemsAwaitingReview,
   mockRejudgeBatchItems,
@@ -40,6 +39,9 @@ type MockAdapterOptions = {
 };
 
 const createdSubmissions: SubmissionSummary[] = [];
+// Source lives with the submission in the mock so the detail page's source view
+// has something real to show, mirroring the backend's artifact store.
+const createdSubmissionSources = new Map<number, string>();
 const createdRuns: RunSummary[] = [];
 let nextSubmissionId = 10_000;
 let nextRunId = 20_000;
@@ -158,13 +160,11 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       me: async () => currentUser,
     },
     problems: {
-      // 站点策略与后端 SOJ 一致：题库内容（列表、详情）只对已登录 actor 开放。
+      // 站点策略与后端 SOJ 一致：publish 的公开题对匿名可读；私有/草稿只有作者与管理员可见（由 mock 数据本身表达）。
       list: async () => {
-        requireMockUser(currentUser);
         return { items: mockProblems, total: mockProblems.length };
       },
       get: async (id) => {
-        requireMockUser(currentUser);
         const problem = mockProblems.find((item) => item.id === id);
         if (!problem) throw notFound("Problem", id);
         return problem;
@@ -292,18 +292,39 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         if (!submission) throw notFound("Submission", id);
         return submission;
       },
+      source: async (id) => {
+        const submission = [...createdSubmissions, ...mockSubmissions].find((item) => item.id === id);
+        if (!submission) throw notFound("Submission", id);
+        return {
+          sourceCode: createdSubmissionSources.get(id) ?? "// mock submission source\n",
+          languageId: 54,
+        };
+      },
       create: async (input) => {
         const problem = mockProblems.find((item) => item.id === input.problemId);
+        const now = new Date().toISOString();
+        const id = nextSubmissionId++;
+        // 演示夹具直接落终态（与 mock 的 run 同一策略）：否则任何轮询的界面都会
+        // 一路等到截止时间，mock 模式下提交就是一个永远转圈的页面。
         const submission: SubmissionSummary = {
-          id: nextSubmissionId++,
+          id,
           problemId: input.problemId,
           problemTitle: problem?.title ?? `Problem #${input.problemId}`,
           contestId: input.contestId,
-          status: "queued",
-          score: 0,
-          submittedAt: new Date().toISOString(),
+          status: "accepted",
+          timeMs: 42,
+          memoryKb: 8192,
+          submittedAt: now,
+          result: { attemptId: id + 1000, status: "accepted", timeMs: 42, memoryKb: 8192, updatedAt: now },
+          cases: Array.from({ length: 4 }, (_, index) => ({
+            caseIndex: index + 1,
+            status: "accepted" as const,
+            timeMs: 8,
+            memoryKb: 4096,
+          })),
         };
         createdSubmissions.unshift(submission);
+        createdSubmissionSources.set(submission.id, input.sourceCode);
         return submission;
       },
     },
@@ -368,9 +389,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         const contest = mockContests.find((item) => item.id === id);
         if (!contest) throw notFound("Contest", id);
 
-        return contest.type === "acm"
-          ? buildScoreboardModel({ type: "acm", rows: mockAcmScoreboardRows })
-          : buildScoreboardModel({ type: "oi", rows: mockOiScoreboardRows });
+        return buildAcmScoreboard(mockAcmScoreboardRows);
       },
       listRoles: async (id) => {
         requireContestRoleManager(currentUser, id);

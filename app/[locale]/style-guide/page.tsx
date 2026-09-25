@@ -511,15 +511,15 @@ export default async function StyleGuidePage() {
                 items={[
                   { id: "queued", status: "queued", label: "", labelKey: "style.queuedByJudge", timestamp: "10:12:01" },
                   { id: "running", status: "running", label: "", labelKey: "style.runningTestPoints", timestamp: "10:12:05" },
-                  { id: "accepted", status: "accepted", label: "", labelKey: "status.accepted", timestamp: "10:12:09" },
+                  { id: "accepted", status: "accepted", label: "", timestamp: "10:12:09" },
                 ]}
               />
               <TestPointMatrix
                 points={[
-                  { index: 1, status: "accepted", score: 10 },
-                  { index: 2, status: "accepted", score: 10 },
-                  { index: 3, status: "running", score: 0 },
-                  { index: 4, status: "wrong_answer", score: 0 },
+                  { index: 1, status: "accepted" },
+                  { index: 2, status: "accepted" },
+                  { index: 3, status: "running" },
+                  { index: 4, status: "wrong_answer" },
                 ]}
               />
             </PanelBody>
@@ -547,10 +547,9 @@ export default async function StyleGuidePage() {
           </div>
           <Panel variant="flush">
             <ScoreboardGrid
-              mode="acm"
               rows={[
-                { id: "1", rank: 1, handle: "lin", solved: 5, penalty: 312, movement: 2 },
-                { id: "2", rank: 2, handle: "mira", solved: 4, penalty: 260, movement: -1 },
+                { id: "1", rank: 1, handle: "lin", solved: 5, penalty: 312 },
+                { id: "2", rank: 2, handle: "mira", solved: 4, penalty: 260 },
               ]}
             />
           </Panel>

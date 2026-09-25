@@ -8,7 +8,7 @@ import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Stat, StatDivider, StatGroup } from "@/components/ui/stat";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { getContestDurationMinutes } from "@/lib/domain/contest";
-import type { ContestStatus, ContestSummary, ContestType } from "@/lib/api/types";
+import type { ContestStatus, ContestSummary } from "@/lib/api/types";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translator } from "@/lib/i18n/translate";
 import { cn } from "@/lib/ui/cn";
@@ -28,11 +28,6 @@ const statusView: Record<ContestStatus, { label: MessageKey; tone: React.Compone
   frozen: { label: "contests.status.frozen", tone: "warning", phase: "contests.phase.scoreboardHidden" },
   ended: { label: "contests.status.ended", tone: "neutral", phase: "contests.phase.submissionsClosed" },
   unsealed: { label: "contests.status.unsealed", tone: "success", phase: "contests.phase.finalRanksPublic" },
-};
-
-const typeLabel: Record<ContestType, MessageKey> = {
-  acm: "status.acm",
-  oi: "status.oi",
 };
 
 /**
@@ -74,7 +69,7 @@ export function ContestList({ contests }: ContestListProps) {
                 <StatusPill tone={statusView[featuredContest.status].tone} withDot>
                   {t(statusView[featuredContest.status].label)}
                 </StatusPill>
-                <span className="soj-eyebrow">{t(typeLabel[featuredContest.type])}</span>
+                <span className="soj-eyebrow">{t("status.acm")}</span>
                 <span className="soj-eyebrow">{t(statusView[featuredContest.status].phase)}</span>
               </div>
               <h1 className="soj-display mt-5 max-w-4xl text-4xl md:text-6xl">{featuredContest.title}</h1>
@@ -138,7 +133,7 @@ export function ContestList({ contests }: ContestListProps) {
                     ))}
                   </div>
                 </div>
-                <ContestRowStat label={t("contests.list.format")} value={t(typeLabel[contest.type])} />
+                <ContestRowStat label={t("contests.list.format")} value={t("status.acm")} />
                 <ContestRowStat label={t("contests.list.window")} value={formatDuration(getContestDurationMinutes(contest), t)} />
                 <div className="grid gap-2.5">
                   <ContestAction

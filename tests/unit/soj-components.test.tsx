@@ -72,12 +72,10 @@ describe("soj product components", () => {
     expect(screen.getByText("Running tests")).toBeVisible();
   });
 
-  it("renders ACM and OI scoreboard rows", () => {
-    const { rerender } = renderWithLocale(<ScoreboardGrid mode="acm" rows={[{ id: "1", rank: 1, handle: "lin", solved: 4, penalty: 312 }]} />);
+  it("renders ACM scoreboard rows", () => {
+    renderWithLocale(<ScoreboardGrid rows={[{ id: "1", rank: 1, handle: "lin", solved: 4, penalty: 312 }]} />);
     expect(screen.getByText("Solved")).toBeVisible();
-
-    rerender(<I18nProvider locale="en"><ScoreboardGrid mode="oi" rows={[{ id: "1", rank: 1, handle: "lin", score: 460, movement: 2 }]} /></I18nProvider>);
-    expect(screen.getByText("Score")).toBeVisible();
+    expect(screen.getByText("Penalty")).toBeVisible();
   });
 
   it("edits source and reports the workspace state upward", () => {

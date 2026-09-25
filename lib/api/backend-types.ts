@@ -57,6 +57,10 @@ export type ProblemResponse = {
     time_limit_ms: number;
     memory_limit_kb: number;
   };
+  // 由后端批量投影得到，不是题目行本身的列：列表页一次请求即携带，
+  // 不需要每道题再打一次 /stats。
+  submission_count: number;
+  accepted_count: number;
   owner_user_id: number;
   created_at: string;
   updated_at: string;
@@ -167,7 +171,6 @@ export type SubmissionResponse = {
   contest_id?: number | null;
   language_id: number;
   status: JudgeStatus;
-  score: number;
   time_ms?: number | null;
   memory_kb?: number | null;
   error_message?: string | null;
@@ -180,10 +183,14 @@ export type SubmissionResponse = {
   admin_diagnostics?: SubmissionAdminDiagnostics;
 };
 
+export type SubmissionSourceResponse = {
+  source_code: string;
+  language_id: number;
+};
+
 export type SubmissionResultSummary = {
   attempt_id: number;
   status: JudgeStatus;
-  score: number;
   time_ms?: number | null;
   memory_kb?: number | null;
   first_failed_case_index?: number | null;
@@ -197,7 +204,6 @@ export type SubmissionCaseSummary = {
   case_index: number;
   group_name?: string | null;
   status: JudgeStatus;
-  score: number;
   time_ms?: number | null;
   memory_kb?: number | null;
   checker_message?: string | null;
@@ -256,7 +262,6 @@ export type ContestResponse = {
   description?: string | null;
   visibility: ContestVisibility;
   status: BackendContestStatus;
-  scoring_mode: "acm";
   registered: boolean;
   current_user_roles: ContestRole[];
   start_at: string;

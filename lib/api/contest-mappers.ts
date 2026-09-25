@@ -13,7 +13,6 @@ export function mapContestResponse(input: ContestResponse, now: Date = new Date(
     id: input.id,
     ownerUserId: input.owner_user_id,
     title: input.title,
-    type: input.scoring_mode,
     status: mapContestStatus(input, now),
     startsAt: input.start_at,
     endsAt: input.end_at,
@@ -57,7 +56,6 @@ export function mapContestRegistration(input: ContestRegistrationResponse): Cont
 
 export function mapContestScoreboard(input: ScoreboardResponse): ScoreboardModel {
   const scoreboard: ScoreboardModel = {
-    type: "acm",
     view: input.view,
     rows: input.rows.map((row) => ({
       rank: row.rank,

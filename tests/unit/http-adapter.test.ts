@@ -61,7 +61,7 @@ describe("http adapter", () => {
     });
   });
 
-  it("maps a backend problem page with per-item stats to problem summaries", async () => {
+  it("maps a backend problem page to problem summaries with inline counts", async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request) => {
       const path = String(url).replace("http://localhost:8080", "");
       if (path === "/api/v1/problems?page=1&page_size=100") {
@@ -77,6 +77,8 @@ describe("http adapter", () => {
                 tags: ["array", "hash-table"],
                 timeLimitMs: 1500,
                 memoryLimitKb: 131072,
+                submissionCount: 20,
+                acceptedCount: 12,
               }),
               problemResponse({
                 id: 102,
@@ -85,6 +87,8 @@ describe("http adapter", () => {
                 difficulty: "medium",
                 status: "published",
                 tags: ["dp"],
+                submissionCount: 8,
+                acceptedCount: 3,
               }),
             ],
             total: 2,
@@ -94,31 +98,13 @@ describe("http adapter", () => {
           error: null,
         });
       }
-      if (path === "/api/v1/problems/101/stats") {
-        return Response.json({
-          data: problemStatsResponse({ problemId: 101, totalSubmissions: 20, acceptedSubmissions: 12 }),
-          error: null,
-        });
-      }
-      if (path === "/api/v1/problems/102/stats") {
-        return Response.json({
-          data: problemStatsResponse({ problemId: 102, totalSubmissions: 8, acceptedSubmissions: 3 }),
-          error: null,
-        });
-      }
       return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
     });
     vi.stubGlobal("fetch", fetchMock);
 
     const problems = await createHttpAdapter().problems.list();
 
-    expect(requestedUrls(fetchMock)).toEqual(
-      expect.arrayContaining([
-        "http://localhost:8080/api/v1/problems?page=1&page_size=100",
-        "http://localhost:8080/api/v1/problems/101/stats",
-        "http://localhost:8080/api/v1/problems/102/stats",
-      ]),
-    );
+    expect(requestedUrls(fetchMock)).toEqual(["http://localhost:8080/api/v1/problems?page=1&page_size=100"]);
     expect(problems).toEqual({
       items: [
         {
@@ -146,44 +132,24 @@ describe("http adapter", () => {
     });
   });
 
-  it("propagates typed ApiError when a problem list stats request fails", async () => {
+  it("propagates typed ApiError when the problem detail request fails", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (url: string | URL | Request) => {
-        const path = String(url).replace("http://localhost:8080", "");
-        if (path === "/api/v1/problems?page=1&page_size=100") {
-          return Response.json({
-            data: {
-              items: [
-                problemResponse({
-                  id: 101,
-                  slug: "two-sum",
-                  title: "Two Sum",
-                  difficulty: "easy",
-                  status: "published",
-                }),
-              ],
-              total: 1,
-              page: 1,
-              page_size: 100,
-            },
-            error: null,
-          });
-        }
-        return Response.json(
+      vi.fn(async () =>
+        Response.json(
           {
             data: null,
-            error: { code: "problem.stats_unavailable", message: "Problem stats unavailable." },
+            error: { code: "problem.unavailable", message: "Problem catalog unavailable." },
           },
           { status: 503 },
-        );
-      }),
+        ),
+      ),
     );
 
-    await expect(createHttpAdapter().problems.list()).rejects.toMatchObject({
+    await expect(createHttpAdapter().problems.get(999)).rejects.toMatchObject({
       name: "ApiError",
-      code: "problem.stats_unavailable",
-      message: "Problem stats unavailable.",
+      code: "problem.unavailable",
+      message: "Problem catalog unavailable.",
       status: 503,
     } satisfies Partial<ApiError>);
   });
@@ -206,12 +172,6 @@ describe("http adapter", () => {
             },
             error: null,
           });
-        }
-        if (path === "/api/v1/problems/102/stats") {
-          return Response.json({ data: problemStatsResponse({ problemId: 102 }), error: null });
-        }
-        if (path === "/api/v1/problems/103/stats") {
-          return Response.json({ data: problemStatsResponse({ problemId: 103 }), error: null });
         }
         return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
       }),
@@ -321,7 +281,6 @@ describe("http adapter", () => {
               problemId: 101,
               contestId: 7,
               status: "time_limit",
-              score: 40,
               timeMs: 1001,
               memoryKb: 65536,
             }),
@@ -330,7 +289,6 @@ describe("http adapter", () => {
               problemId: 102,
               contestId: null,
               status: "memory_limit",
-              score: 0,
               timeMs: null,
               memoryKb: null,
             }),
@@ -355,7 +313,6 @@ describe("http adapter", () => {
           problemTitle: "Problem #101",
           contestId: 7,
           status: "time_limit",
-          score: 40,
           timeMs: 1001,
           memoryKb: 65536,
           submittedAt: "2026-07-07T10:12:00Z",
@@ -366,7 +323,6 @@ describe("http adapter", () => {
           problemTitle: "Problem #102",
           contestId: undefined,
           status: "memory_limit",
-          score: 0,
           timeMs: undefined,
           memoryKb: undefined,
           submittedAt: "2026-07-07T10:12:00Z",
@@ -385,7 +341,6 @@ describe("http adapter", () => {
             problemId: 101,
             contestId: 7,
             status: "queued",
-            score: 0,
           }),
           error: null,
         },
@@ -429,13 +384,12 @@ describe("http adapter", () => {
     const fetchMock = vi.fn(async () =>
       Response.json({
         data: {
-          ...submissionResponse({ id: 602, problemId: 101, status: "wrong_answer", score: 35 }),
+          ...submissionResponse({ id: 602, problemId: 101, status: "wrong_answer" }),
           error_message: "checker rejected point 4",
           visibility: "visible",
           result: {
             attempt_id: 902,
             status: "wrong_answer",
-            score: 35,
             first_failed_case_index: 4,
             first_failed_group: "hidden",
             error_class: "wrong_answer",
@@ -443,8 +397,8 @@ describe("http adapter", () => {
             updated_at: "2026-07-07T10:12:39Z",
           },
           cases: [
-            { case_index: 1, status: "accepted", score: 10, time_ms: 2, memory_kb: 128 },
-            { case_index: 4, status: "wrong_answer", score: 5, checker_message: "checker rejected point 4" },
+            { case_index: 1, status: "accepted", time_ms: 2, memory_kb: 128 },
+            { case_index: 4, status: "wrong_answer", checker_message: "checker rejected point 4" },
           ],
           admin_diagnostics: {
             attempt_id: 902,
@@ -468,8 +422,8 @@ describe("http adapter", () => {
       visibility: "visible",
       result: { attemptId: 902, firstFailedCaseIndex: 4, safeSummary: { reason: "mismatch" } },
       cases: [
-        { caseIndex: 1, status: "accepted", score: 10, timeMs: 2, memoryKb: 128 },
-        { caseIndex: 4, status: "wrong_answer", score: 5, checkerMessage: "checker rejected point 4" },
+        { caseIndex: 1, status: "accepted", timeMs: 2, memoryKb: 128 },
+        { caseIndex: 4, status: "wrong_answer", checkerMessage: "checker rejected point 4" },
       ],
       adminDiagnostics: { attemptId: 902, sandboxBackend: "runsc" },
     });
@@ -620,7 +574,6 @@ describe("http adapter", () => {
     expect(contests.items[0]).toMatchObject({
       id: 11,
       title: "SOJ Weekly Contest",
-      type: "acm",
       status: "scheduled",
       registered: true,
       problems: [{ problemId: 101, alias: "A", title: "Two Sum" }],
@@ -731,7 +684,6 @@ describe("http adapter", () => {
       headers: { Authorization: "Bearer contest-token" },
     });
     expect(scoreboard).toMatchObject({
-      type: "acm",
       view: "live",
       rows: [
         {
@@ -776,7 +728,7 @@ describe("http adapter", () => {
     expect(scoreboard.nextCursor).toBeUndefined();
   });
 
-  it("combines backend problem, statement, and stats into a problem detail", async () => {
+  it("combines backend problem and statement into a problem detail", async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request) => {
       const path = String(url).replace("http://localhost:8080", "");
       if (path === "/api/v1/problems/101") {
@@ -790,6 +742,8 @@ describe("http adapter", () => {
               tags: ["array", "hash-table"],
               timeLimitMs: 1500,
               memoryLimitKb: 131072,
+              submissionCount: 20,
+              acceptedCount: 12,
             }),
           error: null,
         });
@@ -811,12 +765,6 @@ describe("http adapter", () => {
           error: null,
         });
       }
-      if (path === "/api/v1/problems/101/stats") {
-        return Response.json({
-          data: problemStatsResponse({ problemId: 101, totalSubmissions: 20, acceptedSubmissions: 12 }),
-          error: null,
-        });
-      }
       return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -827,7 +775,6 @@ describe("http adapter", () => {
       expect.arrayContaining([
         "http://localhost:8080/api/v1/problems/101",
         "http://localhost:8080/api/v1/problems/101/statement",
-        "http://localhost:8080/api/v1/problems/101/stats",
       ]),
     );
     expect(problem).toMatchObject({
@@ -877,41 +824,6 @@ describe("http adapter", () => {
       code: "not_found",
       message: "Problem statement not found.",
       status: 404,
-    } satisfies Partial<ApiError>);
-  });
-
-  it("propagates typed ApiError when a problem detail stats request fails", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string | URL | Request) => {
-        const path = String(url).replace("http://localhost:8080", "");
-        if (path === "/api/v1/problems/101") {
-          return Response.json({
-            data: problemResponse({ id: 101, slug: "two-sum", title: "Two Sum", difficulty: "easy", status: "published" }),
-            error: null,
-          });
-        }
-        if (path === "/api/v1/problems/101/statement") {
-          return Response.json({
-            data: problemStatementResponse({ problemId: 101 }),
-            error: null,
-          });
-        }
-        return Response.json(
-          {
-            data: null,
-            error: { code: "problem.stats_unavailable", message: "Problem stats unavailable." },
-          },
-          { status: 503 },
-        );
-      }),
-    );
-
-    await expect(createHttpAdapter().problems.get(101)).rejects.toMatchObject({
-      name: "ApiError",
-      code: "problem.stats_unavailable",
-      message: "Problem stats unavailable.",
-      status: 503,
     } satisfies Partial<ApiError>);
   });
 
@@ -1159,6 +1071,8 @@ function problemResponse(overrides: {
   tags?: string[];
   timeLimitMs?: number;
   memoryLimitKb?: number;
+  submissionCount?: number;
+  acceptedCount?: number;
 }) {
   return {
     id: overrides.id,
@@ -1172,6 +1086,8 @@ function problemResponse(overrides: {
       time_limit_ms: overrides.timeLimitMs ?? 1000,
       memory_limit_kb: overrides.memoryLimitKb ?? 262144,
     },
+    submission_count: overrides.submissionCount ?? 0,
+    accepted_count: overrides.acceptedCount ?? 0,
     owner_user_id: 1,
     created_at: "2026-07-07T10:00:00Z",
     updated_at: "2026-07-07T10:00:00Z",
@@ -1208,7 +1124,6 @@ function submissionResponse(overrides: {
   problemId: number;
   contestId?: number | null;
   status: "queued" | "running" | "accepted" | "wrong_answer" | "compile_error" | "runtime_error" | "time_limit" | "memory_limit" | "system_error" | "canceled";
-  score: number;
   timeMs?: number | null;
   memoryKb?: number | null;
 }) {
@@ -1219,7 +1134,6 @@ function submissionResponse(overrides: {
     contest_id: overrides.contestId ?? null,
     language_id: 54,
     status: overrides.status,
-    score: overrides.score,
     time_ms: overrides.timeMs ?? null,
     memory_kb: overrides.memoryKb ?? null,
     error_message: null,
@@ -1276,7 +1190,6 @@ function contestResponse(overrides: {
     description: null,
     visibility: "public",
     status: overrides.status,
-    scoring_mode: "acm" as const,
     registered: overrides.registered ?? false,
     start_at: overrides.startAt ?? "2026-07-08T10:00:00Z",
     end_at: overrides.endAt ?? "2026-07-08T12:00:00Z",

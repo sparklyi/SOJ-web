@@ -5,7 +5,7 @@ import { StatusPill } from "@/components/soj/status-pill";
 import { buttonVariants } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { getContestDurationMinutes } from "@/lib/domain/contest";
-import type { ContestStatus, ContestSummary, ContestType } from "@/lib/api/types";
+import type { ContestStatus, ContestSummary } from "@/lib/api/types";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translator } from "@/lib/i18n/translate";
 import { cn } from "@/lib/ui/cn";
@@ -28,11 +28,6 @@ const statusView: Record<ContestStatus, { label: MessageKey; tone: React.Compone
   unsealed: { label: "contests.status.unsealed", tone: "success" },
 };
 
-const typeLabel: Record<ContestType, MessageKey> = {
-  acm: "contests.type.acmPenalty",
-  oi: "contests.type.oiScoring",
-};
-
 export function ContestDetail({ contest }: ContestDetailProps) {
   const { t, locale } = useI18n();
   const status = statusView[contest.status];
@@ -49,7 +44,7 @@ export function ContestDetail({ contest }: ContestDetailProps) {
                 出现两次，稀释的是两处的分量。 */}
             <div className="flex flex-wrap items-center gap-3">
               <StatusPill tone={status.tone}>{t(status.label)}</StatusPill>
-              <StatusPill tone="neutral">{t(typeLabel[contest.type])}</StatusPill>
+              <StatusPill tone="neutral">{t("contests.type.acmPenalty")}</StatusPill>
             </div>
             {/* 曾经是 text-5xl/7xl 的超大标题，绕开 soj-display 与全站页头尺度。
                 比赛详情是「正在发生的事」，标题用展示字，但回到比赛列表焦点赛事
@@ -99,7 +94,7 @@ export function ContestDetail({ contest }: ContestDetailProps) {
           <section aria-labelledby="contest-rules-heading" className="soj-contest-brief p-5 md:p-6">
             <h2 id="contest-rules-heading" className="text-2xl font-semibold tracking-tight">{t("contests.detail.rules")}</h2>
             <ul className="mt-5 grid gap-3 text-sm leading-6 text-soj-muted">
-              {buildRules(contest).map((rule) => (
+              {buildRules().map((rule) => (
                 <li key={rule} className="border-l border-soj-line-strong pl-3">{t(rule)}</li>
               ))}
             </ul>
@@ -167,18 +162,10 @@ function RouteAction({ href, label, primary = false }: { href: string; label: st
   );
 }
 
-function buildRules(contest: ContestSummary): MessageKey[] {
-  if (contest.type === "acm") {
-    return [
-      "contests.rules.acm.accepted",
-      "contests.rules.acm.freeze",
-      "contests.rules.registered",
-    ];
-  }
-
+function buildRules(): MessageKey[] {
   return [
-    "contests.rules.oi.partial",
-    "contests.rules.oi.highest",
+    "contests.rules.acm.accepted",
+    "contests.rules.acm.freeze",
     "contests.rules.registered",
   ];
 }

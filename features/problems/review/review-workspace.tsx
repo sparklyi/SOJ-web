@@ -182,7 +182,7 @@ function ReviewQueue() {
                 <span>
                   {t("roles.userId")}: <span className="font-mono text-soj-text">{selected.ownerUserId}</span>
                 </span>
-                <LocalizedLink className="text-soj-accent underline-offset-4 hover:underline" href={`/manage/problems`}>
+                <LocalizedLink className="text-soj-accent transition hover:opacity-80" href={`/manage/problems`}>
                   {t("nav.account.authorProblems")}
                 </LocalizedLink>
               </div>

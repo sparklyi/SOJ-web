@@ -12,13 +12,10 @@ type ContestScoreboardPageProps = {
   scoreboard: ScoreboardModel;
 };
 
-const statusLabel: Record<ScoreboardProblemCell["status"], MessageKey> = {
+// 非判定态的单元格词条（无提交 / 等待中）。判定态用通用短码，见 acmCellLabel。
+const statusLabel: Record<"none" | "pending", MessageKey> = {
   none: "contests.scoreboard.noRun",
   pending: "status.pending",
-  accepted: "status.accepted",
-  wrong_answer: "status.wrongAnswer",
-  partial: "contests.scoreboard.partial",
-  first_blood: "contests.scoreboard.firstBlood",
 };
 
 export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboardPageProps) {
@@ -34,7 +31,7 @@ export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboard
         <div className="relative z-[1] min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <StatusPill tone={frozen ? "warning" : "accent"}>{frozen ? t("contests.scoreboard.frozen") : t("contests.scoreboard.live")}</StatusPill>
-            <StatusPill tone="neutral">{t(scoreboard.type === "acm" ? "status.acm" : "status.oi")}</StatusPill>
+            <StatusPill tone="neutral">{t("status.acm")}</StatusPill>
           </div>
           <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-none tracking-tight md:text-7xl">{t("contests.scoreboard.title")}</h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-soj-muted">
@@ -60,8 +57,8 @@ export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboard
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <ScoreMetric label={t(scoreboard.type === "acm" ? "scoreboard.solved" : "scoreboard.score")} value={leader ? topValue(leader) : "-"} tone="accent" />
-            <ScoreMetric label={t(scoreboard.type === "acm" ? "scoreboard.penalty" : "contests.scoreboard.lastDelta")} value={leader ? sideValue(leader) : "-"} />
+            <ScoreMetric label={t("scoreboard.solved")} value={leader ? String(leader.solved) : "-"} tone="accent" />
+            <ScoreMetric label={t("scoreboard.penalty")} value={leader ? String(leader.penalty) : "-"} />
           </div>
         </aside>
       </section>
@@ -69,7 +66,7 @@ export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboard
       <section className="soj-scoreboard-board overflow-hidden">
         <div className="grid gap-3 border-b border-soj-line/55 p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">{t("contests.scoreboard.matrixTitle", { mode: t(scoreboard.type === "acm" ? "status.acm" : "status.oi") })}</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">{t("contests.scoreboard.matrixTitle", { mode: t("status.acm") })}</h2>
             <p className="mt-2 text-sm leading-6 text-soj-muted">{t("contests.scoreboard.matrixDescription")}</p>
           </div>
           <StatusPill tone={frozen ? "warning" : "accent"} className="justify-self-start">
@@ -82,8 +79,8 @@ export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboard
               <tr className="border-b border-soj-line/65 text-xs uppercase tracking-[0.16em] text-soj-muted">
                 <th className="sticky left-0 z-[2] bg-soj-bg-raised/95 px-4 py-3 font-medium">{t("scoreboard.rank")}</th>
                 <th className="px-4 py-3 font-medium">{t("scoreboard.handle")}</th>
-                <th className="px-4 py-3 font-medium">{t(scoreboard.type === "acm" ? "scoreboard.solved" : "scoreboard.score")}</th>
-                <th className="px-4 py-3 font-medium">{t(scoreboard.type === "acm" ? "scoreboard.penalty" : "scoreboard.movement")}</th>
+                <th className="px-4 py-3 font-medium">{t("scoreboard.solved")}</th>
+                <th className="px-4 py-3 font-medium">{t("scoreboard.penalty")}</th>
                 {problemColumns.map((problem) => (
                   <th key={problem.alias} className="px-3 py-3 text-center font-medium">
                     {problem.alias}
@@ -103,11 +100,11 @@ export function ContestScoreboardPage({ contest, scoreboard }: ContestScoreboard
                     <div className="font-semibold text-soj-text">{row.handle}</div>
                     <div className="mt-1 font-mono text-xs text-soj-muted">{row.id}</div>
                   </td>
-                  <td className="px-4 py-4 font-mono text-lg text-soj-accent">{"solved" in row ? row.solved : row.score}</td>
-                  <td className="px-4 py-4 font-mono">{"penalty" in row ? row.penalty : <RankMovement delta={row.movement ?? 0} />}</td>
+                  <td className="px-4 py-4 font-mono text-lg text-soj-accent">{row.solved}</td>
+                  <td className="px-4 py-4 font-mono">{row.penalty}</td>
                   {row.problems.map((problem) => (
                     <td key={`${row.id}-${problem.alias}`} className="px-3 py-4 text-center">
-                      <ProblemCell mode={scoreboard.type} problem={problem} t={t} />
+                      <ProblemCell problem={problem} t={t} />
                     </td>
                   ))}
                 </tr>
@@ -136,31 +133,20 @@ function ScoreMetric({ label, value, tone = "text" }: { label: string; value: st
   );
 }
 
-function ProblemCell({ mode, problem, t }: { mode: ScoreboardModel["type"]; problem: ScoreboardProblemCell; t: (key: MessageKey) => string }) {
+function ProblemCell({ problem, t }: { problem: ScoreboardProblemCell; t: (key: MessageKey) => string }) {
   return (
     <div className={`soj-score-cell soj-score-cell-${problem.status}`}>
-      <span>{mode === "acm" ? acmCellLabel(problem, t) : oiCellLabel(problem, t)}</span>
+      <span>{acmCellLabel(problem, t)}</span>
     </div>
   );
 }
 
-function topValue(row: ScoreboardModel["rows"][number]) {
-  return "solved" in row ? String(row.solved) : String(row.score);
-}
-
-function sideValue(row: ScoreboardModel["rows"][number]) {
-  return "penalty" in row ? String(row.penalty) : `${row.movement && row.movement > 0 ? "+" : ""}${row.movement ?? 0}`;
-}
-
 function acmCellLabel(problem: ScoreboardProblemCell, t: (key: MessageKey) => string) {
-  if (problem.status === "accepted" || problem.status === "first_blood") {
-    return `${t(statusLabel[problem.status])} ${problem.penalty ?? 0}`;
+  // 判定用 OJ 通用短码：AC / WA。榜单格子窄，且这两个词本来就跨语言通用。
+  const label = problem.status === "accepted" ? "AC" : problem.status === "wrong_answer" ? "WA" : t(statusLabel[problem.status]);
+  if (problem.status === "accepted") {
+    return `${label} ${problem.penalty ?? 0}`;
   }
-  if (problem.attempts) return `${t(statusLabel[problem.status])} ${problem.attempts}`;
-  return t(statusLabel[problem.status]);
-}
-
-function oiCellLabel(problem: ScoreboardProblemCell, t: (key: MessageKey) => string) {
-  if (typeof problem.score === "number") return `${problem.score}`;
-  return t(statusLabel[problem.status]);
+  if (problem.attempts) return `${label} ${problem.attempts}`;
+  return label;
 }

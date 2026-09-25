@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getApiMode } from "@/lib/api/mode";
-import { restoreSession } from "@/lib/auth/session";
+import { restoreSession, sessionChangeEvent } from "@/lib/auth/session";
 
 /**
  * 「这个浏览器现在能不能执行需要登录的动作」。
@@ -11,23 +10,30 @@ import { restoreSession } from "@/lib/auth/session";
  * 可以同步读 localStorage，不必等网络往返——否则每个受限按钮在首帧都会
  * 闪一下「可点」。所以这里直接读会话，不查后端。
  *
- * mock 模式恒为 true：演示夹具里没有真实会话，用登录墙挡住会让评审
- * 看不到功能本身长什么样。这是**故意**的差异，不是漏判。
+ * **不再对 mock 模式放行。** 之前 mock 恒为 true，理由是「演示夹具里没有
+ * 真实会话」；但那让评审在未登录时也能点提交/运行，看到的是一套真实部署里
+ * 不存在的流程。mock 现在同样要求会话：mock 登录接受任意邮箱密码，
+ * 想走提交路径就先登录，这才和线上一致。
  *
- * 监听 `storage` 是为了跨标签页同步：在另一个标签页登录后，
- * 这个标签页的按钮应该跟着变成可用。
+ * 监听两个信号：`soj:session-change`（同标签页登录/登出，`saveSession`/`clearSession`
+ * 派发）与 `storage`（另一个标签页的变更）。少了前者，登录后当前页的按钮
+ * 要等到下次整页导航才解禁。
  */
 export function useBrowserSessionAvailable() {
-  const [available, setAvailable] = useState(() => getApiMode() === "mock");
+  const [available, setAvailable] = useState(false);
 
   useEffect(() => {
     function update() {
-      setAvailable(getApiMode() === "mock" || browserHasSession());
+      setAvailable(browserHasSession());
     }
 
     update();
+    window.addEventListener(sessionChangeEvent, update);
     window.addEventListener("storage", update);
-    return () => window.removeEventListener("storage", update);
+    return () => {
+      window.removeEventListener(sessionChangeEvent, update);
+      window.removeEventListener("storage", update);
+    };
   }, []);
 
   return available;

@@ -1,5 +1,5 @@
 import type { ContestSummary, ProblemDetail, SubmissionSummary } from "@/lib/api/types";
-import type { AcmScoreboardRow, OiScoreboardRow } from "@/lib/domain/scoreboard";
+import type { AcmScoreboardRow } from "@/lib/domain/scoreboard";
 
 /**
  * 比赛时间按「整点」锚定到当前时刻。
@@ -56,10 +56,14 @@ export function buildProblem(overrides: Partial<ProblemDetail> = {}): ProblemDet
     status: "todo",
     acceptedCount: 184 + id,
     submissionCount: 421 + id * 3,
-    statement: "Find the minimum-cost path between two nodes in a directed weighted graph.",
-    input: "The first line contains n and m. The next m lines contain weighted directed edges.",
-    output: "Print the minimum cost from source to target.",
-    examples: [{ input: "4 4\n1 2 5\n2 4 7\n1 3 2\n3 4 4", output: "6" }],
+    statement:
+      "在带权有向图中，求两个结点之间的最小代价路径。若 $u \\to v$ 的边权为 $w$，代价即路径上边权之和。",
+    input: "第一行两个整数 $n$ 和 $m$。接下来 $m$ 行，每行一条带权有向边。",
+    output: "输出从源点到目标点的最小代价。若不可达，输出 `-1`；数据保证 $1 \\le w \\le 10^9$。",
+    examples: [
+      { input: "4 4\n1 2 5\n2 4 7\n1 3 2\n3 4 4", output: "6" },
+      { input: "3 2\n1 2 10\n2 3 5", output: "15" },
+    ],
     constraints: ["1 <= n <= 200000", "1 <= m <= 400000"],
     timeLimitMs: 1000,
     memoryLimitKb: 262144,
@@ -74,7 +78,6 @@ export function buildContest(overrides: Partial<ContestSummary> = {}): ContestSu
     id: overrides.id ?? 1,
     ownerUserId: overrides.ownerUserId ?? 1,
     title: "Sundial Weekly Contest",
-    type: "acm",
     status: "running",
     startsAt: at(-2),
     endsAt: at(3),
@@ -98,7 +101,6 @@ export function buildSubmission(overrides: Partial<SubmissionSummary> = {}): Sub
     contestTitle: "Sundial Weekly Contest",
     contestId: 1,
     status: "running",
-    score: 0,
     submittedAt: minutesFromNow(-12),
     ...overrides,
   };
@@ -108,9 +110,7 @@ export function buildSubmission(overrides: Partial<SubmissionSummary> = {}): Sub
  * 排行榜一行。
  *
  * 默认值必须**自洽**：`solved` 是下面三个单元格里 accepted 的个数，
- * `penalty` 是各题解出分钟数加罚时，`score` 是各题得分之和。
- * 旧默认值写着 solved: 4 / score: 420，而三格题目只有一题通过、
- * 分数加起来是 170 —— 排行榜上「通过题数 4」配三个格子，一眼就是编的。
+ * `penalty` 是各题解出分钟数加罚时。
  */
 export function buildAcmScoreboardRow(overrides: Partial<AcmScoreboardRow> = {}): AcmScoreboardRow {
   return {
@@ -123,22 +123,6 @@ export function buildAcmScoreboardRow(overrides: Partial<AcmScoreboardRow> = {})
       { problemId: 1, alias: "A", status: "accepted", attempts: 1, penalty: 42 },
       { problemId: 2, alias: "B", status: "wrong_answer", attempts: 2 },
       { problemId: 3, alias: "C", status: "pending", attempts: 1 },
-    ],
-    ...overrides,
-  };
-}
-
-export function buildOiScoreboardRow(overrides: Partial<OiScoreboardRow> = {}): OiScoreboardRow {
-  return {
-    id: overrides.id ?? "team-1",
-    handle: "lin-chen",
-    score: 170,
-    lastImprovedAt: minutesFromNow(-20),
-    movement: 2,
-    problems: [
-      { problemId: 1, alias: "A", status: "accepted", score: 100 },
-      { problemId: 2, alias: "B", status: "partial", score: 70 },
-      { problemId: 3, alias: "C", status: "wrong_answer", score: 0 },
     ],
     ...overrides,
   };

@@ -1,13 +1,12 @@
 import type { SubmissionSummary } from "@/lib/api/types";
-import type { MessageKey } from "@/lib/i18n/messages";
-import { getSubmissionDisplayState, judgeStatusLabelKey } from "./submission";
+import { getSubmissionDisplayState, verdictLabel } from "./submission";
 
 export type ArenaEventTone = "accent" | "success" | "warning" | "danger";
 
 export type ArenaEvent = {
   id: string;
-  /** 词条 key。域层不产出用户可见文案——这里以前硬编码过 `"Contest status"`。 */
-  labelKey: MessageKey;
+  /** 判定词的通用英文术语（Accepted / Wrong Answer…），不翻译。 */
+  label: string;
   /** 事件主体（题目标题）。 */
   value: string;
   tone: ArenaEventTone;
@@ -29,7 +28,7 @@ export function buildArenaEvents(submissions: SubmissionSummary[]): ArenaEvent[]
     const state = getSubmissionDisplayState(submission.status);
     return {
       id: `submission-${submission.id}`,
-      labelKey: judgeStatusLabelKey[submission.status],
+      label: verdictLabel(submission.status),
       value: submission.problemTitle,
       tone: toArenaTone(state.tone),
       timestamp: submission.submittedAt,

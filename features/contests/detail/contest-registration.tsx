@@ -1,5 +1,6 @@
 "use client";
 
+import { useBrowserSessionAvailable } from "@/components/auth/use-browser-session";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -46,7 +47,7 @@ export function ContestRegistration({ contest }: ContestRegistrationProps) {
     | { status: "error"; message: string }
   >({ status: "idle" });
   const registered = contest.registered || (apiMode === "mock" && locallyRegistered) || state.status === "success";
-  const needsSession = apiMode === "http" && !hasSession;
+  const needsSession = !hasSession;
   const canSubmitRegistration = contest.canRegister && !registered && !needsSession && state.status !== "pending";
   const canEnter = (registered || contest.canSubmit) && Boolean(firstProblemId);
   const statusPill = useMemo(() => {
@@ -126,7 +127,7 @@ export function ContestRegistration({ contest }: ContestRegistrationProps) {
           </Button>
           {needsSession ? (
             <p className="text-sm text-soj-muted">
-              <LocalizedLink className="text-soj-accent underline-offset-4 hover:underline" href="/auth/login">
+              <LocalizedLink className="text-soj-accent transition hover:opacity-80" href="/auth/login">
                 {t("contests.registration.signIn")}
               </LocalizedLink>{" "}
               {t("contests.registration.signInHint")}
@@ -149,28 +150,8 @@ function browserSession() {
   return restoreSession(window.localStorage);
 }
 
-function browserHasSession() {
-  return Boolean(browserSession());
-}
-
 function browserUserKey() {
   return contestRegistrationUserKey(browserSession()?.user);
-}
-
-function useBrowserSessionAvailable() {
-  const [available, setAvailable] = useState(() => getApiMode() === "mock");
-
-  useEffect(() => {
-    function update() {
-      setAvailable(getApiMode() === "mock" || browserHasSession());
-    }
-
-    update();
-    window.addEventListener("storage", update);
-    return () => window.removeEventListener("storage", update);
-  }, []);
-
-  return available;
 }
 
 function useLocalContestRegistration(contestId: number, enabled: boolean) {

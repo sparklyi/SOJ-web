@@ -12,7 +12,6 @@ export const contestMessages = {
   "contests.phase.submissionsClosed": { en: "Submissions closed", "zh-CN": "提交已关闭" },
   "contests.phase.finalRanksPublic": { en: "Final ranks public", "zh-CN": "最终排名公开" },
   "contests.type.acmPenalty": { en: "ACM penalty", "zh-CN": "ACM 罚时" },
-  "contests.type.oiScoring": { en: "OI/IOI scoring", "zh-CN": "OI/IOI 计分" },
   "contests.state.closed": { en: "Closed", "zh-CN": "已关闭" },
   "contests.state.standby": { en: "Standby", "zh-CN": "待机" },
   "contests.state.active": { en: "Active", "zh-CN": "激活" },
@@ -52,14 +51,6 @@ export const contestMessages = {
   "contests.rules.acm.freeze": {
     en: "The scoreboard may freeze before the final hour while submissions continue.",
     "zh-CN": "最后一小时之前排行榜可能冻结，但提交仍会继续评测。",
-  },
-  "contests.rules.oi.partial": {
-    en: "Each problem can award partial score based on accepted subtasks and test groups.",
-    "zh-CN": "每道题可根据通过的子任务和测试组获得部分分数。",
-  },
-  "contests.rules.oi.highest": {
-    en: "The highest valid score per problem contributes to the total score.",
-    "zh-CN": "每道题的最高有效分数计入总分。",
   },
   "contests.rules.registered": {
     en: "Only registered participants can submit during the live contest window.",
@@ -177,19 +168,16 @@ export const contestMessages = {
   },
   "contests.scoreboard.freezeStatus": { en: "Freeze status", "zh-CN": "冻结状态" },
   "contests.scoreboard.rankMovement": { en: "Rank movement", "zh-CN": "排名变化" },
-  "contests.scoreboard.lastDelta": { en: "Last delta", "zh-CN": "最近变化" },
   "contests.scoreboard.teams": { en: "Teams", "zh-CN": "队伍" },
   "contests.scoreboard.currentLeader": { en: "Current leader", "zh-CN": "当前第一名" },
   "contests.scoreboard.noRank": { en: "No rank", "zh-CN": "暂无排名" },
   "contests.scoreboard.matrixTitle": { en: "{mode} rank matrix", "zh-CN": "{mode} 排名矩阵" },
   "contests.scoreboard.matrixDescription": {
-    en: "Problem columns track accepted, pending, penalty, movement, and score states.",
-    "zh-CN": "题目列展示通过、等待、罚时、排名变化和得分状态。",
+    en: "Problem columns track accepted, pending, and penalty states.",
+    "zh-CN": "题目列展示通过、等待和罚时状态。",
   },
   "contests.scoreboard.publicRanks": { en: "Public ranks", "zh-CN": "公开排名" },
   "contests.scoreboard.noRun": { en: "No run", "zh-CN": "暂无提交" },
-  "contests.scoreboard.firstBlood": { en: "First blood", "zh-CN": "首杀" },
-  "contests.scoreboard.partial": { en: "Partial", "zh-CN": "部分通过" },
   "contests.workspace.back": { en: "Back", "zh-CN": "返回" },
   "contests.workspace.problem": { en: "Problem {alias}", "zh-CN": "题目 {alias}" },
   "contests.workspace.description": {

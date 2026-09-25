@@ -1,34 +1,39 @@
 import type { JudgeStatus, SubmissionSummary } from "@/lib/api/types";
-import type { MessageKey } from "@/lib/i18n/messages";
 
 export type SubmissionTone = "neutral" | "info" | "accent" | "success" | "warning" | "danger";
 
+/**
+ * 判定词是 OJ 圈的通用术语（Accepted / Wrong Answer / Time Limit Exceeded…），
+ * 和变量名一样不随界面语言翻译。中英对照、截图传播、与评测机原始输出
+ * 都对得上这一套词；翻成「通过」「答案错误」反而是第二套词汇。
+ * 这里是它的唯一出处，徽标、原地结果卡、事件流都从这里取。
+ */
+export const verdictLabels: Record<JudgeStatus, string> = {
+  queued: "Queued",
+  compiling: "Compiling",
+  running: "Running",
+  accepted: "Accepted",
+  wrong_answer: "Wrong Answer",
+  runtime_error: "Runtime Error",
+  compile_error: "Compile Error",
+  time_limit: "Time Limit Exceeded",
+  memory_limit: "Memory Limit Exceeded",
+  canceled: "Canceled",
+  system_error: "System Error",
+};
+
+export function verdictLabel(status: JudgeStatus): string {
+  return verdictLabels[status];
+}
+
 export type SubmissionDisplayState = {
   status: JudgeStatus;
-  /** 词条 key。这里曾经放的是英文原文（"Queued" / "Wrong Answer"…），
-      于是中文界面上的竞技场事件流直接显出了 `Runtime Error`。 */
-  labelKey: MessageKey;
   tone: SubmissionTone;
   terminal: boolean;
   order: number;
 };
 
-/** JudgeStatus → i18n key（`status.*`，见 lib/i18n/messages/system.ts）。词条的唯一出处。 */
-export const judgeStatusLabelKey: Record<JudgeStatus, MessageKey> = {
-  queued: "status.queued",
-  compiling: "status.compiling",
-  running: "status.running",
-  accepted: "status.accepted",
-  wrong_answer: "status.wrongAnswer",
-  runtime_error: "status.runtimeError",
-  compile_error: "status.compileError",
-  time_limit: "status.timeLimit",
-  memory_limit: "status.memoryLimit",
-  canceled: "status.canceled",
-  system_error: "status.systemError",
-};
-
-const states: Record<JudgeStatus, Omit<SubmissionDisplayState, "status" | "labelKey">> = {
+const states: Record<JudgeStatus, Omit<SubmissionDisplayState, "status">> = {
   queued: { tone: "neutral", terminal: false, order: 10 },
   compiling: { tone: "info", terminal: false, order: 20 },
   running: { tone: "accent", terminal: false, order: 30 },
@@ -43,7 +48,7 @@ const states: Record<JudgeStatus, Omit<SubmissionDisplayState, "status" | "label
 };
 
 export function getSubmissionDisplayState(status: JudgeStatus): SubmissionDisplayState {
-  return { status, labelKey: judgeStatusLabelKey[status], ...states[status] };
+  return { status, ...states[status] };
 }
 
 export function isSubmissionTerminal(status: JudgeStatus) {

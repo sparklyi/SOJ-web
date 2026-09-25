@@ -1,9 +1,9 @@
-import type { ProblemResponse, ProblemStatementResponse, ProblemStatsResponse } from "./backend-types";
+import type { ProblemResponse, ProblemStatementResponse } from "./backend-types";
 import type { ProblemDetail, ProblemSummary } from "./types";
 
 const DEFAULT_SOLVE_STATUS = "todo";
 
-export function mapProblemSummary(problem: ProblemResponse, stats?: ProblemStatsResponse): ProblemSummary {
+export function mapProblemSummary(problem: ProblemResponse): ProblemSummary {
   return {
     id: problem.id,
     slug: problem.slug,
@@ -11,18 +11,17 @@ export function mapProblemSummary(problem: ProblemResponse, stats?: ProblemStats
     difficulty: problem.difficulty,
     tags: problem.tags,
     status: DEFAULT_SOLVE_STATUS,
-    acceptedCount: stats?.accepted_submissions ?? 0,
-    submissionCount: stats?.total_submissions ?? 0,
+    acceptedCount: problem.accepted_count,
+    submissionCount: problem.submission_count,
   };
 }
 
 export function mapProblemDetail(
   problem: ProblemResponse,
   statement: ProblemStatementResponse,
-  stats: ProblemStatsResponse,
 ): ProblemDetail {
   return {
-    ...mapProblemSummary(problem, stats),
+    ...mapProblemSummary(problem),
     statement: statement.description,
     input: statement.input_description ?? "",
     output: statement.output_description ?? "",

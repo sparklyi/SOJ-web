@@ -20,7 +20,7 @@ export default async function RegisterPage() {
           footer={
             <p>
               {t("auth.form.registerFooter")}{" "}
-              <LocalizedLink href="/auth/login" className="text-soj-accent underline-offset-4 transition hover:underline">
+              <LocalizedLink href="/auth/login" className="text-soj-accent transition hover:opacity-80">
                 {t("auth.form.login")}
               </LocalizedLink>
             </p>

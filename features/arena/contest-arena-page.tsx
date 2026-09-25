@@ -36,7 +36,7 @@ export function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPa
               <div className="flex flex-wrap gap-2">
                 <StatusPill tone="accent">{t("arena.label")}</StatusPill>
                 <StatusPill tone={frozen ? "warning" : "accent"}>{frozen ? t("status.frozen") : t("status.live")}</StatusPill>
-                <StatusPill tone={scoreboard.type === "acm" ? "info" : "warning"}>{scoreboard.type.toUpperCase()}</StatusPill>
+                <StatusPill tone="info">{t("status.acm")}</StatusPill>
               </div>
               <h1 className="mt-5 text-6xl font-semibold leading-none tracking-tight md:text-8xl">{t("arena.liveBoard")}</h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-soj-muted">{t("arena.broadcastDescription", { title: contest.title })}</p>
@@ -53,7 +53,7 @@ export function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPa
               </div>
               <div className="soj-arena-track">
                 {topRows.map((row) => (
-                  <TopRankLane key={row.id} row={row} mode={scoreboard.type} t={t} />
+                  <TopRankLane key={row.id} row={row} t={t} />
                 ))}
               </div>
             </div>
@@ -85,14 +85,14 @@ export function ContestArenaPage({ contest, events, scoreboard }: ContestArenaPa
       {/* 两栏各自按自己的条数收高（items-start）。默认的 stretch 会把
           「通过事件」只有 1 条的那一栏拉到和左边一样高，下面留一大片空窗。 */}
       <section className="grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <ArenaEventPanel title={t("arena.keySubmissions")} events={keyEvents} emptyLabel={t("arena.noSubmissions")} t={t} />
-        <ArenaEventPanel title={t("arena.acceptedEvents")} events={acceptedEvents} emptyLabel={t("arena.noSubmissions")} t={t} />
+        <ArenaEventPanel title={t("arena.keySubmissions")} events={keyEvents} emptyLabel={t("arena.noSubmissions")} />
+        <ArenaEventPanel title={t("arena.acceptedEvents")} events={acceptedEvents} emptyLabel={t("arena.noSubmissions")} />
       </section>
     </div>
   );
 }
 
-function TopRankLane({ row, mode, t }: { row: ScoreboardModel["rows"][number]; mode: ScoreboardModel["type"]; t: Translator }) {
+function TopRankLane({ row, t }: { row: ScoreboardModel["rows"][number]; t: Translator }) {
   return (
     <div className="soj-arena-rank-lane">
       <div className="grid h-12 w-12 place-items-center rounded-soj-md border border-soj-accent/45 bg-soj-accent/12 font-mono text-2xl text-soj-accent">
@@ -103,8 +103,8 @@ function TopRankLane({ row, mode, t }: { row: ScoreboardModel["rows"][number]; m
         <div className="mt-1 font-mono text-xs text-soj-muted">{row.id}</div>
       </div>
       <div className="justify-self-end text-right">
-        <div className="font-mono text-2xl text-soj-accent">{"solved" in row ? row.solved : row.score}</div>
-        <div className="text-xs text-soj-muted">{t(mode === "acm" ? "arena.solved" : "arena.score")}</div>
+        <div className="font-mono text-2xl text-soj-accent">{row.solved}</div>
+        <div className="text-xs text-soj-muted">{t("arena.solved")}</div>
       </div>
       <RankMovement delta={row.movement ?? 0} />
     </div>
@@ -139,7 +139,7 @@ function ArenaTicker({ events, t }: { events: ArenaEvent[]; t: Translator }) {
       {latest ? (
         <div className="mt-4">
           <div className="text-2xl font-semibold text-soj-text">{latest.value}</div>
-          <div className="mt-1 font-mono text-sm text-soj-accent">{t(latest.labelKey)}</div>
+          <div className="mt-1 font-mono text-sm text-soj-accent">{latest.label}</div>
         </div>
       ) : (
         <div className="mt-4 text-sm text-soj-muted">{t("arena.noVerdict")}</div>
@@ -148,7 +148,7 @@ function ArenaTicker({ events, t }: { events: ArenaEvent[]; t: Translator }) {
   );
 }
 
-function ArenaEventPanel({ title, events, emptyLabel, t }: { title: string; events: ArenaEvent[]; emptyLabel: string; t: Translator }) {
+function ArenaEventPanel({ title, events, emptyLabel }: { title: string; events: ArenaEvent[]; emptyLabel: string }) {
   return (
     <section className="soj-arena-panel overflow-hidden">
       <div className="flex min-w-0 items-center justify-between gap-3 border-b border-soj-line/55 px-4 py-3">
@@ -161,7 +161,7 @@ function ArenaEventPanel({ title, events, emptyLabel, t }: { title: string; even
             <li key={event.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-4 px-4 py-4 transition hover:bg-soj-surface/35">
               <div className="min-w-0">
                 <div className="text-lg font-medium text-soj-text">{event.value}</div>
-                <div className="mt-1 text-sm text-soj-muted">{t(event.labelKey)}</div>
+                <div className="mt-1 text-sm text-soj-muted">{event.label}</div>
               </div>
               {/* 这里曾经按 verdict 的 tone 现编一个排名变化（失败 -1、其余 +1）：
                   提交事件本身没有排名数据，编出来的箭头比没有箭头更糟。 */}

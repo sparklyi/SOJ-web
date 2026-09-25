@@ -4,8 +4,7 @@ import type { JudgeStatus } from "@/lib/api/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
-import { getSubmissionDisplayState, judgeStatusLabelKey } from "@/lib/domain/submission";
-import type { MessageKey } from "@/lib/i18n/messages";
+import { getSubmissionDisplayState, verdictLabel } from "@/lib/domain/submission";
 import { formatDuration, formatMemory } from "@/lib/ui/number";
 import type { RunState } from "./use-run";
 
@@ -48,7 +47,7 @@ export function RunResultView({ state, onContinuePolling, className }: RunResult
     <div className={className ?? "grid gap-3"} aria-live="polite">
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={display.tone} size="sm">
-          {t(runVerdictLabelKey(run.status))}
+          {runVerdictLabel(run.status, t)}
         </Badge>
         {run.timeMs != null ? (
           <span className="text-xs text-soj-muted">
@@ -102,12 +101,12 @@ function outputBlock(label: string, text: string | undefined) {
 }
 
 /**
- * verdict 文案：除 accepted 外全部沿用提交那套词表。
+ * verdict 文案：除 accepted 外全部沿用提交那套通用词表。
  *
  * 只有 accepted 需要换一个词。它在提交里是「通过了这道题」，而在一次自测运行里
  * 没有题目可过——它只意味着「程序跑完且正常退出」。沿用「Accepted」会让练习场
  * 看起来像刚刚解出了一道不存在的题。配色不换，两者都是成功态。
  */
-function runVerdictLabelKey(status: JudgeStatus): MessageKey {
-  return status === "accepted" ? "runs.finished" : judgeStatusLabelKey[status];
+function runVerdictLabel(status: JudgeStatus, t: ReturnType<typeof useI18n>["t"]): string {
+  return status === "accepted" ? t("runs.finished") : verdictLabel(status);
 }

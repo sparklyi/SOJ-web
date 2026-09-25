@@ -1,25 +1,12 @@
 "use client";
 
-import { useI18n } from "@/components/providers/i18n-provider";
 import type { JudgeStatus } from "@/lib/api/types";
-import type { MessageKey } from "@/lib/i18n/messages";
+import { verdictLabels } from "@/lib/domain/submission";
 import { StatusPill } from "./status-pill";
 
-const labels = {
-  queued: "status.queued",
-  compiling: "status.compiling",
-  running: "status.running",
-  accepted: "status.accepted",
-  wrong_answer: "status.wrongAnswer",
-  runtime_error: "status.runtimeError",
-  compile_error: "status.compileError",
-  time_limit: "status.timeLimit",
-  memory_limit: "status.memoryLimit",
-  canceled: "status.canceled",
-  system_error: "status.systemError",
-} as const;
+type VerdictTone = "neutral" | "accent" | "success" | "warning" | "danger" | "info";
 
-const tones: Record<JudgeStatus, React.ComponentProps<typeof StatusPill>["tone"]> = {
+const tones: Record<JudgeStatus, VerdictTone> = {
   queued: "neutral",
   compiling: "info",
   running: "accent",
@@ -37,18 +24,40 @@ type VerdictBadgeProps = {
   status: JudgeStatus;
 };
 
-/**
- * 徽标自己的词条。
- *
- * 导出的原因是「一句话里同一状态别说两遍」：时间线的每一行既有徽标（图标 + 词）
- * 又有一个文字标签，当那个标签**就是**徽标那个词时，一行里会读成
- * 「排队中 排队中」。调用点需要能判断「我要写的词与徽标是不是同一个」。
- */
-export function verdictLabelKey(status: JudgeStatus): MessageKey {
-  return labels[status];
+export function VerdictBadge({ status }: VerdictBadgeProps) {
+  return <StatusPill tone={tones[status]}>{verdictLabels[status]}</StatusPill>;
 }
 
-export function VerdictBadge({ status }: VerdictBadgeProps) {
-  const { t } = useI18n();
-  return <StatusPill tone={tones[status]}>{t(labels[status])}</StatusPill>;
+const textTone: Record<VerdictTone, string> = {
+  neutral: "text-soj-muted",
+  accent: "text-soj-accent",
+  success: "text-soj-success",
+  warning: "text-soj-warning",
+  danger: "text-soj-danger",
+  info: "text-soj-info",
+};
+
+const surfaceTone: Record<VerdictTone, string> = {
+  neutral: "border-soj-line bg-soj-bg/45",
+  accent: "border-soj-accent/40 bg-soj-accent/10",
+  success: "border-soj-success/40 bg-soj-success/10",
+  warning: "border-soj-warning/40 bg-soj-warning/10",
+  danger: "border-soj-danger/40 bg-soj-danger/10",
+  info: "border-soj-info/40 bg-soj-info/10",
+};
+
+/**
+ * 判定词的主视觉：大字号 + 按判定着色的文字（可外加一层同色调底板）。
+ *
+ * 之前详情页和原地结果卡都把结论写成 `text-soj-text` 的普通黑字，
+ * 于是「通过」和「答案错误」看起来一样淡。判定是整页最重要的一个词，
+ * 它应当自己带着颜色说话。
+ */
+export function VerdictHeadline({ status, className }: { status: JudgeStatus; className?: string }) {
+  return <span className={`font-semibold ${textTone[tones[status]]} ${className ?? ""}`}>{verdictLabels[status]}</span>;
+}
+
+/** 与判定同色调的底板类，供结果卡/详情页把结论框起来。 */
+export function verdictSurfaceClass(status: JudgeStatus): string {
+  return surfaceTone[tones[status]];
 }
