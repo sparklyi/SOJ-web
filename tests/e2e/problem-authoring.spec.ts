@@ -9,11 +9,14 @@ test("author creates, validates, and submits a problem for review", async ({ pag
   await page.getByRole("link", { name: "New problem" }).click();
   await expect(page).toHaveURL(/\/manage\/problems\/new$/);
   await expect(page.getByText("Step 1 of 5 · 5 remaining")).toBeVisible();
+  // 标题只在建题这一步出现，之后由 problem.title 承载。
+  await expect(page.getByLabel("Title")).toHaveCount(1);
 
   await page.getByLabel("Title").fill("Author Flow");
   await page.getByRole("button", { name: "Create and continue" }).click();
   await expect(page).toHaveURL(/\/manage\/problems\/\d+\?step=statement$/);
   await expect(page.getByText("Step 2 of 5 · 4 remaining")).toBeVisible();
+  await expect(page.getByLabel("Title")).toHaveCount(0);
 
   await page.getByLabel("Description", { exact: true }).fill("Return the input value.");
   await page.getByLabel("Input description").fill("One integer.");
@@ -27,6 +30,12 @@ test("author creates, validates, and submits a problem for review", async ({ pag
   await expect(page).toHaveURL(/\?step=testcase$/);
   // 用例数由后端解析压缩包得出，界面上没有数量输入。
   await expect(page.getByLabel("Case count")).toHaveCount(0);
+
+  // 模板是仓库静态资源，可下载且确实是 zip（PK 魔数）。
+  await expect(page.getByRole("link", { name: "Download template" })).toHaveAttribute("href", "/examples/testcases.zip");
+  const template = await page.request.get("/examples/testcases.zip");
+  expect(template.status()).toBe(200);
+  expect((await template.body()).subarray(0, 2).toString("ascii")).toBe("PK");
 
   await page.getByLabel("Archive", { exact: true }).setInputFiles({ name: "invalid.zip", mimeType: "application/zip", buffer: Buffer.from("not a real archive") });
   await page.getByRole("button", { name: "Upload archive" }).click();
