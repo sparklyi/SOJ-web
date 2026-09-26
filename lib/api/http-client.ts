@@ -1,5 +1,6 @@
-import { ApiError } from "./errors";
+import { ApiError, type ApiErrorDetails } from "./errors";
 import type { BackendError, Envelope } from "./backend-types";
+import type { TestcaseFinding } from "./types";
 
 type QueryValue = string | number | boolean | null | undefined;
 
@@ -85,7 +86,20 @@ async function parseEnvelope<T>(response: Response): Promise<Envelope<T>> {
 }
 
 function apiErrorFromBackend(error: BackendError | null | undefined, status: number) {
-  return new ApiError(error?.message ?? "HTTP API request failed.", error?.code ?? "api.request_failed", status);
+  return new ApiError(error?.message ?? "HTTP API request failed.", error?.code ?? "api.request_failed", status, parseErrorDetails(error?.details));
+}
+
+function parseErrorDetails(details: unknown): ApiErrorDetails | undefined {
+  if (!details || typeof details !== "object") return undefined;
+  const findings = (details as { findings?: unknown }).findings;
+  if (!Array.isArray(findings)) return undefined;
+  return { findings: findings.filter(isTestcaseFinding) };
+}
+
+function isTestcaseFinding(value: unknown): value is TestcaseFinding {
+  if (!value || typeof value !== "object") return false;
+  const finding = value as { code?: unknown; message?: unknown };
+  return typeof finding.code === "string" && typeof finding.message === "string";
 }
 
 function appendQuery(path: string, query?: Record<string, QueryValue | QueryValue[]>) {

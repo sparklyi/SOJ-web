@@ -16,6 +16,7 @@ import {
   mockUser,
 } from "@/lib/mock/fixtures";
 import type { ContestRole, GlobalRole, Permission } from "@/lib/auth/permissions";
+import { deriveAuthoringFlow } from "@/features/problems/authoring/flow";
 import type {
   AdminUser,
   ApiClient,
@@ -64,6 +65,8 @@ const authoredProblems: AuthoringProblem[] = mockProblems.slice(0, 3).map((probl
   timeLimitMs: problem.timeLimitMs,
   memoryLimitKb: problem.memoryLimitKb,
   ownerUserId: mockUser.id,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 }));
 
 const authoringStatements = new Map<number, AuthoringStatement>();
@@ -102,16 +105,17 @@ for (const problem of authoredProblems) {
     checksumSha256: "mock-checksum",
     sizeBytes: 1024,
     caseCount: 1,
-    status: "ready",
     isCurrent: true,
+    createdAt: new Date().toISOString(),
   };
   const check: ProblemCheckRun = {
     id: nextCheckId++,
     problemId: problem.id,
     testcaseSetId: testcaseSet.id,
     status: "completed",
-    summary: { caseCount: 1, expectedCaseCount: 1, findingCount: 0, errorCount: 0, warningCount: 0, infoCount: 0, storageReadable: true, zipReadable: true, valid: true },
+    summary: { caseCount: 1, findingCount: 0, errorCount: 0, warningCount: 0, infoCount: 0, storageReadable: true, zipReadable: true, valid: true },
     findings: [],
+    createdAt: new Date().toISOString(),
   };
   authoringStatements.set(problem.id, statement);
   authoringTestcaseSets.set(problem.id, testcaseSet);
@@ -175,7 +179,22 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         return { items, total: items.length };
       },
       create: async (input) => {
-        const problem: AuthoringProblem = { ...input, id: nextProblemId++, publicationStatus: "draft", ownerUserId: requireProblemAuthorAccess(currentUser).id };
+        const actor = requireProblemAuthorAccess(currentUser);
+        const problem: AuthoringProblem = {
+          id: nextProblemId++,
+          title: input.title,
+          // 服务端生成 slug：标题不可 slug 化时回落 problem，再拼 6 位随机 hex。
+          slug: `${slugify(input.title) || "problem"}-${randomHex(6)}`,
+          difficulty: input.difficulty ?? "medium",
+          visibility: input.visibility ?? "private",
+          publicationStatus: "draft",
+          tags: input.tags ?? [],
+          timeLimitMs: input.timeLimitMs ?? 1000,
+          memoryLimitKb: input.memoryLimitKb ?? 262144,
+          ownerUserId: actor.id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
         authoredProblems.unshift(problem);
         return problem;
       },
@@ -188,7 +207,15 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       },
       saveStatement: async (id, input) => {
         requireProblemAuthorAccess(currentUser);
-        const statement: AuthoringStatement = { ...input, problemId: id, version: (authoringStatements.get(id)?.version ?? 0) + 1 };
+        const problem = authoredProblems.find((item) => item.id === id);
+        if (!problem) throw notFound("Problem", id);
+        const statement: AuthoringStatement = {
+          ...input,
+          problemId: id,
+          // 标题写 problem.title 的当前值，题面请求里已经没有 title。
+          title: problem.title,
+          version: (authoringStatements.get(id)?.version ?? 0) + 1,
+        };
         authoringStatements.set(id, statement);
         authoringChecks.delete(id);
         demoteAuthoredProblem(id);
@@ -196,20 +223,27 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       },
       uploadTestcases: async (id, input) => {
         requireProblemAuthorAccess(currentUser);
+        // mock 只按文件名模拟解析结果：坏包（文件名含 invalid）回 findings，
+        // 合法包固定 2 用例且无 warnings。真实解析由后端负责。
+        if (input.archive.name.toLowerCase().includes("invalid")) {
+          throw new ApiError("testcase archive is invalid", "testcase.archive_invalid", 422, {
+            findings: [{ severity: "error", code: "testcase.output_missing", file: "3.in", message: "3.in has no matching 3.ans" }],
+          });
+        }
         const testcaseSet: AuthoringTestcaseSet = {
           id: nextTestcaseSetId++,
           problemId: id,
           version: (authoringTestcaseSets.get(id)?.version ?? 0) + 1,
           checksumSha256: "mock-checksum",
           sizeBytes: input.archive.size,
-          caseCount: input.caseCount,
-          status: "ready",
+          caseCount: 2,
           isCurrent: true,
+          createdAt: new Date().toISOString(),
         };
         authoringTestcaseSets.set(id, testcaseSet);
         authoringChecks.delete(id);
         demoteAuthoredProblem(id);
-        return testcaseSet;
+        return { ...testcaseSet, warnings: [] };
       },
       getAuthoringState: async (id) => {
         requireAuthoringAccess(currentUser);
@@ -218,12 +252,17 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         const statement = authoringStatements.get(id);
         const testcaseSet = authoringTestcaseSets.get(id);
         const latestCheck = authoringChecks.get(id);
+        // 文案与顺序复刻后端 problem_readiness 的 blockers，界面直接渲染这些 message。
         const blockers = [
-          ...(!statement ? [{ code: "problem.statement_required", message: "Current statement is required." }] : []),
-          ...(!testcaseSet ? [{ code: "problem.testcase_required", message: "Current testcase set is required." }] : []),
-          ...(testcaseSet && !latestCheck ? [{ code: "problem.check_required", message: "Run a problem check." }] : []),
+          ...(!statement ? [{ code: "problem.statement_required", message: "current statement is required before publishing", step: "statement" as const }] : []),
+          ...(!testcaseSet ? [{ code: "problem.testcase_required", message: "current testcase set is required before publishing", step: "testcase" as const }] : []),
+          ...(testcaseSet && !latestCheck ? [{ code: "problem.check_required", message: "run a problem check for the current testcase set before publishing", step: "check" as const }] : []),
+          ...(latestCheck && !latestCheck.summary.valid
+            ? [{ code: "problem.check_failed", message: "the current testcase set has validation errors", step: "check" as const }]
+            : []),
         ];
-        return { problem, statement, testcaseSet, latestCheck, publishable: blockers.length === 0 && Boolean(latestCheck?.summary.valid), blockers };
+        const publishable = blockers.length === 0 && Boolean(latestCheck?.summary.valid);
+        return { problem, statement, testcaseSet, latestCheck, flow: deriveAuthoringFlow({ problem, statement, testcaseSet, latestCheck }), publishable, blockers };
       },
       runCheck: async (id) => {
         requireProblemAuthorAccess(currentUser);
@@ -234,8 +273,9 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
           problemId: id,
           testcaseSetId: testcaseSet.id,
           status: "completed",
-          summary: { caseCount: testcaseSet.caseCount, expectedCaseCount: testcaseSet.caseCount, findingCount: 0, errorCount: 0, warningCount: 0, infoCount: 0, storageReadable: true, zipReadable: true, valid: true },
+          summary: { caseCount: testcaseSet.caseCount, findingCount: 0, errorCount: 0, warningCount: 0, infoCount: 0, storageReadable: true, zipReadable: true, valid: true },
           findings: [],
+          createdAt: new Date().toISOString(),
         };
         authoringChecks.set(id, check);
         return check;
@@ -604,9 +644,15 @@ function requireAnyPermission(user: CurrentUser | null, permissions: Permission[
 }
 
 const authoringAccessMessage = "Problem authoring access is required.";
+const authoringPermissions: Permission[] = ["problem.create", "problem.review", "problem.manage_all"];
 
 function requireAuthoringAccess(user: CurrentUser | null) {
-  return requireAnyPermission(user, ["problem.create", "problem.review", "problem.manage_all"], authoringAccessMessage);
+  const currentUser = requireMockUser(user);
+  if (!authoringPermissions.some((permission) => currentUser.permissions.includes(permission))) {
+    // Mirrors the backend's `problem.forbidden` denial for `mine=true` lists.
+    throw new ApiError(authoringAccessMessage, "problem.forbidden", 403);
+  }
+  return currentUser;
 }
 
 /**
@@ -698,4 +744,17 @@ function demoteAuthoredProblem(id: number) {
 function mockRunStdout(stdin: string | undefined) {
   const text = stdin?.trim();
   return text ? `${text}\n` : "(demo run) hello from the mock judge\n";
+}
+
+function slugify(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function randomHex(length: number) {
+  let value = "";
+  while (value.length < length) value += Math.floor(Math.random() * 16).toString(16);
+  return value.slice(0, length);
 }

@@ -196,8 +196,9 @@ describe("http adapter", () => {
           data: {
             problem: problemResponse({ id: 201, slug: "author-problem", title: "Author Problem", difficulty: "medium", status: "draft" }),
             statement: problemStatementResponse({ problemId: 201 }),
-            testcase_set: { id: 9, problem_id: 201, version: 2, checksum_sha256: "abc", size_bytes: 120, case_count: 1, status: "ready", is_current: true, created_at: "2026-07-11T10:00:00Z" },
+            testcase_set: { id: 9, problem_id: 201, version: 2, checksum_sha256: "abc", size_bytes: 120, case_count: 1, is_current: true, created_at: "2026-07-11T10:00:00Z" },
             latest_check: problemCheckResponse({ id: 15, problemId: 201, testcaseSetId: 9, valid: true }),
+            flow: { current_step: "check", remaining: 2, steps: [{ key: "create", status: "done" }, { key: "statement", status: "done" }, { key: "testcase", status: "done" }, { key: "check", status: "todo" }, { key: "review", status: "todo" }] },
             publishable: true,
             blockers: [],
           },
@@ -207,10 +208,11 @@ describe("http adapter", () => {
       if (path === "/api/v1/problems/201/testcase-sets") {
         expect(init?.body).toBeInstanceOf(FormData);
         const form = init?.body as FormData;
-        expect(form.get("case_count")).toBe("1");
         expect(form.get("archive")).toBeInstanceOf(File);
-        expect(form.get("checksum_sha256")).toMatch(/^[a-f0-9]{64}$/);
-        return Response.json({ data: { id: 10, problem_id: 201, version: 3, checksum_sha256: "def", size_bytes: 140, case_count: 1, status: "ready", is_current: true, created_at: "2026-07-11T10:10:00Z" }, error: null }, { status: 201 });
+        // 新的上传契约只有 archive：数量由后端解析，校验和由后端落盘时计算。
+        expect(form.get("case_count")).toBeNull();
+        expect(form.get("checksum_sha256")).toBeNull();
+        return Response.json({ data: { id: 10, problem_id: 201, version: 3, checksum_sha256: "def", size_bytes: 140, case_count: 2, is_current: true, created_at: "2026-07-11T10:10:00Z", warnings: [{ severity: "warning", code: "testcase.file_ignored", file: ".DS_Store", message: "ignored" }] }, error: null }, { status: 201 });
       }
       if (path === "/api/v1/problems/201/checks") {
         return Response.json({ data: problemCheckResponse({ id: 16, problemId: 201, testcaseSetId: 10, valid: true }), error: null }, { status: 201 });
@@ -222,16 +224,36 @@ describe("http adapter", () => {
 
     const mine = await client.problems.listMine();
     const state = await client.problems.getAuthoringState(201);
-    const testcaseSet = await client.problems.uploadTestcases(201, { archive: new File(["zip"], "cases.zip", { type: "application/zip" }), caseCount: 1 });
+    const testcaseSet = await client.problems.uploadTestcases(201, { archive: new File(["zip"], "cases.zip", { type: "application/zip" }) });
     const check = await client.problems.runCheck(201);
 
     expect(mine.items[0]).toMatchObject({ id: 201, publicationStatus: "draft", ownerUserId: 1 });
-    expect(state).toMatchObject({ publishable: true, testcaseSet: { id: 9 }, latestCheck: { id: 15, summary: { valid: true } } });
+    expect(state).toMatchObject({ publishable: true, flow: { currentStep: "check", remaining: 2 }, testcaseSet: { id: 9 }, latestCheck: { id: 15, summary: { valid: true } } });
     expect(testcaseSet.id).toBe(10);
+    expect(testcaseSet.caseCount).toBe(2);
+    expect(testcaseSet.warnings).toEqual([{ severity: "warning", code: "testcase.file_ignored", file: ".DS_Store", message: "ignored" }]);
     expect(check.id).toBe(16);
     for (const [, init] of fetchMock.mock.calls) {
       expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer owner-token");
     }
+  });
+
+  it("defaults upload warnings to an empty list when the backend omits them", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const path = String(url).replace("http://localhost:8080", "");
+      if (path === "/api/v1/problems/201/testcase-sets") {
+        // 后端对空 findings 用 omitempty：干净的压缩包响应里没有 warnings 字段。
+        return Response.json({ data: { id: 10, problem_id: 201, version: 3, checksum_sha256: "def", size_bytes: 140, case_count: 2, is_current: true, created_at: "2026-07-11T10:10:00Z" }, error: null }, { status: 201 });
+      }
+      return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createHttpAdapter({ accessToken: "owner-token" });
+
+    const testcaseSet = await client.problems.uploadTestcases(201, { archive: new File(["zip"], "cases.zip", { type: "application/zip" }) });
+
+    expect(testcaseSet.caseCount).toBe(2);
+    expect(testcaseSet.warnings).toEqual([]);
   });
 
   it("sends problem create, edit, statement, and review submission commands", async () => {
@@ -239,11 +261,15 @@ describe("http adapter", () => {
       const path = String(url).replace("http://localhost:8080", "");
       const body = typeof init?.body === "string" ? JSON.parse(init.body) : null;
       if (path === "/api/v1/problems" && init?.method === "POST") {
-        expect(body).toMatchObject({ title: "New Problem", slug: "new-problem", visibility: "private" });
+        // slug 由服务端生成，请求体里不该再出现。
+        expect(body).toMatchObject({ title: "New Problem", difficulty: "easy", visibility: "private" });
+        expect(body).not.toHaveProperty("slug");
         return Response.json({ data: problemResponse({ id: 301, slug: "new-problem", title: "New Problem", difficulty: "easy", status: "draft" }), error: null }, { status: 201 });
       }
       if (path === "/api/v1/problems/301/statement") {
+        // 题面不再携带标题。
         expect(body.samples).toEqual([{ input: "1", output: "1" }]);
+        expect(body).not.toHaveProperty("title");
         return Response.json({ data: problemStatementResponse({ problemId: 301 }), error: null }, { status: 201 });
       }
       if (path === "/api/v1/problems/301" && init?.method === "PATCH") {
@@ -257,8 +283,8 @@ describe("http adapter", () => {
     vi.stubGlobal("fetch", fetchMock);
     const client = createHttpAdapter({ accessToken: "owner-token" });
 
-    const created = await client.problems.create({ title: "New Problem", slug: "new-problem", difficulty: "easy", visibility: "private", timeLimitMs: 1000, memoryLimitKb: 262144, tags: ["math"] });
-    await client.problems.saveStatement(301, { title: "New Problem", description: "Solve it", inputDescription: "Input", outputDescription: "Output", samples: [{ input: "1", output: "1" }], hint: "", source: "" });
+    const created = await client.problems.create({ title: "New Problem", difficulty: "easy", visibility: "private", timeLimitMs: 1000, memoryLimitKb: 262144, tags: ["math"] });
+    await client.problems.saveStatement(301, { description: "Solve it", inputDescription: "Input", outputDescription: "Output", samples: [{ input: "1", output: "1" }], hint: "", source: "" });
     await client.problems.update(301, { tags: ["math", "implementation"] });
     const submitted = await client.problems.submitReview(301);
 
@@ -1302,7 +1328,6 @@ function problemCheckResponse(overrides: { id: number; problemId: number; testca
     status: "completed",
     summary: {
       case_count: 1,
-      expected_case_count: 1,
       finding_count: overrides.valid ? 0 : 1,
       error_count: overrides.valid ? 0 : 1,
       warning_count: 0,

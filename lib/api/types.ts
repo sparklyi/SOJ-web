@@ -41,16 +41,23 @@ export type AuthoringProblem = {
   timeLimitMs: number;
   memoryLimitKb: number;
   ownerUserId: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
-export type ProblemCreateInput = Omit<AuthoringProblem, "id" | "publicationStatus" | "ownerUserId">;
-export type ProblemUpdateInput = Partial<Omit<ProblemCreateInput, "difficulty" | "visibility">> & {
+/** 创建题目时服务端负责生成 slug，其余字段可选并回落到平台默认值。 */
+export type ProblemCreateInput = {
+  title: string;
   difficulty?: ProblemDifficulty;
   visibility?: ProblemVisibility;
+  tags?: string[];
+  timeLimitMs?: number;
+  memoryLimitKb?: number;
 };
+export type ProblemUpdateInput = Partial<ProblemCreateInput>;
 
+/** 题面不再携带标题：服务端写入 problem.title 的当前值。 */
 export type ProblemStatementInput = {
-  title: string;
   description: string;
   inputDescription: string;
   outputDescription: string;
@@ -62,6 +69,16 @@ export type ProblemStatementInput = {
 export type AuthoringStatement = ProblemStatementInput & {
   problemId: number;
   version: number;
+  title: string;
+};
+
+/** 测试包结构问题（上传响应与错误 details 共用同一形状；severity 只在 warnings 里出现）。 */
+export type TestcaseFinding = {
+  severity?: "info" | "warning" | "error";
+  code: string;
+  /** zip 内原始路径；整包级 finding 为空。 */
+  file?: string;
+  message: string;
 };
 
 export type AuthoringTestcaseSet = {
@@ -71,9 +88,12 @@ export type AuthoringTestcaseSet = {
   checksumSha256: string;
   sizeBytes: number;
   caseCount: number;
-  status: "uploading" | "ready" | "disabled";
   isCurrent: boolean;
+  createdAt: string;
 };
+
+/** 上传响应内联 warnings；warnings 不持久化，GET authoring 里没有这一层。 */
+export type UploadedTestcaseSet = AuthoringTestcaseSet & { warnings: TestcaseFinding[] };
 
 export type ProblemCheckFinding = {
   id: number;
@@ -92,7 +112,6 @@ export type ProblemCheckRun = {
   status: "queued" | "running" | "completed" | "failed" | "canceled";
   summary: {
     caseCount: number;
-    expectedCaseCount: number;
     findingCount: number;
     errorCount: number;
     warningCount: number;
@@ -102,6 +121,29 @@ export type ProblemCheckRun = {
     valid: boolean;
   };
   findings: ProblemCheckFinding[];
+  createdAt: string;
+};
+
+export type AuthoringStepKey = "create" | "statement" | "testcase" | "check" | "review";
+export type AuthoringStepStatus = "done" | "todo";
+
+export type ProblemAuthoringStep = {
+  key: AuthoringStepKey;
+  status: AuthoringStepStatus;
+};
+
+export type ProblemAuthoringFlow = {
+  /** 第一个 todo 步；全部完成时为空串。 */
+  currentStep: AuthoringStepKey | "";
+  /** todo 步的数量。 */
+  remaining: number;
+  steps: ProblemAuthoringStep[];
+};
+
+export type ProblemAuthoringBlocker = {
+  code: string;
+  message: string;
+  step?: AuthoringStepKey;
 };
 
 export type ProblemAuthoringState = {
@@ -109,8 +151,9 @@ export type ProblemAuthoringState = {
   statement?: AuthoringStatement;
   testcaseSet?: AuthoringTestcaseSet;
   latestCheck?: ProblemCheckRun;
+  flow: ProblemAuthoringFlow;
   publishable: boolean;
-  blockers: Array<{ code: string; message: string }>;
+  blockers: ProblemAuthoringBlocker[];
 };
 
 export type ContestStatus = "scheduled" | "running" | "frozen" | "ended" | "unsealed";
@@ -390,7 +433,7 @@ export type ApiClient = {
     create: (input: ProblemCreateInput) => Promise<AuthoringProblem>;
     update: (id: number, input: ProblemUpdateInput) => Promise<AuthoringProblem>;
     saveStatement: (id: number, input: ProblemStatementInput) => Promise<AuthoringStatement>;
-    uploadTestcases: (id: number, input: { archive: File; caseCount: number }) => Promise<AuthoringTestcaseSet>;
+    uploadTestcases: (id: number, input: { archive: File }) => Promise<UploadedTestcaseSet>;
     getAuthoringState: (id: number) => Promise<ProblemAuthoringState>;
     runCheck: (id: number) => Promise<ProblemCheckRun>;
     submitReview: (id: number) => Promise<AuthoringProblem>;

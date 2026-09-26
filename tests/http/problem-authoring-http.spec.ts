@@ -1,13 +1,16 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
-test("real backend enforces validation before submitting a problem for review", async ({ page }) => {
+const templateArchive = join(process.cwd(), "public", "examples", "testcases.zip");
+const backendDir = process.env.SOJ_BACKEND_DIR ?? join(process.cwd(), "..", "SOJ");
+const composeFile = join(backendDir, "deploy", "docker-compose.yaml");
+
+test("real backend parses the template archive and gates review on a passing check", async ({ page }) => {
   const run = Date.now();
-  const slug = `http-author-${run}`;
-  const archive = testcaseArchive();
+  const broken = brokenArchive();
 
   try {
     await page.goto("/auth/register");
@@ -17,79 +20,119 @@ test("real backend enforces validation before submitting a problem for review", 
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page).toHaveURL(/\/me$/);
 
-    await page.goto("/manage/problems");
-    await page.getByLabel("Title").fill("HTTP Author Flow");
-    await page.getByLabel("Slug").fill(slug);
-    await page.getByLabel("Tags").fill("integration, validation");
-    await page.getByRole("button", { name: "Create draft" }).click();
-    await expect(page).toHaveURL(/\/manage\/problems\/\d+$/);
-    const problemId = Number(page.url().split("/").at(-1));
+    // 真实后端把建题权限绑在 author 角色上，注册只发 user 角色；这与 mock 注册即
+    // 作者不同。这里通过部署自带的 postgres 授一次 author，等价于管理员在
+    // /admin/users 上的授权（角色按请求从库里读，无需重新登录）。
+    grantAuthorRole(`http-author-${run}@example.com`);
 
-    await page.getByLabel("Visibility").selectOption("public");
-    await page.getByRole("button", { name: "Save settings" }).click();
-    await expect(page.getByText("Problem settings saved.")).toBeVisible();
+    await page.goto("/manage/problems");
+    await page.getByRole("link", { name: "New problem" }).click();
+    await expect(page).toHaveURL(/\/manage\/problems\/new$/);
+    await page.getByLabel("Title").fill("HTTP Author Flow");
+    await page.getByRole("button", { name: "Create and continue" }).click();
+    await expect(page).toHaveURL(/\/manage\/problems\/\d+\?step=statement$/);
+    const problemId = Number(new URL(page.url()).pathname.split("/").at(-1));
 
     await page.getByLabel("Description", { exact: true }).fill("Return the sum of two integers.");
     await page.getByLabel("Input description").fill("Two integers.");
     await page.getByLabel("Output description").fill("Their sum.");
-    await page.getByLabel("Sample input").fill("1 1");
-    await page.getByLabel("Sample output").fill("2");
+    await page.getByLabel("Sample 1 input").fill("1 1");
+    await page.getByLabel("Sample 1 output").fill("2");
     await page.getByRole("button", { name: "Save statement" }).click();
     await expect(page.getByText("Statement version saved.")).toBeVisible();
 
-    await page.getByLabel("Archive").setInputFiles(archive.path);
+    // 题面已就绪、还没有测试集：flow 落在 testcase，blocker 点名该步。
+    const afterStatement = await fetchAuthoringState(page, problemId);
+    expect(afterStatement.publishable).toBe(false);
+    expect(afterStatement.blockers.map((blocker) => [blocker.code, blocker.step])).toContainEqual(["problem.testcase_required", "testcase"]);
+    expect(afterStatement.flow.current_step).toBe("testcase");
+
+    await page.getByRole("button", { name: "Test data" }).click();
+    // 用例数由后端解析，界面上没有数量输入。
+    await expect(page.getByLabel("Case count")).toHaveCount(0);
+
+    await page.getByLabel("Archive", { exact: true }).setInputFiles(broken.path);
+    await page.getByRole("button", { name: "Upload archive" }).click();
+    await expect(page.getByText("3.in has no matching output.")).toBeVisible();
+
+    expect(existsSync(templateArchive)).toBe(true);
+    await page.getByLabel("Archive", { exact: true }).setInputFiles(templateArchive);
     await page.getByRole("button", { name: "Upload archive" }).click();
     await expect(page.getByText("Testcase archive uploaded.")).toBeVisible();
+    await expect(page.getByText("Parsed 2 cases.")).toBeVisible();
 
-    const blocked = await page.evaluate(async (id) => {
-      const session = JSON.parse(window.localStorage.getItem("soj.session") ?? "null") as { accessToken: string };
-      const response = await fetch(`/soj-api/api/v1/problems/${id}`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${session.accessToken}`, "content-type": "application/json" },
-        body: JSON.stringify({ status: "published" }),
-      });
-      return { status: response.status, body: await response.json() };
-    }, problemId);
-    expect(blocked.status).toBe(422);
-    expect(blocked.body.error.code).toBe("problem.check_required");
+    // 测试集就绪、还没有校验：flow 落在 check，blocker 点名该步。
+    const beforeCheck = await fetchAuthoringState(page, problemId);
+    expect(beforeCheck.publishable).toBe(false);
+    expect(beforeCheck.blockers.map((blocker) => [blocker.code, blocker.step])).toContainEqual(["problem.check_required", "check"]);
+    expect(beforeCheck.flow.current_step).toBe("check");
 
+    await page.getByRole("button", { name: "Validation" }).click();
     await page.getByRole("button", { name: "Run validation" }).click();
-    await expect(page.getByText("Ready to submit for review")).toBeVisible();
+    await expect(page.getByText("The current versions passed validation.")).toBeVisible();
 
-    await page.getByLabel("Description", { exact: true }).fill("Return the sum of two signed integers.");
-    await page.getByRole("button", { name: "Save statement" }).click();
-    await expect(page.getByText("Statement version saved.")).toBeVisible();
+    // 校验通过后没有 blocker，flow 推进到提审。
+    const afterCheck = await fetchAuthoringState(page, problemId);
+    expect(afterCheck.publishable).toBe(true);
+    expect(afterCheck.blockers).toEqual([]);
+    expect(afterCheck.flow.current_step).toBe("review");
 
-    const staleStatementCheck = await attemptDirectPublication(page, problemId);
-    expect(staleStatementCheck.status).toBe(422);
-    expect(staleStatementCheck.body.error.code).toBe("problem.check_required");
-
-    await page.getByRole("button", { name: "Run validation" }).click();
-    await expect(page.getByText("Ready to submit for review")).toBeVisible();
+    await page.getByRole("button", { name: "Review" }).click();
     await page.getByRole("button", { name: "Submit for review" }).click();
     await expect(page.getByText("Problem submitted for review.")).toBeVisible();
-    await expect(page.getByLabel("Validation and publication").getByText("In review", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Review in progress" })).toBeDisabled();
   } finally {
-    rmSync(archive.dir, { recursive: true, force: true });
+    rmSync(broken.dir, { recursive: true, force: true });
   }
 });
 
-async function attemptDirectPublication(page: import("@playwright/test").Page, problemId: number) {
-  return page.evaluate(async (id) => {
+type AuthoringProbe = {
+  flow: { current_step: string; remaining: number };
+  publishable: boolean;
+  blockers: Array<{ code: string; step: string }>;
+};
+
+/** 直读 authoring state，核对后端算出的 flow/blockers 契约（前端 stepper 与门禁的依据）。 */
+async function fetchAuthoringState(page: import("@playwright/test").Page, problemId: number): Promise<AuthoringProbe> {
+  const envelope = await page.evaluate(async (id) => {
     const session = JSON.parse(window.localStorage.getItem("soj.session") ?? "null") as { accessToken: string };
-    const response = await fetch(`/soj-api/api/v1/problems/${id}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${session.accessToken}`, "content-type": "application/json" },
-      body: JSON.stringify({ status: "published" }),
+    const response = await fetch(`/soj-api/api/v1/problems/${id}/authoring`, {
+      headers: { Authorization: `Bearer ${session.accessToken}` },
     });
-    return { status: response.status, body: await response.json() };
+    return (await response.json()) as { data: unknown };
   }, problemId);
+  return envelope.data as AuthoringProbe;
 }
 
-function testcaseArchive() {
+/** 给刚注册的账号授 author，使之后的建题/上传/校验请求满足后端 RBAC。 */
+function grantAuthorRole(email: string) {
+  execFileSync(
+    "docker",
+    [
+      "compose",
+      "-f",
+      composeFile,
+      "exec",
+      "-T",
+      "postgres",
+      "psql",
+      "-U",
+      "soj",
+      "-d",
+      "soj",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-c",
+      `INSERT INTO user_role_assignments (user_id, role_code, granted_at) SELECT id, 'author', now() FROM users WHERE email = '${email}' ON CONFLICT DO NOTHING;`,
+    ],
+    { stdio: "inherit" },
+  );
+}
+
+/** 只含 `3.in`、缺 `3.ans` 的坏包：后端应在 details.findings 里点名这个文件。 */
+function brokenArchive() {
   const dir = mkdtempSync(join(tmpdir(), "soj-http-authoring-"));
-  writeFileSync(join(dir, "input1.txt"), "1 1\n");
-  writeFileSync(join(dir, "output1.txt"), "2\n");
-  execFileSync("zip", ["-q", "cases.zip", "input1.txt", "output1.txt"], { cwd: dir });
-  return { dir, path: join(dir, "cases.zip") };
+  writeFileSync(join(dir, "3.in"), "1 2\n");
+  execFileSync("zip", ["-q", "broken.zip", "3.in"], { cwd: dir });
+  return { dir, path: join(dir, "broken.zip") };
 }
