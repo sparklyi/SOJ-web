@@ -238,6 +238,24 @@ describe("http adapter", () => {
     }
   });
 
+  it("defaults upload warnings to an empty list when the backend omits them", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const path = String(url).replace("http://localhost:8080", "");
+      if (path === "/api/v1/problems/201/testcase-sets") {
+        // 后端对空 findings 用 omitempty：干净的压缩包响应里没有 warnings 字段。
+        return Response.json({ data: { id: 10, problem_id: 201, version: 3, checksum_sha256: "def", size_bytes: 140, case_count: 2, is_current: true, created_at: "2026-07-11T10:10:00Z" }, error: null }, { status: 201 });
+      }
+      return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createHttpAdapter({ accessToken: "owner-token" });
+
+    const testcaseSet = await client.problems.uploadTestcases(201, { archive: new File(["zip"], "cases.zip", { type: "application/zip" }) });
+
+    expect(testcaseSet.caseCount).toBe(2);
+    expect(testcaseSet.warnings).toEqual([]);
+  });
+
   it("sends problem create, edit, statement, and review submission commands", async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
       const path = String(url).replace("http://localhost:8080", "");

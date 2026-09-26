@@ -110,8 +110,11 @@ export type TestcaseSetResponse = {
   created_at: string;
 };
 
-/** 上传响应内联 warnings，与 GET authoring 的 testcase_set 同构但多一层。 */
-export type UploadedTestcaseSetResponse = TestcaseSetResponse & { warnings: TestcaseFindingResponse[] };
+/**
+ * 上传响应内联 warnings，与 GET authoring 的 testcase_set 同构但多一层。
+ * 后端用 `warnings,omitempty`：干净的包不会带这个字段，前端必须容忍缺省。
+ */
+export type UploadedTestcaseSetResponse = TestcaseSetResponse & { warnings?: TestcaseFindingResponse[] };
 
 export type ProblemCheckResponse = {
   id: number;

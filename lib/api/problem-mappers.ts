@@ -110,7 +110,8 @@ export function mapTestcaseFinding(input: TestcaseFindingResponse): TestcaseFind
 }
 
 export function mapUploadedTestcaseSet(input: UploadedTestcaseSetResponse): UploadedTestcaseSet {
-  return { ...mapTestcaseSet(input), warnings: input.warnings.map(mapTestcaseFinding) };
+  // 后端对空 warnings 用 omitempty，字段可能整个缺席。
+  return { ...mapTestcaseSet(input), warnings: (input.warnings ?? []).map(mapTestcaseFinding) };
 }
 
 export function mapProblemCheck(input: ProblemCheckResponse): ProblemCheckRun {
