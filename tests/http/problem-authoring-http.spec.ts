@@ -34,9 +34,11 @@ test("real backend parses the template archive and gates review on a passing che
     await page.getByRole("button", { name: "Save statement" }).click();
     await expect(page.getByText("Statement version saved.")).toBeVisible();
 
-    const blocked = await attemptDirectPublication(page, problemId);
-    expect(blocked.status).toBe(422);
-    expect(blocked.body.error.code).toBe("problem.check_required");
+    // 题面已就绪、还没有测试集：flow 落在 testcase，blocker 点名该步。
+    const afterStatement = await fetchAuthoringState(page, problemId);
+    expect(afterStatement.publishable).toBe(false);
+    expect(afterStatement.blockers.map((blocker) => [blocker.code, blocker.step])).toContainEqual(["problem.testcase_required", "testcase"]);
+    expect(afterStatement.flow.current_step).toBe("testcase");
 
     await page.getByRole("button", { name: "Test data" }).click();
     // 用例数由后端解析，界面上没有数量输入。
@@ -52,9 +54,21 @@ test("real backend parses the template archive and gates review on a passing che
     await expect(page.getByText("Testcase archive uploaded.")).toBeVisible();
     await expect(page.getByText("Parsed 2 cases.")).toBeVisible();
 
+    // 测试集就绪、还没有校验：flow 落在 check，blocker 点名该步。
+    const beforeCheck = await fetchAuthoringState(page, problemId);
+    expect(beforeCheck.publishable).toBe(false);
+    expect(beforeCheck.blockers.map((blocker) => [blocker.code, blocker.step])).toContainEqual(["problem.check_required", "check"]);
+    expect(beforeCheck.flow.current_step).toBe("check");
+
     await page.getByRole("button", { name: "Validation" }).click();
     await page.getByRole("button", { name: "Run validation" }).click();
     await expect(page.getByText("The current versions passed validation.")).toBeVisible();
+
+    // 校验通过后没有 blocker，flow 推进到提审。
+    const afterCheck = await fetchAuthoringState(page, problemId);
+    expect(afterCheck.publishable).toBe(true);
+    expect(afterCheck.blockers).toEqual([]);
+    expect(afterCheck.flow.current_step).toBe("review");
 
     await page.getByRole("button", { name: "Review" }).click();
     await page.getByRole("button", { name: "Submit for review" }).click();
@@ -65,16 +79,22 @@ test("real backend parses the template archive and gates review on a passing che
   }
 });
 
-async function attemptDirectPublication(page: import("@playwright/test").Page, problemId: number) {
-  return page.evaluate(async (id) => {
+type AuthoringProbe = {
+  flow: { current_step: string; remaining: number };
+  publishable: boolean;
+  blockers: Array<{ code: string; step: string }>;
+};
+
+/** 直读 authoring state，核对后端算出的 flow/blockers 契约（前端 stepper 与门禁的依据）。 */
+async function fetchAuthoringState(page: import("@playwright/test").Page, problemId: number): Promise<AuthoringProbe> {
+  const envelope = await page.evaluate(async (id) => {
     const session = JSON.parse(window.localStorage.getItem("soj.session") ?? "null") as { accessToken: string };
-    const response = await fetch(`/soj-api/api/v1/problems/${id}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${session.accessToken}`, "content-type": "application/json" },
-      body: JSON.stringify({ status: "published" }),
+    const response = await fetch(`/soj-api/api/v1/problems/${id}/authoring`, {
+      headers: { Authorization: `Bearer ${session.accessToken}` },
     });
-    return { status: response.status, body: await response.json() };
+    return (await response.json()) as { data: unknown };
   }, problemId);
+  return envelope.data as AuthoringProbe;
 }
 
 /** 只含 `3.in`、缺 `3.ans` 的坏包：后端应在 details.findings 里点名这个文件。 */
