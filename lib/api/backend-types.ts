@@ -9,6 +9,7 @@ export type Envelope<T> = {
 export type BackendError = {
   code: string;
   message: string;
+  details?: unknown;
 };
 
 export type PageResponse<T> = {
@@ -91,6 +92,13 @@ export type ProblemStatsResponse = {
   status_counts: Record<string, number>;
 };
 
+export type TestcaseFindingResponse = {
+  severity: "info" | "warning" | "error";
+  code: string;
+  file?: string | null;
+  message: string;
+};
+
 export type TestcaseSetResponse = {
   id: number;
   problem_id: number;
@@ -98,10 +106,12 @@ export type TestcaseSetResponse = {
   checksum_sha256: string;
   size_bytes: number;
   case_count: number;
-  status: "uploading" | "ready" | "disabled";
   is_current: boolean;
   created_at: string;
 };
+
+/** 上传响应内联 warnings，与 GET authoring 的 testcase_set 同构但多一层。 */
+export type UploadedTestcaseSetResponse = TestcaseSetResponse & { warnings: TestcaseFindingResponse[] };
 
 export type ProblemCheckResponse = {
   id: number;
@@ -111,7 +121,6 @@ export type ProblemCheckResponse = {
   status: "queued" | "running" | "completed" | "failed" | "canceled";
   summary: {
     case_count: number;
-    expected_case_count: number;
     finding_count: number;
     error_count: number;
     warning_count: number;
@@ -128,6 +137,18 @@ export type ProblemCheckResponse = {
     case_index?: number | null;
     testcase_key?: string | null;
   }>;
+  created_at: string;
+};
+
+export type ProblemAuthoringStepResponse = {
+  key: "create" | "statement" | "testcase" | "check" | "review";
+  status: "done" | "todo";
+};
+
+export type ProblemAuthoringFlowResponse = {
+  current_step: "create" | "statement" | "testcase" | "check" | "review" | "";
+  remaining: number;
+  steps: ProblemAuthoringStepResponse[];
 };
 
 export type ProblemAuthoringStateResponse = {
@@ -135,8 +156,9 @@ export type ProblemAuthoringStateResponse = {
   statement?: ProblemStatementResponse | null;
   testcase_set?: TestcaseSetResponse | null;
   latest_check?: ProblemCheckResponse | null;
+  flow: ProblemAuthoringFlowResponse;
   publishable: boolean;
-  blockers: Array<{ code: string; message: string }>;
+  blockers: Array<{ code: string; message: string; step?: ProblemAuthoringStepResponse["key"] }>;
 };
 
 export type LanguageResponse = {
