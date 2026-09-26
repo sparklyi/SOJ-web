@@ -252,10 +252,14 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         const statement = authoringStatements.get(id);
         const testcaseSet = authoringTestcaseSets.get(id);
         const latestCheck = authoringChecks.get(id);
+        // 文案与顺序复刻后端 problem_readiness 的 blockers，界面直接渲染这些 message。
         const blockers = [
-          ...(!statement ? [{ code: "problem.statement_required", message: "Current statement is required.", step: "statement" as const }] : []),
-          ...(!testcaseSet ? [{ code: "problem.testcase_required", message: "Current testcase set is required.", step: "testcase" as const }] : []),
-          ...(testcaseSet && !latestCheck ? [{ code: "problem.check_required", message: "Run a problem check.", step: "check" as const }] : []),
+          ...(!statement ? [{ code: "problem.statement_required", message: "current statement is required before publishing", step: "statement" as const }] : []),
+          ...(!testcaseSet ? [{ code: "problem.testcase_required", message: "current testcase set is required before publishing", step: "testcase" as const }] : []),
+          ...(testcaseSet && !latestCheck ? [{ code: "problem.check_required", message: "run a problem check for the current testcase set before publishing", step: "check" as const }] : []),
+          ...(latestCheck && !latestCheck.summary.valid
+            ? [{ code: "problem.check_failed", message: "the current testcase set has validation errors", step: "check" as const }]
+            : []),
         ];
         const publishable = blockers.length === 0 && Boolean(latestCheck?.summary.valid);
         return { problem, statement, testcaseSet, latestCheck, flow: deriveAuthoringFlow({ problem, statement, testcaseSet, latestCheck }), publishable, blockers };
