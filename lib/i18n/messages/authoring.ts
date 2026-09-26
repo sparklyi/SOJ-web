@@ -11,6 +11,8 @@ export const authoringMessages = {
   "authoring.authRequired": { en: "Login required", "zh-CN": "需要登录" },
   "authoring.error": { en: "Error", "zh-CN": "错误" },
   "authoring.unableLoadProblems": { en: "Unable to load authored problems.", "zh-CN": "无法加载已创建的题目。" },
+  "authoring.accessRequired": { en: "Problem authoring access is required.", "zh-CN": "需要出题权限。" },
+  "authoring.accessRequiredBody": { en: "Your account cannot open the authoring console. Ask an administrator for the author role.", "zh-CN": "当前账号无法进入出题控制台，请联系管理员授予出题权限。" },
   "authoring.unableCreateProblem": { en: "Unable to create problem.", "zh-CN": "无法创建题目。" },
   "authoring.unableLoadState": { en: "Unable to load authoring state.", "zh-CN": "无法加载出题工作区状态。" },
   "authoring.unableOpenProblem": { en: "Unable to open problem", "zh-CN": "无法打开题目" },

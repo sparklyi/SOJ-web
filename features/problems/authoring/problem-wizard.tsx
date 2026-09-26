@@ -98,7 +98,12 @@ export function ProblemWizard({ problemId, initialStep }: ProblemWizardProps) {
       const problem = await client.create(input);
       router.push(localize(`/manage/problems/${problem.id}?step=statement`));
     } catch (cause) {
-      setMessage({ tone: "danger", text: cause instanceof Error ? cause.message : t("authoring.unableCreateProblem") });
+      const text = cause instanceof ApiError && cause.status === 403
+        ? t("authoring.accessRequired")
+        : cause instanceof Error
+          ? cause.message
+          : t("authoring.unableCreateProblem");
+      setMessage({ tone: "danger", text });
       setBusy(false);
     }
   }

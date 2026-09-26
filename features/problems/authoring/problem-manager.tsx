@@ -11,12 +11,14 @@ import { StatusPill } from "@/components/soj/status-pill";
 import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { createBrowserApiClient } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
 import type { AuthoringProblem } from "@/lib/api/types";
 import { publicationStatusMessageKey } from "./publication-status";
 
 type ManagerState =
   | { status: "loading" }
   | { status: "auth" }
+  | { status: "forbidden" }
   | { status: "error"; message: string }
   | { status: "ready"; problems: AuthoringProblem[] };
 
@@ -36,7 +38,12 @@ export function ProblemManager() {
         const result = await createBrowserApiClient().problems.listMine();
         if (active) setState({ status: "ready", problems: result.items });
       } catch (cause) {
-        if (active) setState({ status: "error", message: cause instanceof Error ? cause.message : t("authoring.unableLoadProblems") });
+        if (!active) return;
+        if (cause instanceof ApiError && cause.status === 403) {
+          setState({ status: "forbidden" });
+          return;
+        }
+        setState({ status: "error", message: cause instanceof Error ? cause.message : t("authoring.unableLoadProblems") });
       }
     }
     void start();
@@ -53,7 +60,7 @@ export function ProblemManager() {
           eyebrow={t("authoring.eyebrow")}
           title={t("authoring.title")}
           actions={
-            viewState.status === "auth" ? null : (
+            viewState.status === "auth" || viewState.status === "forbidden" ? null : (
               <div className="flex flex-wrap items-center gap-2">
                 <StatusPill tone={viewState.status === "ready" ? "accent" : "neutral"}>{managerStatusLabel(t, viewState)}</StatusPill>
                 {viewState.status === "ready" ? (
@@ -68,6 +75,7 @@ export function ProblemManager() {
         />
 
         {viewState.status === "auth" ? <AuthWall title={t("gate.signInRequired")} body={t("gate.signInBody")} actionHref="/auth/login" actionLabel={t("gate.signIn")} /> : null}
+        {viewState.status === "forbidden" ? <AuthWall title={t("authoring.accessRequired")} body={t("authoring.accessRequiredBody")} /> : null}
         {viewState.status === "error" ? <p className="text-sm text-soj-danger">{viewState.message}</p> : null}
         {viewState.status === "loading" ? <p className="text-sm text-soj-muted">{t("authoring.loadingAuthorWorkspace")}</p> : null}
 
@@ -106,5 +114,6 @@ function managerStatusLabel(t: ReturnType<typeof useI18n>["t"], state: ManagerSt
   if (state.status === "ready") return t("authoring.ownedCount", { count: state.problems.length });
   if (state.status === "loading") return t("authoring.loading");
   if (state.status === "auth") return t("authoring.authRequired");
+  if (state.status === "forbidden") return t("authoring.accessRequired");
   return t("authoring.error");
 }
