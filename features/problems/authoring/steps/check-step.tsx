@@ -49,7 +49,7 @@ export function CheckStep({ state, busy, onRun }: CheckStepProps) {
           ) : null}
         </div>
       ) : (
-        <p className="text-sm text-soj-muted">{t("authoring.check.none")}</p>
+        <p className="text-sm text-soj-muted">{t("authoring.check.notRun")}</p>
       )}
 
       <div>

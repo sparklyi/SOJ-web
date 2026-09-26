@@ -47,6 +47,20 @@ describe("problem authoring steps", () => {
     expect(screen.getByText("Checking statement v1 and testcase set v2.")).toBeInTheDocument();
     expect(screen.getByText("input1.txt has no matching output.")).toBeInTheDocument();
   });
+
+  it("tells the author to run validation when a testcase set exists but no check has run", () => {
+    const state = authoringState(true);
+    state.latestCheck = undefined;
+    render(
+      <I18nProvider locale="en">
+        <CheckStep state={state} busy={false} onRun={vi.fn()} />
+      </I18nProvider>,
+    );
+
+    expect(screen.getByText("Not checked yet. Run validation to compare the current versions.")).toBeInTheDocument();
+    // 已经有了测试集，不该再提示先上传测试集。
+    expect(screen.queryByText("Upload a testcase set before running a check.")).not.toBeInTheDocument();
+  });
 });
 
 function authoringState(valid: boolean, publicationStatus: ProblemAuthoringState["problem"]["publicationStatus"] = "draft"): ProblemAuthoringState {

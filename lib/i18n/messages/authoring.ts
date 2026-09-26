@@ -104,6 +104,7 @@ export const authoringMessages = {
   "authoring.check.heading": { en: "Validate statement and test data", "zh-CN": "校验题面与测试数据" },
   "authoring.check.object": { en: "Checking statement v{statement} and testcase set v{testcase}.", "zh-CN": "校验对象：题面 v{statement}、测试集 v{testcase}。" },
   "authoring.check.none": { en: "Upload a testcase set before running a check.", "zh-CN": "请先上传测试数据再运行校验。" },
+  "authoring.check.notRun": { en: "Not checked yet. Run validation to compare the current versions.", "zh-CN": "尚未校验。请运行校验以比对当前版本。" },
   "authoring.check.passed": { en: "The current versions passed validation.", "zh-CN": "当前版本校验通过。" },
   "authoring.check.failed": { en: "The current versions did not pass validation.", "zh-CN": "当前版本未通过校验。" },
   "authoring.runValidation": { en: "Run validation", "zh-CN": "运行校验" },
