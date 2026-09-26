@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
 const templateArchive = join(process.cwd(), "public", "examples", "testcases.zip");
+const backendDir = process.env.SOJ_BACKEND_DIR ?? join(process.cwd(), "..", "SOJ");
+const composeFile = join(backendDir, "deploy", "docker-compose.yaml");
 
 test("real backend parses the template archive and gates review on a passing check", async ({ page }) => {
   const run = Date.now();
@@ -17,6 +19,11 @@ test("real backend parses the template archive and gates review on a passing che
     await page.getByLabel("Password").fill("Passw0rd!");
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page).toHaveURL(/\/me$/);
+
+    // 真实后端把建题权限绑在 author 角色上，注册只发 user 角色；这与 mock 注册即
+    // 作者不同。这里通过部署自带的 postgres 授一次 author，等价于管理员在
+    // /admin/users 上的授权（角色按请求从库里读，无需重新登录）。
+    grantAuthorRole(`http-author-${run}@example.com`);
 
     await page.goto("/manage/problems");
     await page.getByRole("link", { name: "New problem" }).click();
@@ -95,6 +102,31 @@ async function fetchAuthoringState(page: import("@playwright/test").Page, proble
     return (await response.json()) as { data: unknown };
   }, problemId);
   return envelope.data as AuthoringProbe;
+}
+
+/** 给刚注册的账号授 author，使之后的建题/上传/校验请求满足后端 RBAC。 */
+function grantAuthorRole(email: string) {
+  execFileSync(
+    "docker",
+    [
+      "compose",
+      "-f",
+      composeFile,
+      "exec",
+      "-T",
+      "postgres",
+      "psql",
+      "-U",
+      "soj",
+      "-d",
+      "soj",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-c",
+      `INSERT INTO user_role_assignments (user_id, role_code, granted_at) SELECT id, 'author', now() FROM users WHERE email = '${email}' ON CONFLICT DO NOTHING;`,
+    ],
+    { stdio: "inherit" },
+  );
 }
 
 /** 只含 `3.in`、缺 `3.ans` 的坏包：后端应在 details.findings 里点名这个文件。 */
