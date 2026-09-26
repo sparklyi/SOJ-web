@@ -80,7 +80,13 @@ export function defaultAuthoringStep(flow: ProblemAuthoringFlow): AuthoringStepK
   return "review";
 }
 
-/** 深链里的 `?step=` 优先；非法或缺省时回落到 flow。 */
+/**
+ * 深链里的 `?step=` 优先；非法或缺省时回落到 flow。
+ *
+ * 建题步只在 `/manage/problems/new` 有意义，编辑态的 stepper 点击或手写
+ * `?step=create` 会指向一个没有任何操作的空白面板，因此统一归一到题面步。
+ */
 export function resolveAuthoringStep(flow: ProblemAuthoringFlow, requested?: string | null): AuthoringStepKey {
-  return isAuthoringStepKey(requested) ? requested : defaultAuthoringStep(flow);
+  const step = isAuthoringStepKey(requested) ? requested : defaultAuthoringStep(flow);
+  return step === "create" ? "statement" : step;
 }

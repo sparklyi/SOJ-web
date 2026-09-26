@@ -54,6 +54,8 @@ describe("authoring flow", () => {
     expect(defaultAuthoringStep({ currentStep: "", remaining: 0, steps: [] })).toBe("review");
     expect(resolveAuthoringStep(flow, "review")).toBe("review");
     expect(resolveAuthoringStep(flow, "bogus")).toBe("testcase");
+    // 编辑态没有建题操作，`create` 深链归一到题面。
+    expect(resolveAuthoringStep(flow, "create")).toBe("statement");
   });
 });
 

@@ -81,6 +81,18 @@ test("ordinary user sees the authoring 403 state without a create entry", async 
   await expect(page.getByRole("link", { name: "New problem" })).toHaveCount(0);
 });
 
+test("an existing problem never opens an empty create step", async ({ page }) => {
+  await injectAuthor(page);
+
+  // 建题步只属于 /manage/problems/new；编辑态的 ?step=create（手写深链或点 stepper）
+  // 必须归一到题面，而不是渲染一个没有操作的空白面板。
+  await page.goto("/manage/problems/1?step=create");
+
+  await expect(page.getByLabel("Description", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save statement" })).toBeVisible();
+  await expect(page.getByLabel("Title")).toHaveCount(0);
+});
+
 async function injectAuthor(page: import("@playwright/test").Page) {
   await page.addInitScript((session) => {
     window.localStorage.setItem("soj.session", JSON.stringify(session));

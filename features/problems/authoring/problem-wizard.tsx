@@ -127,7 +127,10 @@ export function ProblemWizard({ problemId, initialStep }: ProblemWizardProps) {
   }
 
   function selectStep(step: AuthoringStepKey) {
-    if (problemId) router.replace(localize(`/manage/problems/${problemId}?step=${step}`));
+    if (!problemId) return;
+    // 编辑态没有建题操作：点「建题」回题面，别落到空白面板。
+    const target = step === "create" ? "statement" : step;
+    router.replace(localize(`/manage/problems/${problemId}?step=${target}`));
   }
 
   // 未登录 / 会话加载中：无论建题还是编辑都先过登录门。
