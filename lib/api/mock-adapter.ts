@@ -644,9 +644,15 @@ function requireAnyPermission(user: CurrentUser | null, permissions: Permission[
 }
 
 const authoringAccessMessage = "Problem authoring access is required.";
+const authoringPermissions: Permission[] = ["problem.create", "problem.review", "problem.manage_all"];
 
 function requireAuthoringAccess(user: CurrentUser | null) {
-  return requireAnyPermission(user, ["problem.create", "problem.review", "problem.manage_all"], authoringAccessMessage);
+  const currentUser = requireMockUser(user);
+  if (!authoringPermissions.some((permission) => currentUser.permissions.includes(permission))) {
+    // Mirrors the backend's `problem.forbidden` denial for `mine=true` lists.
+    throw new ApiError(authoringAccessMessage, "problem.forbidden", 403);
+  }
+  return currentUser;
 }
 
 /**

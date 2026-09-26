@@ -52,7 +52,7 @@ describe("api mode", () => {
 
   it("denies problem authoring to a user without the authoring capability", async () => {
     await expect(createMockAdapter({ currentUser: mockUser }).problems.listMine()).rejects.toMatchObject({
-      code: "auth.forbidden",
+      code: "problem.forbidden",
       status: 403,
     });
     await expect(createMockAdapter({ currentUser: mockAuthorUser }).problems.listMine()).resolves.toMatchObject({ total: expect.any(Number) });
