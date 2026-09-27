@@ -23,10 +23,25 @@ describe("pagination", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("renders clickable page numbers and the total, without a manual jump input", () => {
+    renderPagination();
+
+    expect(screen.getByRole("button", { name: "1" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "4" })).toBeVisible();
+    expect(screen.getByText("61 total")).toBeVisible();
+    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+  });
+
+  it("switches pages by clicking a number", () => {
+    const { onPageChange } = renderPagination();
+
+    fireEvent.click(screen.getByRole("button", { name: "3" }));
+    expect(onPageChange).toHaveBeenCalledWith(3);
+  });
+
   it("moves to the previous and next page", () => {
     const { onPageChange } = renderPagination({ page: 2 });
 
-    expect(screen.getByText("Page 2 of 4")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Previous" }));
     expect(onPageChange).toHaveBeenCalledWith(1);
 
@@ -34,7 +49,7 @@ describe("pagination", () => {
     expect(onPageChange).toHaveBeenCalledWith(3);
   });
 
-  it("disables the buttons at the edges", () => {
+  it("disables the arrows at the edges", () => {
     renderPagination({ page: 1 });
     expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
 
@@ -42,19 +57,11 @@ describe("pagination", () => {
     expect(screen.getAllByRole("button", { name: "Next" }).at(-1)).toBeDisabled();
   });
 
-  it("jumps to an explicit page", () => {
-    const { onPageChange } = renderPagination();
+  it("collapses long ranges with ellipses around the current page", () => {
+    renderPagination({ page: 5, pageSize: 20, total: 200 });
 
-    fireEvent.change(screen.getByLabelText("Jump to page"), { target: { value: "3" } });
-    fireEvent.click(screen.getByRole("button", { name: "Go" }));
-    expect(onPageChange).toHaveBeenCalledWith(3);
-  });
-
-  it("clamps an out-of-range jump input", () => {
-    const { onPageChange } = renderPagination();
-
-    fireEvent.change(screen.getByLabelText("Jump to page"), { target: { value: "99" } });
-    fireEvent.click(screen.getByRole("button", { name: "Go" }));
-    expect(onPageChange).toHaveBeenCalledWith(4);
+    expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual(["", "1", "4", "5", "6", "10", ""]);
+    expect(screen.getAllByText("…")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "5" })).toHaveAttribute("aria-current", "page");
   });
 });
