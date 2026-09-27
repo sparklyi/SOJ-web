@@ -5,6 +5,7 @@ import type { CreateSubmissionInput, SubmissionSummary } from "@/lib/api/types";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { isSubmissionTerminal } from "@/lib/domain/submission";
+import { isLanguageDisabledError } from "@/lib/api/errors";
 import { pollToTerminal } from "@/lib/domain/poll";
 
 export const SUBMISSION_POLL_INTERVAL_MS = 1200;
@@ -82,7 +83,14 @@ export function useSubmission(options: UseSubmissionOptions = {}): UseSubmission
         await settle(created);
       } catch (error) {
         if (!aliveRef.current) return;
-        setState({ status: "error", message: error instanceof Error ? error.message : t("problems.submissionFailed") });
+        setState({
+          status: "error",
+          message: isLanguageDisabledError(error)
+            ? t("problems.languageDisabled")
+            : error instanceof Error
+              ? error.message
+              : t("problems.submissionFailed"),
+        });
       }
     },
     [settle, t],

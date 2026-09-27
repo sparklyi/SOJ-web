@@ -67,6 +67,10 @@ export const problemMessages = {
   },
   "problems.languageCatalogUnavailable": { en: "Unable to load language catalog.", "zh-CN": "无法加载评测语言列表。" },
   "problems.languageCatalogEmpty": { en: "Language catalog is empty for this backend session.", "zh-CN": "当前后端会话没有可用的评测语言。" },
+  "problems.languageDisabled": {
+    en: "The selected language is disabled. Pick another language and submit again.",
+    "zh-CN": "所选语言已停用，请重新选择语言后再提交。",
+  },
   "problems.codeWorkspace": { en: "Code workspace", "zh-CN": "代码工作区" },
   "problems.resetCode": { en: "Reset to default code", "zh-CN": "重置为默认代码" },
   "problems.language": { en: "Language", "zh-CN": "评测语言" },

@@ -41,3 +41,11 @@ export function notFound(resource: string, id: number | string) {
 export function isNotFoundError(error: unknown) {
   return error instanceof ApiError && error.code === "not_found";
 }
+
+/**
+ * 停用语言的拒绝（409 submission.language_disabled）要在提交/运行面板里
+ * 给出自己的文案，而不是直接展示后端的英文句子；调用方据此换成 i18n 词条。
+ */
+export function isLanguageDisabledError(error: unknown) {
+  return error instanceof ApiError && error.code === "submission.language_disabled";
+}

@@ -13,4 +13,8 @@ export const runMessages = {
     "zh-CN": "仍在判题端执行，可以再查一次。",
   },
   "runs.continuePolling": { en: "Check again", "zh-CN": "继续查询" },
+  "runs.languageDisabled": {
+    en: "The selected language is disabled. Pick another language and run again.",
+    "zh-CN": "所选语言已停用，请重新选择语言后再运行。",
+  },
 } as const;

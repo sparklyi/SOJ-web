@@ -2,6 +2,8 @@ import { ApiError } from "./errors";
 import { request } from "./http-client";
 import type {
   AdminUserUpdateRequest,
+  AuditEventPageResponse,
+  AuditEventResponse,
   AuthResponse,
   ContestRegistrationResponse,
   ContestResponse,
@@ -9,7 +11,9 @@ import type {
   ContestRoleAssignmentResponse,
   ContestRoleGrantRequest,
   ContestRoleRevokeRequest,
+  ContestWriteRequest,
   LanguageResponse,
+  LanguageUpdateRequest,
   LoginRequest,
   PageResponse,
   ProblemAuthoringStateResponse,
@@ -44,8 +48,16 @@ import type {
 import type { AuthSession } from "@/lib/auth/session";
 import { isGlobalRole } from "@/lib/auth/permissions";
 import type {
+  AdminContest,
+  AdminContestFilter,
+  AdminContestInput,
+  AdminLanguageUpdateInput,
+  AdminProblemFilter,
   AdminUser,
   ApiClient,
+  AuditEvent,
+  AuditEventFilter,
+  AuthoringProblem,
   CurrentUser,
   GlobalRoleAssignment,
   JudgeLanguage,
@@ -56,7 +68,7 @@ import type {
   RejudgeBatchItem,
   SiteFacts,
 } from "./types";
-import { mapContestRegistration, mapContestResponse, mapContestRoleAssignment, mapContestScoreboard } from "./contest-mappers";
+import { mapAdminContest, mapContestRegistration, mapContestResponse, mapContestRoleAssignment, mapContestScoreboard } from "./contest-mappers";
 import {
   mapAuthoringProblem,
   mapAuthoringState,
@@ -109,6 +121,21 @@ function mapAdminUser(input: UserResponse): AdminUser {
     createdAt: input.created_at,
     updatedAt: input.updated_at,
   };
+}
+
+function mapAuditEvent(input: AuditEventResponse): AuditEvent {
+  const event: AuditEvent = {
+    id: input.id,
+    action: input.action as AuditEvent["action"],
+    objectType: input.object_type as AuditEvent["objectType"],
+    objectId: input.object_id,
+    createdAt: input.created_at,
+  };
+  if (input.actor_user_id != null) event.actorUserId = input.actor_user_id;
+  if (input.actor_username) event.actorUsername = input.actor_username;
+  if (input.reason) event.reason = input.reason;
+  if (input.metadata) event.metadata = input.metadata;
+  return event;
 }
 
 function mapGlobalRoleAssignment(input: RoleAssignmentResponse): GlobalRoleAssignment {
@@ -619,6 +646,129 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
           body: JSON.stringify(body),
         });
       },
+      languages: {
+        list: async (filter = {}): Promise<PageResult<JudgeLanguage>> => {
+          const data = await request<PageResponse<LanguageResponse>>("/api/v1/admin/languages", {
+            accessToken: options.accessToken,
+            query: { page: filter.page ?? 1, page_size: filter.pageSize ?? 20, enabled: filter.enabled, engine: filter.engine },
+          });
+          return { items: data.items.map(mapLanguage), total: data.total };
+        },
+        update: async (id, input: AdminLanguageUpdateInput): Promise<JudgeLanguage> => {
+          const body: LanguageUpdateRequest = {};
+          if (input.enabled !== undefined) body.enabled = input.enabled;
+          if (input.defaultTimeLimitMs !== undefined) body.default_time_limit_ms = input.defaultTimeLimitMs;
+          if (input.defaultMemoryLimitKb !== undefined) body.default_memory_limit_kb = input.defaultMemoryLimitKb;
+          const data = await request<LanguageResponse>(`/api/v1/admin/languages/${id}`, {
+            accessToken: options.accessToken,
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          return mapLanguage(data);
+        },
+      },
+      problems: {
+        list: async (filter: AdminProblemFilter = {}): Promise<PageResult<AuthoringProblem>> => {
+          const data = await request<PageResponse<ProblemResponse>>("/api/v1/problems", {
+            accessToken: options.accessToken,
+            query: {
+              page: filter.page ?? 1,
+              page_size: filter.pageSize ?? 20,
+              keyword: filter.keyword,
+              status: filter.status,
+              owner: filter.owner,
+              visibility: filter.visibility,
+              tag: filter.tag,
+            },
+          });
+          return { items: data.items.map(mapAuthoringProblem), total: data.total };
+        },
+        archive: async (id) => {
+          await request<undefined>(`/api/v1/problems/${id}`, {
+            accessToken: options.accessToken,
+            method: "DELETE",
+          });
+        },
+        restore: async (id) => {
+          const data = await request<ProblemResponse>(`/api/v1/problems/${id}/restore`, {
+            accessToken: options.accessToken,
+            method: "POST",
+          });
+          return mapAuthoringProblem(data);
+        },
+      },
+      contests: {
+        list: async (filter: AdminContestFilter = {}): Promise<PageResult<AdminContest>> => {
+          const data = await request<PageResponse<ContestResponse>>("/api/v1/contests", {
+            accessToken: options.accessToken,
+            query: {
+              page: filter.page ?? 1,
+              page_size: filter.pageSize ?? 20,
+              keyword: filter.keyword,
+              status: filter.status,
+            },
+          });
+          return { items: data.items.map(mapAdminContest), total: data.total };
+        },
+        create: async (input) => {
+          const data = await request<ContestResponse>("/api/v1/contests", {
+            accessToken: options.accessToken,
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(contestWriteRequest(input)),
+          });
+          return mapAdminContest(data);
+        },
+        update: async (id, input) => {
+          const data = await request<ContestResponse>(`/api/v1/contests/${id}`, {
+            accessToken: options.accessToken,
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(contestWriteRequest(input)),
+          });
+          return mapAdminContest(data);
+        },
+        archive: async (id) => {
+          await request<undefined>(`/api/v1/contests/${id}`, {
+            accessToken: options.accessToken,
+            method: "DELETE",
+          });
+        },
+      },
+      audit: {
+        list: async (filter: AuditEventFilter = {}): Promise<PageResult<AuditEvent>> => {
+          const data = await request<AuditEventPageResponse>("/api/v1/admin/audit-events", {
+            accessToken: options.accessToken,
+            query: {
+              page: filter.page ?? 1,
+              page_size: filter.pageSize ?? 20,
+              object_type: filter.objectType,
+              object_id: filter.objectId,
+              actor_id: filter.actorId,
+              action: filter.action,
+            },
+          });
+          return { items: data.items.map(mapAuditEvent), total: data.total };
+        },
+      },
     },
   };
+}
+
+function contestWriteRequest(input: AdminContestInput): ContestWriteRequest {
+  const body: ContestWriteRequest = {
+    title: input.title,
+    visibility: input.visibility,
+    status: input.status,
+    start_at: input.startAt,
+    end_at: input.endAt,
+    freeze_at: input.freezeAt,
+  };
+  if (input.description !== undefined) body.description = input.description;
+  if (input.inviteCode) body.invite_code = input.inviteCode;
+  if (input.problems) {
+    body.problems = input.problems.map((problem) => ({ problem_id: problem.problemId, alias: problem.alias }));
+  }
+  return body;
 }

@@ -3,7 +3,7 @@ import type { AdminUserStatus, ApiClient } from "@/lib/api/types";
 import type { GlobalRole } from "@/lib/auth/permissions";
 
 export async function listAdminUsers(
-  filter: { keyword?: string; status?: AdminUserStatus } = {},
+  filter: { keyword?: string; status?: AdminUserStatus; page?: number; pageSize?: number } = {},
   client: ApiClient = createApiClient(),
 ) {
   return client.admin.listUsers(filter);

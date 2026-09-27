@@ -2,7 +2,7 @@ import type { MessageCatalog } from "../types";
 
 export const rbacMessages = {
   "gate.loading": { en: "Checking your access…", "zh-CN": "正在校验访问权限…" },
-  "gate.deniedTitle": { en: "Permission required", "zh-CN": "缺少权限" },
+  "gate.deniedTitle": { en: "403 · Permission required", "zh-CN": "403 · 缺少权限" },
   "gate.deniedBody": {
     en: "Your account does not hold the permission this surface requires. Ask an administrator if you believe this is wrong.",
     "zh-CN": "当前账号没有访问该界面所需的权限。如果认为这是误判，请联系管理员。",
@@ -86,6 +86,13 @@ export const rbacMessages = {
     "zh-CN": "赛事角色只在单场比赛内生效，由赛事所有者、赛事管理员、admin 或 root 授予。",
   },
   "roles.users": { en: "Users", "zh-CN": "用户" },
+  "roles.search": { en: "Search", "zh-CN": "检索" },
+  "roles.allStatuses": { en: "All statuses", "zh-CN": "全部状态" },
+  "roles.manage": { en: "Manage roles", "zh-CN": "管理角色" },
+  "roles.manageTitle": { en: "Roles · {name}", "zh-CN": "管理角色 · {name}" },
+  "roles.fixedRole": { en: "Fixed", "zh-CN": "固定角色" },
+  "roles.you": { en: "You", "zh-CN": "本人" },
+  "roles.current": { en: "Current", "zh-CN": "当前" },
   "roles.usersEmpty": { en: "No users match this filter.", "zh-CN": "没有符合条件的用户。" },
   "roles.searchPlaceholder": { en: "Search handle or email", "zh-CN": "搜索用户名或邮箱" },
   "roles.searchAction": { en: "Search", "zh-CN": "搜索" },

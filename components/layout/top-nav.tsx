@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { canOpenAdmin } from "@/features/admin/modules";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -49,13 +50,13 @@ export function TopNav() {
   // manager reaches rejudge from the contest page instead, because the session
   // cannot enumerate contest assignments.
   const canOpenRejudge = can("submission.rejudge") || can("problem.manage_all");
-  const canOpenAdmin = can("user.manage");
+  const canOpenAdminConsole = canOpenAdmin((permission) => can(permission));
   const visibleItems = [
     ...navItems,
     ...(canOpenAuthoring ? [{ href: "/manage/problems", labelKey: "nav.author" as const }] : []),
     ...(canOpenReview ? [{ href: "/manage/reviews", labelKey: "nav.reviews" as const }] : []),
     ...(canOpenRejudge ? [{ href: "/manage/rejudge", labelKey: "nav.rejudge" as const }] : []),
-    ...(canOpenAdmin ? [{ href: "/admin/users", labelKey: "nav.adminUsers" as const }] : []),
+    ...(canOpenAdminConsole ? [{ href: "/admin", labelKey: "nav.admin" as const }] : []),
   ];
   const currentPathname = unlocalizePath(pathname);
   const activeHref = visibleItems.find((item) => currentPathname === item.href || (item.href !== "/" && currentPathname.startsWith(`${item.href}/`)))?.href ?? "/";

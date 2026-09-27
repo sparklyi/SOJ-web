@@ -1,5 +1,7 @@
 import type {
+  AdminContest,
   AdminUser,
+  AuditEvent,
   ContestRoleAssignment,
   ContestSummary,
   CurrentUser,
@@ -347,6 +349,90 @@ export const mockAdminUsers: AdminUser[] = [
   { id: 12, email: "aya.sato@soj.dev", handle: "aya-sato", status: "active", roles: ["user", "author"], createdAt: "2026-06-02T09:00:00Z", updatedAt: "2026-06-20T09:00:00Z" },
   { id: 21, email: "noa.weiss@soj.dev", handle: "noa-weiss", status: "active", roles: ["user", "reviewer"], createdAt: "2026-06-03T09:00:00Z", updatedAt: "2026-06-21T09:00:00Z" },
   { id: 33, email: "ravi.menon@soj.dev", handle: "ravi-menon", status: "disabled", roles: ["user", "admin"], createdAt: "2026-06-04T09:00:00Z", updatedAt: "2026-07-01T09:00:00Z" },
+];
+
+/**
+ * 后台竞赛夹具保留发布状态：选手端的 ContestSummary 会把 draft 折算成
+ * ended、archived 折算成 unsealed，后台编辑与归档需要看到真实状态。
+ */
+export const mockAdminContests: AdminContest[] = [
+  {
+    id: 1,
+    ownerUserId: 21,
+    title: "Sundial Weekly Contest",
+    status: "running",
+    visibility: "public",
+    startsAt: hoursFromNow(-2),
+    endsAt: hoursFromNow(3),
+    freezeAt: hoursFromNow(1),
+    problems: [
+      { problemId: 1, alias: "A", title: "Shortest Path" },
+      { problemId: 2, alias: "B", title: "Cache Relay" },
+      { problemId: 3, alias: "C", title: "Frozen Matrix" },
+    ],
+    createdAt: hoursFromNow(-72),
+    updatedAt: hoursFromNow(-2),
+  },
+  {
+    id: 2,
+    ownerUserId: 7,
+    title: "OI Calibration Round",
+    status: "draft",
+    visibility: "private",
+    startsAt: hoursFromNow(24),
+    endsAt: hoursFromNow(29),
+    freezeAt: hoursFromNow(27),
+    problems: [{ problemId: 4, alias: "A", title: "Judge Queue" }],
+    createdAt: hoursFromNow(-20),
+    updatedAt: hoursFromNow(-20),
+  },
+  {
+    id: 3,
+    ownerUserId: 12,
+    title: "Spring Invitational",
+    status: "archived",
+    visibility: "public",
+    startsAt: hoursFromNow(-720),
+    endsAt: hoursFromNow(-715),
+    freezeAt: hoursFromNow(-717),
+    problems: [],
+    createdAt: hoursFromNow(-800),
+    updatedAt: hoursFromNow(-700),
+  },
+];
+
+export const mockAuditEvents: AuditEvent[] = [
+  {
+    id: 3,
+    actorUserId: 7,
+    actorUsername: "lin-chen",
+    action: "language.disabled",
+    objectType: "language",
+    objectId: 57,
+    createdAt: "2026-07-08T09:20:00Z",
+  },
+  {
+    id: 2,
+    actorUserId: 7,
+    actorUsername: "lin-chen",
+    action: "problem.archived",
+    objectType: "problem",
+    objectId: 5,
+    reason: "retired after the calibration round",
+    metadata: { previous_status: "published" },
+    createdAt: "2026-07-08T09:05:00Z",
+  },
+  {
+    id: 1,
+    actorUserId: 33,
+    actorUsername: "ravi-menon",
+    action: "user.role.granted",
+    objectType: "user",
+    objectId: 12,
+    reason: "author onboarding",
+    metadata: { role: "author" },
+    createdAt: "2026-07-07T18:40:00Z",
+  },
 ];
 
 export const mockRejudgeBatches: RejudgeBatch[] = [

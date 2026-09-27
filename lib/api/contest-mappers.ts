@@ -5,8 +5,35 @@ import type {
   ScoreboardCell,
   ScoreboardResponse,
 } from "./backend-types";
-import type { ContestRegistration, ContestRoleAssignment, ContestStatus, ContestSummary } from "./types";
+import type { AdminContest, ContestRegistration, ContestRoleAssignment, ContestStatus, ContestSummary } from "./types";
 import type { ScoreboardModel, ScoreboardProblemCell, ScoreboardProblemStatus } from "@/lib/domain/scoreboard";
+
+/**
+ * 后台需要区分 draft/archived，而选手端的 ContestSummary 把这些状态折算成了
+ * 进行时态（draft→ended、archived→unsealed）。后台列表保留原始发布状态和
+ * 可见性，不复用选手端的折算。
+ */
+export function mapAdminContest(input: ContestResponse): AdminContest {
+  return {
+    id: input.id,
+    ownerUserId: input.owner_user_id,
+    title: input.title,
+    status: input.status,
+    visibility: input.visibility,
+    startsAt: input.start_at,
+    endsAt: input.end_at,
+    freezeAt: input.freeze_at,
+    problems: [...(input.problems ?? [])]
+      .sort((a, b) => a.sort_order - b.sort_order || a.alias.localeCompare(b.alias))
+      .map((problem) => ({
+        problemId: problem.problem_id,
+        alias: problem.alias,
+        title: problem.title ?? `Problem ${problem.alias}`,
+      })),
+    createdAt: input.created_at,
+    updatedAt: input.updated_at,
+  };
+}
 
 export function mapContestResponse(input: ContestResponse, now: Date = new Date()): ContestSummary {
   return {
@@ -19,7 +46,7 @@ export function mapContestResponse(input: ContestResponse, now: Date = new Date(
     freezeAt: input.freeze_at,
     registered: input.registered,
     currentUserRoles: [...(input.current_user_roles ?? [])],
-    problems: [...input.problems]
+    problems: [...(input.problems ?? [])]
       .sort((a, b) => a.sort_order - b.sort_order || a.alias.localeCompare(b.alias))
       .map((problem) => ({
         problemId: problem.problem_id,
