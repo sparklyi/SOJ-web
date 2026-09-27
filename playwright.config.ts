@@ -3,7 +3,10 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
-  workers: 1,
+  // Two files in parallel keeps the dev server's compile queue busy without the
+  // thundering herd of a higher worker count, which times the suite out on a
+  // cold .next. Tests inside one file still run serially.
+  workers: process.env.CI ? 2 : 1,
   reporter: "list",
   use: {
     baseURL: "http://127.0.0.1:3000",

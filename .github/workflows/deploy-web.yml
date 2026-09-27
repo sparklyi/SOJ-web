@@ -28,15 +28,8 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Unit tests
-        run: npm run test
-
+      # 不重复 typecheck / lint / test：tag 打在已通过 CI 的 main 提交上，
+      # 且 `next build` 自带全量类型检查（typescript.ignoreBuildErrors 未开）。
       - name: Build (standalone)
         run: npm run build
         env:
