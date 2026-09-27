@@ -3,11 +3,13 @@ import { injectSession } from "./helpers/session";
 
 const adminPermissions = [
   "system.manage",
+  "audit.read",
   "problem.manage_all",
   "contest.manage_all",
   "user.manage",
   "role.grant",
   "role.revoke",
+  "role.permission.manage",
 ];
 
 async function injectAdmin(page: Page) {
@@ -99,4 +101,26 @@ test("a plain account gets the 403 wall on an admin URL", async ({ page }) => {
 
   await expect(page.getByText("403 · Permission required")).toBeVisible();
   await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
+});
+
+test("admin edits the role permission matrix from the admin tab", async ({ page }) => {
+  await injectAdmin(page);
+  await page.goto("/admin");
+
+  const tabs = page.getByRole("navigation", { name: "Administration" });
+  await tabs.getByRole("link", { name: "Roles" }).click();
+  await expect(page.getByRole("heading", { name: "Role permissions" })).toBeVisible();
+
+  // contest.create is a global capability despite the contest prefix, so the
+  // global author column may hold it.
+  const checkbox = page.getByRole("checkbox", { name: "author contest.create" });
+  await expect(checkbox).toBeEnabled();
+  await checkbox.check();
+
+  await page.getByRole("button", { name: "Save Author" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Reason").fill("e2e grant contest creation");
+  await dialog.getByRole("button", { name: "Apply" }).click();
+
+  await expect(page.getByText("Role permissions updated.")).toBeVisible();
 });

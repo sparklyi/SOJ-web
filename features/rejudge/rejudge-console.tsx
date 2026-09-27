@@ -21,16 +21,16 @@ type ListState =
 type TargetKind = RejudgeTarget["kind"];
 
 /**
- * Global console. It covers the capabilities the session can answer on its own:
- * `submission.rejudge` for a problem target, and `problem.manage_all` (carried by
- * every full-access role) for either target kind.
+ * Global console. The backend now authorizes a global rejudge through
+ * `submission.rejudge` alone, so that is the only capability this surface asks
+ * the session for.
  */
 export function RejudgeConsole() {
   const { t } = useI18n();
 
   return (
     <PageShell title={t("rejudge.title")} description={t("rejudge.description")}>
-      <PermissionGate anyOf={["submission.rejudge", "problem.manage_all"]}>
+      <PermissionGate anyOf={["submission.rejudge"]}>
         <RejudgeBoard />
       </PermissionGate>
     </PageShell>
@@ -50,7 +50,7 @@ export function ContestRejudgeConsole({ contestId }: { contestId: number }) {
 
   return (
     <PageShell title={`${t("rejudge.title")} · #${contestId}`} description={t("rejudge.contestDescription")}>
-      <PermissionGate anyOf={["submission.rejudge", "problem.manage_all"]} override={access.state}>
+      <PermissionGate anyOf={["submission.rejudge"]} override={access.state}>
         <RejudgeBoard contestId={contestId} />
       </PermissionGate>
     </PageShell>

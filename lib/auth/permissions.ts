@@ -17,21 +17,22 @@ export type ContestRole = (typeof contestRoles)[number];
 /** Roles that carry every known permission, mirroring the backend authz package. */
 export const fullAccessRoles = ["admin", "root"] as const satisfies readonly GlobalRole[];
 
+/**
+ * The phase-one permission catalog. It mirrors the backend authz catalog exactly;
+ * the role→permission mapping lives only in `lib/mock/role-permissions.ts`
+ * because the running app answers `can()` from the server-issued
+ * `user.permissions` list.
+ */
 export const permissions = [
-  "problem.read",
   "problem.create",
   "problem.edit_own",
-  "problem.testcase.manage_own",
-  "problem.check_own",
   "problem.submit_review",
   "problem.review",
   "problem.publish",
   "problem.manage_all",
-  "submission.create",
-  "submission.read_own",
   "submission.rejudge",
   "judge.inspect",
-  "contest.join",
+  "contest.create",
   "contest.read",
   "contest.manage",
   "contest.judge",
@@ -39,25 +40,11 @@ export const permissions = [
   "user.manage",
   "role.grant",
   "role.revoke",
+  "role.permission.manage",
   "system.manage",
+  "audit.read",
 ] as const;
 export type Permission = (typeof permissions)[number];
-
-const rolePermissions: Record<Role, readonly Permission[]> = {
-  user: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
-  author: ["problem.create", "problem.edit_own", "problem.testcase.manage_own", "problem.check_own", "problem.submit_review"],
-  reviewer: ["problem.review", "problem.publish"],
-  operator: ["submission.rejudge", "judge.inspect"],
-  admin: permissions,
-  root: permissions,
-  contest_staff: ["contest.read"],
-  contest_manager: ["contest.read", "contest.manage"],
-  contest_judge: ["contest.read", "contest.judge"],
-};
-
-export function permissionsForRoles(...userRoles: Role[]): Permission[] {
-  return permissions.filter((permission) => userRoles.some((role) => rolePermissions[role].includes(permission)));
-}
 
 export function isRole(value: unknown): value is Role {
   return typeof value === "string" && (roles as readonly string[]).includes(value);

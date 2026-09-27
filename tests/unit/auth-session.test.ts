@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { permissionsForRoles } from "@/lib/auth/permissions";
+import { permissionsForRoles } from "@/lib/mock/role-permissions";
 import { clearSession, createMemorySessionStore, createMockSession, restoreSession, saveSession } from "@/lib/auth/session";
 import { mockUser } from "@/lib/mock/fixtures";
 

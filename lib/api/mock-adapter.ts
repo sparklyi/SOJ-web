@@ -17,7 +17,8 @@ import {
   mockSubmissions,
   mockUser,
 } from "@/lib/mock/fixtures";
-import type { ContestRole, GlobalRole, Permission } from "@/lib/auth/permissions";
+import { roles, type ContestRole, type GlobalRole, type Permission, type Role } from "@/lib/auth/permissions";
+import { lockedRoles, permissionCatalog, permissionsForRole, roleScope } from "@/lib/mock/role-permissions";
 import { deriveAuthoringFlow } from "@/features/problems/authoring/flow";
 import type {
   AdminContest,
@@ -45,6 +46,8 @@ import type {
   RejudgeBatchItem,
   RunSummary,
   SubmissionSummary,
+  RolePermissionEntry,
+  RolePermissionMatrix,
 } from "./types";
 
 type MockAdapterOptions = {
@@ -92,6 +95,16 @@ const adminUsers: AdminUser[] = mockAdminUsers.map((user) => ({ ...user, roles: 
 const adminContests: AdminContest[] = mockAdminContests.map((contest) => ({ ...contest, problems: [...contest.problems] }));
 const judgeLanguages: JudgeLanguage[] = mockLanguages.map((language) => ({ ...language }));
 const auditEvents: AuditEvent[] = mockAuditEvents.map((event) => ({ ...event }));
+
+/**
+ * Phase-2 role→permission state. `admin`/`root` are locked and always report
+ * the whole directory; every other role starts from the seeded defaults in
+ * `lib/mock/role-permissions.ts` and is replaced wholesale by an update.
+ */
+const rolePermissionState = new Map<Role, Permission[]>();
+for (const role of roles) {
+  rolePermissionState.set(role, permissionsForRole(role));
+}
 
 // The admin problem list spans every seeded problem, not just the authoring
 // console's three. The first entries stay shared with `authoredProblems` so an
@@ -773,7 +786,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       },
       audit: {
         list: async (filter: AuditEventFilter = {}) => {
-          requirePermission(currentUser, "system.manage");
+          requirePermission(currentUser, "audit.read");
           const items = auditEvents
             .filter((event) => {
               if (filter.objectType && event.objectType !== filter.objectType) return false;
@@ -786,11 +799,71 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
           return paginate(items, filter.page, filter.pageSize);
         },
       },
+      rolePermissions: async (): Promise<RolePermissionMatrix> => {
+        requirePermission(currentUser, "role.permission.manage");
+        return {
+          permissions: permissionCatalog(),
+          roles: roles.map((role) => rolePermissionEntry(role)),
+        };
+      },
+      updateRolePermissions: async (role, input): Promise<RolePermissionEntry> => {
+        const actor = requirePermission(currentUser, "role.permission.manage");
+        if (!(roles as readonly string[]).includes(role)) {
+          throw new ApiError("Role was not found.", "role.not_found", 404);
+        }
+        if (lockedRoles.includes(role)) {
+          throw new ApiError("This role is locked and cannot be edited.", "role.locked", 409);
+        }
+
+        const catalog = permissionCatalog();
+        const byCode = new Map(catalog.map((entry) => [entry.code, entry]));
+        const selected = new Set<Permission>();
+        for (const permission of input.permissions) {
+          const entry = byCode.get(permission);
+          if (!entry) {
+            throw new ApiError(`Unknown permission ${permission}.`, "role.permission_invalid", 400);
+          }
+          if (selected.has(permission)) continue;
+          selected.add(permission);
+          if (!entry.delegable) {
+            throw new ApiError(`${permission} is admin/root only.`, "role.permission_not_delegable", 400);
+          }
+          if (entry.scope !== roleScope(role)) {
+            throw new ApiError(`${permission} does not belong to a ${roleScope(role)} role.`, "role.permission_scope_mismatch", 400);
+          }
+        }
+        if (!input.reason.trim()) {
+          throw new ApiError("A reason is required.", "role.permission_reason_required", 400);
+        }
+
+        const before = rolePermissionState.get(role) ?? [];
+        // Keep the directory order rather than the request order so repeated
+        // reads are stable and comparable.
+        const after = catalog.filter((entry) => selected.has(entry.code)).map((entry) => entry.code);
+        rolePermissionState.set(role, after);
+        recordAudit(actor.id, "role.permissions.updated", "role", null, input.reason.trim(), {
+          role,
+          before: JSON.stringify(before),
+          after: JSON.stringify(after),
+        });
+        return rolePermissionEntry(role);
+      },
     },
   };
 }
 
 const archivedFromStatus = new Map<number, AuthoringProblem["publicationStatus"]>();
+
+/** One role column; locked roles always report the whole directory. */
+function rolePermissionEntry(role: Role): RolePermissionEntry {
+  const locked = lockedRoles.includes(role);
+  return {
+    code: role,
+    scope: roleScope(role),
+    locked,
+    permissions: locked ? permissionCatalog().map((entry) => entry.code) : [...(rolePermissionState.get(role) ?? [])],
+  };
+}
 
 function paginate<T>(items: T[], page = 1, pageSize = 20) {
   const current = Math.max(1, page);
@@ -813,7 +886,7 @@ function recordAudit(
   actorUserId: number,
   action: AuditAction,
   objectType: AuditObjectType,
-  objectId: number,
+  objectId: number | null,
   reason?: string,
   metadata?: Record<string, unknown>,
 ) {

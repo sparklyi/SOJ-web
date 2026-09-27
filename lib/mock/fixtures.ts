@@ -12,7 +12,7 @@ import type {
   RejudgeBatchItem,
   SubmissionSummary,
 } from "@/lib/api/types";
-import { permissionsForRoles } from "@/lib/auth/permissions";
+import { permissionsForRoles } from "@/lib/mock/role-permissions";
 import { buildAcmScoreboardRow, buildContest, buildProblem, buildSubmission, hoursFromNow, minutesFromNow } from "./builders";
 
 export const mockUser: CurrentUser = {
@@ -396,6 +396,21 @@ export const mockAdminContests: AdminContest[] = [
 ];
 
 export const mockAuditEvents: AuditEvent[] = [
+  {
+    id: 4,
+    actorUserId: 7,
+    actorUsername: "lin-chen",
+    action: "role.permissions.updated",
+    objectType: "role",
+    objectId: null,
+    reason: "the author role no longer needs to edit published problems",
+    metadata: {
+      role: "author",
+      before: JSON.stringify(["problem.create", "problem.edit_own", "problem.submit_review"]),
+      after: JSON.stringify(["problem.create", "problem.submit_review"]),
+    },
+    createdAt: "2026-07-08T09:30:00Z",
+  },
   {
     id: 3,
     actorUserId: 7,

@@ -511,6 +511,30 @@ export type RoleRevokeRequest = {
   reason: string;
 };
 
+export type PermissionSpecResponse = {
+  code: Permission;
+  scope: "global" | "contest";
+  delegable: boolean;
+  consumer: string;
+};
+
+export type RolePermissionResponse = {
+  code: Role;
+  scope: "global" | "contest";
+  locked: boolean;
+  permissions: Permission[];
+};
+
+export type RolePermissionMatrixResponse = {
+  permissions: PermissionSpecResponse[];
+  roles: RolePermissionResponse[];
+};
+
+export type RolePermissionUpdateRequest = {
+  permissions: Permission[];
+  reason: string;
+};
+
 export type ContestRoleGrantRequest = {
   user_id: number;
   role: ContestRole;
@@ -545,7 +569,8 @@ export type AuditEventResponse = {
   actor_username?: string | null;
   action: string;
   object_type: string;
-  object_id: number;
+  /** null for objects without a numeric id (a role carries its code in metadata). */
+  object_id: number | null;
   reason?: string;
   metadata?: Record<string, unknown> | null;
   created_at: string;
