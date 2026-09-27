@@ -3,7 +3,9 @@ import { createMockSession } from "@/lib/auth/session";
 import { buildAcmScoreboard } from "@/lib/domain/scoreboard";
 import {
   mockAcmScoreboardRows,
+  mockAdminContests,
   mockAdminUsers,
+  mockAuditEvents,
   mockContests,
   mockContestRoleAssignments,
   mockLanguages,
@@ -18,8 +20,17 @@ import {
 import type { ContestRole, GlobalRole, Permission } from "@/lib/auth/permissions";
 import { deriveAuthoringFlow } from "@/features/problems/authoring/flow";
 import type {
+  AdminContest,
+  AdminContestFilter,
+  AdminContestInput,
+  AdminLanguageUpdateInput,
+  AdminProblemFilter,
   AdminUser,
   ApiClient,
+  AuditAction,
+  AuditEvent,
+  AuditEventFilter,
+  AuditObjectType,
   AuthoringProblem,
   AuthoringStatement,
   AuthoringTestcaseSet,
@@ -27,6 +38,7 @@ import type {
   ContestSummary,
   CurrentUser,
   GlobalRoleAssignment,
+  JudgeLanguage,
   ProblemCheckRun,
   ProblemReviewEvent,
   RejudgeBatch,
@@ -53,6 +65,8 @@ let nextReviewEventId = 60_000;
 let nextContestRoleId = 70_000;
 let nextRejudgeBatchId = 80_000;
 let nextRoleAssignmentId = 90_000;
+let nextAuditEventId = 100_000;
+let nextContestId = 110_000;
 
 const authoredProblems: AuthoringProblem[] = mockProblems.slice(0, 3).map((problem) => ({
   id: problem.id,
@@ -75,6 +89,30 @@ const authoringChecks = new Map<number, ProblemCheckRun>();
 const reviewEvents = new Map<number, ProblemReviewEvent[]>();
 const contestRoleAssignments: ContestRoleAssignment[] = [...mockContestRoleAssignments];
 const adminUsers: AdminUser[] = mockAdminUsers.map((user) => ({ ...user, roles: [...user.roles] }));
+const adminContests: AdminContest[] = mockAdminContests.map((contest) => ({ ...contest, problems: [...contest.problems] }));
+const judgeLanguages: JudgeLanguage[] = mockLanguages.map((language) => ({ ...language }));
+const auditEvents: AuditEvent[] = mockAuditEvents.map((event) => ({ ...event }));
+
+// The admin problem list spans every seeded problem, not just the authoring
+// console's three. The first entries stay shared with `authoredProblems` so an
+// archive here is visible in the authoring console too.
+const adminProblems: AuthoringProblem[] = [
+  ...authoredProblems,
+  ...mockProblems.slice(authoredProblems.length).map((problem, index) => ({
+    id: problem.id,
+    title: problem.title,
+    slug: problem.slug,
+    difficulty: problem.difficulty,
+    visibility: index % 4 === 0 ? ("private" as const) : ("public" as const),
+    publicationStatus: (index % 4 === 1 ? "draft" : index % 4 === 2 ? "archived" : "published") as AuthoringProblem["publicationStatus"],
+    tags: problem.tags,
+    timeLimitMs: problem.timeLimitMs,
+    memoryLimitKb: problem.memoryLimitKb,
+    ownerUserId: mockAdminUsers[(index + 1) % mockAdminUsers.length].id,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  })),
+];
 const rejudgeBatches: RejudgeBatch[] = mockRejudgeBatches.map((batch) => ({ ...batch }));
 const rejudgeBatchItems = new Map<number, RejudgeBatchItem[]>();
 
@@ -469,7 +507,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
     },
     languages: {
       list: async (filter = {}) => {
-        const items = mockLanguages.filter((language) => {
+        const items = judgeLanguages.filter((language) => {
           if (typeof filter.enabled === "boolean" && language.enabled !== filter.enabled) return false;
           if (filter.engine && language.engine !== filter.engine) return false;
           return true;
@@ -483,7 +521,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       site: async () => ({
         problems: mockProblems.length,
         submissions: mockProblems.reduce((total, problem) => total + problem.submissionCount, 0),
-        languages: mockLanguages.filter((language) => language.enabled).length,
+        languages: judgeLanguages.filter((language) => language.enabled).length,
       }),
     },
     rejudge: {
@@ -569,13 +607,17 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         return { items, total: items.length };
       },
       updateUser: async (id, input) => {
-        requirePermission(currentUser, "user.manage");
+        const actor = requirePermission(currentUser, "user.manage");
         const index = adminUsers.findIndex((user) => user.id === id);
         if (index < 0) throw notFound("User", id);
+        const previousStatus = adminUsers[index].status;
         const next: AdminUser = { ...adminUsers[index], roles: [...adminUsers[index].roles], updatedAt: new Date().toISOString() };
         if (input.username !== undefined) next.handle = input.username;
         if (input.status !== undefined) next.status = input.status;
         adminUsers[index] = next;
+        if (input.status !== undefined && input.status !== previousStatus) {
+          recordAudit(actor.id, userStatusAction(input.status), "user", id);
+        }
         return next;
       },
       grantRole: async (id, input) => {
@@ -596,18 +638,192 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
           grantedBy: actor.id,
           grantedAt: new Date().toISOString(),
         };
+        recordAudit(actor.id, "user.role.granted", "user", id, input.reason, { role: input.role });
         return assignment;
       },
       revokeRole: async (id, input) => {
-        requirePermission(currentUser, "role.revoke");
+        const actor = requirePermission(currentUser, "role.revoke");
         const index = adminUsers.findIndex((user) => user.id === id);
         if (index < 0) throw notFound("User", id);
         const roles = adminUsers[index].roles.filter((role) => role !== input.role);
         if (roles.length === adminUsers[index].roles.length) throw notFound("Role assignment", id);
         adminUsers[index] = { ...adminUsers[index], roles };
+        recordAudit(actor.id, "user.role.revoked", "user", id, input.reason, { role: input.role });
+      },
+      languages: {
+        list: async (filter = {}) => {
+          requirePermission(currentUser, "system.manage");
+          const items = judgeLanguages.filter((language) => {
+            if (typeof filter.enabled === "boolean" && language.enabled !== filter.enabled) return false;
+            if (filter.engine && language.engine !== filter.engine) return false;
+            return true;
+          });
+          return { items: items.map((language) => ({ ...language })), total: items.length };
+        },
+        update: async (id: number, input: AdminLanguageUpdateInput) => {
+          const actor = requirePermission(currentUser, "system.manage");
+          const index = judgeLanguages.findIndex((language) => language.id === id);
+          if (index < 0) throw notFound("Language", id);
+          const previousEnabled = judgeLanguages[index].enabled;
+          if (input.enabled !== undefined) judgeLanguages[index].enabled = input.enabled;
+          if (input.defaultTimeLimitMs !== undefined) judgeLanguages[index].defaultTimeLimitMs = input.defaultTimeLimitMs;
+          if (input.defaultMemoryLimitKb !== undefined) judgeLanguages[index].defaultMemoryLimitKb = input.defaultMemoryLimitKb;
+          if (input.enabled !== undefined && input.enabled !== previousEnabled) {
+            recordAudit(actor.id, input.enabled ? "language.enabled" : "language.disabled", "language", id);
+          }
+          return { ...judgeLanguages[index] };
+        },
+      },
+      problems: {
+        list: async (filter: AdminProblemFilter = {}) => {
+          requirePermission(currentUser, "problem.manage_all");
+          let items = adminProblems.map((problem) => ({ ...problem, tags: [...problem.tags] }));
+          if (filter.keyword) {
+            const keyword = filter.keyword.toLowerCase();
+            items = items.filter((problem) => problem.title.toLowerCase().includes(keyword) || problem.slug.toLowerCase().includes(keyword));
+          }
+          if (filter.status) items = items.filter((problem) => problem.publicationStatus === filter.status);
+          if (filter.visibility) items = items.filter((problem) => problem.visibility === filter.visibility);
+          if (filter.tag) items = items.filter((problem) => problem.tags.includes(filter.tag!));
+          if (filter.owner) {
+            const owner = filter.owner.toLowerCase();
+            items = items.filter((problem) => userHandle(problem.ownerUserId)?.toLowerCase().includes(owner));
+          }
+          return { items, total: items.length };
+        },
+        archive: async (id: number) => {
+          const actor = requirePermission(currentUser, "problem.manage_all");
+          const index = adminProblems.findIndex((problem) => problem.id === id);
+          if (index < 0) throw notFound("Problem", id);
+          const previous = adminProblems[index].publicationStatus;
+          if (previous === "archived") return;
+          archivedFromStatus.set(id, previous);
+          Object.assign(adminProblems[index], { publicationStatus: "archived", updatedAt: new Date().toISOString() });
+          recordAudit(actor.id, "problem.archived", "problem", id, undefined, { previous_status: previous });
+        },
+        restore: async (id: number) => {
+          const actor = requirePermission(currentUser, "problem.manage_all");
+          const index = adminProblems.findIndex((problem) => problem.id === id);
+          if (index < 0) throw notFound("Problem", id);
+          if (adminProblems[index].publicationStatus !== "archived") {
+            throw new ApiError("Problem is not archived.", "problem.not_archived", 409);
+          }
+          Object.assign(adminProblems[index], {
+            publicationStatus: archivedFromStatus.get(id) ?? "draft",
+            updatedAt: new Date().toISOString(),
+          });
+          recordAudit(actor.id, "problem.restored", "problem", id);
+          return { ...adminProblems[index], tags: [...adminProblems[index].tags] };
+        },
+      },
+      contests: {
+        list: async (filter: AdminContestFilter = {}) => {
+          requirePermission(currentUser, "contest.manage_all");
+          let items = adminContests.map((contest) => ({ ...contest, problems: [...contest.problems] }));
+          if (filter.keyword) {
+            const keyword = filter.keyword.toLowerCase();
+            items = items.filter((contest) => contest.title.toLowerCase().includes(keyword));
+          }
+          if (filter.status) items = items.filter((contest) => contest.status === filter.status);
+          return { items, total: items.length };
+        },
+        create: async (input: AdminContestInput) => {
+          const actor = requirePermission(currentUser, "contest.manage_all");
+          const now = new Date().toISOString();
+          const contest: AdminContest = {
+            id: nextContestId++,
+            ownerUserId: actor.id,
+            title: input.title,
+            status: input.status,
+            visibility: input.visibility,
+            startsAt: input.startAt,
+            endsAt: input.endAt,
+            freezeAt: input.freezeAt,
+            problems: (input.problems ?? []).map((problem) => ({ problemId: problem.problemId, alias: problem.alias, title: `Problem ${problem.alias}` })),
+            createdAt: now,
+            updatedAt: now,
+          };
+          adminContests.push(contest);
+          return { ...contest, problems: [...contest.problems] };
+        },
+        update: async (id: number, input: AdminContestInput) => {
+          requirePermission(currentUser, "contest.manage_all");
+          const index = adminContests.findIndex((contest) => contest.id === id);
+          if (index < 0) throw notFound("Contest", id);
+          Object.assign(adminContests[index], {
+            title: input.title,
+            status: input.status,
+            visibility: input.visibility,
+            startsAt: input.startAt,
+            endsAt: input.endAt,
+            freezeAt: input.freezeAt,
+            problems: (input.problems ?? []).map((problem) => ({ problemId: problem.problemId, alias: problem.alias, title: `Problem ${problem.alias}` })),
+            updatedAt: new Date().toISOString(),
+          });
+          return { ...adminContests[index], problems: [...adminContests[index].problems] };
+        },
+        archive: async (id: number) => {
+          const actor = requirePermission(currentUser, "contest.manage_all");
+          const index = adminContests.findIndex((contest) => contest.id === id);
+          if (index < 0) throw notFound("Contest", id);
+          if (adminContests[index].status === "archived") return;
+          Object.assign(adminContests[index], { status: "archived", updatedAt: new Date().toISOString() });
+          recordAudit(actor.id, "contest.archived", "contest", id);
+        },
+      },
+      audit: {
+        list: async (filter: AuditEventFilter = {}) => {
+          requirePermission(currentUser, "system.manage");
+          const items = auditEvents
+            .filter((event) => {
+              if (filter.objectType && event.objectType !== filter.objectType) return false;
+              if (filter.objectId != null && event.objectId !== filter.objectId) return false;
+              if (filter.actorId != null && event.actorUserId !== filter.actorId) return false;
+              if (filter.action && event.action !== filter.action) return false;
+              return true;
+            })
+            .map((event) => ({ ...event }));
+          return { items, total: items.length };
+        },
       },
     },
   };
+}
+
+const archivedFromStatus = new Map<number, AuthoringProblem["publicationStatus"]>();
+
+function userStatusAction(status: AdminUser["status"]): AuditAction {
+  switch (status) {
+    case "active":
+      return "user.enabled";
+    case "deleted":
+      return "user.deleted";
+    default:
+      return "user.disabled";
+  }
+}
+
+function recordAudit(
+  actorUserId: number,
+  action: AuditAction,
+  objectType: AuditObjectType,
+  objectId: number,
+  reason?: string,
+  metadata?: Record<string, unknown>,
+) {
+  const event: AuditEvent = {
+    id: nextAuditEventId++,
+    actorUserId,
+    action,
+    objectType,
+    objectId,
+    createdAt: new Date().toISOString(),
+  };
+  const username = userHandle(actorUserId);
+  if (username) event.actorUsername = username;
+  if (reason) event.reason = reason;
+  if (metadata) event.metadata = metadata;
+  auditEvents.unshift(event);
 }
 
 function userHandle(userId: number): string | undefined {

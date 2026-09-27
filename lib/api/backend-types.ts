@@ -518,3 +518,35 @@ export type ContestRoleGrantRequest = {
 export type ContestRoleRevokeRequest = {
   reason: string;
 };
+
+export type ContestWriteRequest = {
+  title?: string;
+  description?: string | null;
+  visibility?: ContestVisibility;
+  status?: BackendContestStatus;
+  start_at?: string;
+  end_at?: string;
+  freeze_at?: string;
+  invite_code?: string;
+  problems?: Array<{ problem_id: number; alias: string }>;
+};
+
+export type LanguageUpdateRequest = {
+  enabled?: boolean;
+  default_time_limit_ms?: number;
+  default_memory_limit_kb?: number;
+};
+
+export type AuditEventResponse = {
+  id: number;
+  actor_user_id?: number | null;
+  actor_username?: string | null;
+  action: string;
+  object_type: string;
+  object_id: number;
+  reason?: string;
+  metadata?: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type AuditEventPageResponse = PageResponse<AuditEventResponse>;

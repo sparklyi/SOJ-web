@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { I18nProvider } from "@/components/providers/i18n-provider";
 import { useRun } from "@/features/runs/use-run";
+import { ApiError } from "@/lib/api/errors";
 import type { RunSummary } from "@/lib/api/types";
 
 const runsCreate = vi.fn();
@@ -36,6 +37,7 @@ function Harness({ deadlineMs }: { deadlineMs: number }) {
   return (
     <div>
       <p data-testid="status">{state.status}</p>
+      <p data-testid="error">{state.status === "error" ? state.message : ""}</p>
       <p data-testid="stdout">{state.status === "success" || state.status === "stillRunning" ? (state.run.stdout ?? "") : ""}</p>
       <button type="button" onClick={() => void run({ languageId: 71, sourceCode: "code", stdin: "7\n" })}>
         go
@@ -64,6 +66,15 @@ describe("useRun", () => {
     await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("success"));
     expect(screen.getByTestId("stdout")).toHaveTextContent("7");
     expect(runsCreate).toHaveBeenCalledWith({ languageId: 71, sourceCode: "code", stdin: "7\n" });
+  });
+
+  it("localizes the disabled-language rejection instead of showing the backend sentence", async () => {
+    runsCreate.mockRejectedValue(new ApiError("language is disabled", "submission.language_disabled", 409));
+
+    renderWithLocale(<Harness deadlineMs={2_000} />);
+    fireEvent.click(screen.getByRole("button", { name: "go" }));
+
+    await waitFor(() => expect(screen.getByTestId("error")).toHaveTextContent("The selected language is disabled."));
   });
 
   it("stops at the deadline with a stillRunning state rather than a spinner or an error", async () => {

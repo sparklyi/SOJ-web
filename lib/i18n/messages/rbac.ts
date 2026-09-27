@@ -2,7 +2,7 @@ import type { MessageCatalog } from "../types";
 
 export const rbacMessages = {
   "gate.loading": { en: "Checking your access…", "zh-CN": "正在校验访问权限…" },
-  "gate.deniedTitle": { en: "Permission required", "zh-CN": "缺少权限" },
+  "gate.deniedTitle": { en: "403 · Permission required", "zh-CN": "403 · 缺少权限" },
   "gate.deniedBody": {
     en: "Your account does not hold the permission this surface requires. Ask an administrator if you believe this is wrong.",
     "zh-CN": "当前账号没有访问该界面所需的权限。如果认为这是误判，请联系管理员。",

@@ -5,6 +5,7 @@ import type { RunSummary } from "@/lib/api/types";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { isSubmissionTerminal } from "@/lib/domain/submission";
+import { isLanguageDisabledError } from "@/lib/api/errors";
 import { pollToTerminal } from "@/lib/domain/poll";
 
 export const RUN_POLL_INTERVAL_MS = 1200;
@@ -101,7 +102,11 @@ export function useRun(options: UseRunOptions = {}): UseRunResult {
         if (!aliveRef.current) return;
         setState({
           status: "error",
-          message: error instanceof Error ? error.message : t("problems.runFailed"),
+          message: isLanguageDisabledError(error)
+            ? t("runs.languageDisabled")
+            : error instanceof Error
+              ? error.message
+              : t("problems.runFailed"),
         });
       }
     },

@@ -70,7 +70,7 @@ describe("permission gate", () => {
       mockUser,
     );
 
-    await waitFor(() => expect(screen.getByText("Permission required")).toBeVisible());
+    await waitFor(() => expect(screen.getByText("403 · Permission required")).toBeVisible());
     expect(screen.queryByText("review queue")).not.toBeInTheDocument();
   });
 
@@ -133,7 +133,7 @@ describe("navigation permissions", () => {
     await waitFor(() => expect(screen.getByRole("navigation", { name: "Primary navigation" })).toBeVisible());
     expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Rejudge" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Users" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Admin" })).not.toBeInTheDocument();
   });
 
   it("shows review but not rejudge to a reviewer", async () => {

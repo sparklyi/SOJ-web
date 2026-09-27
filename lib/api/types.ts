@@ -187,6 +187,43 @@ export type ContestRegistration = {
   registeredAt: string;
 };
 
+/** 后台竞赛列表保留发布状态与可见性；选手端 ContestSummary 把它们折算成进行时态。 */
+export type AdminContestStatus = "draft" | "published" | "running" | "ended" | "archived";
+export type ContestVisibility = "public" | "private";
+
+export type AdminContest = {
+  id: number;
+  ownerUserId: number;
+  title: string;
+  status: AdminContestStatus;
+  visibility: ContestVisibility;
+  startsAt: string;
+  endsAt: string;
+  freezeAt: string;
+  problems: Array<{ problemId: number; alias: string; title: string }>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminContestInput = {
+  title: string;
+  description?: string;
+  visibility: ContestVisibility;
+  status: AdminContestStatus;
+  startAt: string;
+  endAt: string;
+  freezeAt: string;
+  inviteCode?: string;
+  problems?: Array<{ problemId: number; alias: string }>;
+};
+
+export type AdminContestFilter = {
+  keyword?: string;
+  status?: AdminContestStatus;
+  page?: number;
+  pageSize?: number;
+};
+
 export type JudgeStatus =
   | "queued"
   | "compiling"
@@ -325,6 +362,26 @@ export type JudgeLanguage = {
   enabled: boolean;
 };
 
+export type AdminLanguageUpdateInput = {
+  enabled?: boolean;
+  defaultTimeLimitMs?: number;
+  defaultMemoryLimitKb?: number;
+};
+
+/**
+ * 后台题目列表的筛选条件。`owner` 是作者用户名的模糊匹配（对应后端 `owner`
+ * 参数），而不是用户 ID：题目管理页因此不依赖 `user.manage` 的用户搜索。
+ */
+export type AdminProblemFilter = {
+  keyword?: string;
+  status?: ProblemPublicationStatus;
+  owner?: string;
+  visibility?: ProblemVisibility;
+  tag?: string;
+  page?: number;
+  pageSize?: number;
+};
+
 export type ReviewDecision = "approve" | "request_changes";
 
 export type ProblemReviewEvent = {
@@ -405,6 +462,41 @@ export type AdminUser = {
   updatedAt: string;
 };
 
+export type AuditAction =
+  | "user.role.granted"
+  | "user.role.revoked"
+  | "user.disabled"
+  | "user.enabled"
+  | "user.deleted"
+  | "language.enabled"
+  | "language.disabled"
+  | "problem.archived"
+  | "problem.restored"
+  | "contest.archived";
+
+export type AuditObjectType = "user" | "language" | "problem" | "contest";
+
+export type AuditEvent = {
+  id: number;
+  actorUserId?: number;
+  actorUsername?: string;
+  action: AuditAction;
+  objectType: AuditObjectType;
+  objectId: number;
+  reason?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type AuditEventFilter = {
+  objectType?: AuditObjectType;
+  objectId?: number;
+  actorId?: number;
+  action?: AuditAction;
+  page?: number;
+  pageSize?: number;
+};
+
 export type CurrentUser = {
   id: number;
   handle: string;
@@ -478,5 +570,23 @@ export type ApiClient = {
     updateUser: (id: number, input: { username?: string; bio?: string | null; status?: AdminUserStatus }) => Promise<AdminUser>;
     grantRole: (id: number, input: { role: GlobalRole; reason: string }) => Promise<GlobalRoleAssignment>;
     revokeRole: (id: number, input: { role: GlobalRole; reason: string }) => Promise<void>;
+    languages: {
+      list: (filter?: { enabled?: boolean; engine?: string }) => Promise<PageResult<JudgeLanguage>>;
+      update: (id: number, input: AdminLanguageUpdateInput) => Promise<JudgeLanguage>;
+    };
+    problems: {
+      list: (filter?: AdminProblemFilter) => Promise<PageResult<AuthoringProblem>>;
+      archive: (id: number) => Promise<void>;
+      restore: (id: number) => Promise<AuthoringProblem>;
+    };
+    contests: {
+      list: (filter?: AdminContestFilter) => Promise<PageResult<AdminContest>>;
+      create: (input: AdminContestInput) => Promise<AdminContest>;
+      update: (id: number, input: AdminContestInput) => Promise<AdminContest>;
+      archive: (id: number) => Promise<void>;
+    };
+    audit: {
+      list: (filter?: AuditEventFilter) => Promise<PageResult<AuditEvent>>;
+    };
   };
 };

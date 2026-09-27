@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMockAdapter } from "@/lib/api/mock-adapter";
-import { mockAuthorUser, mockUser } from "@/lib/mock/fixtures";
+import { mockAdminUser, mockAuthorUser, mockUser } from "@/lib/mock/fixtures";
 import { getApiMode } from "@/lib/api/mode";
 
 describe("api mode", () => {
@@ -56,5 +56,63 @@ describe("api mode", () => {
       status: 403,
     });
     await expect(createMockAdapter({ currentUser: mockAuthorUser }).problems.listMine()).resolves.toMatchObject({ total: expect.any(Number) });
+  });
+});
+
+describe("admin console adapter", () => {
+  it("gates language administration behind system.manage and audits the toggle", async () => {
+    const admin = createMockAdapter({ currentUser: mockAdminUser });
+    const listed = await admin.admin.languages.list();
+    expect(listed.items.length).toBeGreaterThan(0);
+
+    const target = listed.items.find((language) => language.enabled);
+    expect(target).toBeDefined();
+    const updated = await admin.admin.languages.update(target!.id, { enabled: false });
+    expect(updated.enabled).toBe(false);
+    await expect(createMockAdapter({ currentUser: mockUser }).admin.languages.update(target!.id, { enabled: true })).rejects.toMatchObject({
+      status: 403,
+    });
+
+    const events = await admin.admin.audit.list({ objectType: "language", objectId: target!.id });
+    expect(events.items.some((event) => event.action === "language.disabled")).toBe(true);
+  });
+
+  it("archives and restores problems for problem.manage_all", async () => {
+    const admin = createMockAdapter({ currentUser: mockAdminUser });
+    const listed = await admin.admin.problems.list();
+    const target = listed.items.find((problem) => problem.publicationStatus !== "archived");
+    expect(target).toBeDefined();
+
+    await admin.admin.problems.archive(target!.id);
+    const archived = await admin.admin.problems.list();
+    expect(archived.items.find((problem) => problem.id === target!.id)?.publicationStatus).toBe("archived");
+    const restored = await admin.admin.problems.restore(target!.id);
+    expect(restored.publicationStatus).not.toBe("archived");
+
+    await expect(createMockAdapter({ currentUser: mockAuthorUser }).admin.problems.archive(target!.id)).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("creates and archives contests for contest.manage_all", async () => {
+    const admin = createMockAdapter({ currentUser: mockAdminUser });
+    const created = await admin.admin.contests.create({
+      title: "Adapter Round",
+      visibility: "public",
+      status: "draft",
+      startAt: new Date("2030-01-01T10:00:00Z").toISOString(),
+      endAt: new Date("2030-01-01T12:00:00Z").toISOString(),
+      freezeAt: new Date("2030-01-01T11:00:00Z").toISOString(),
+    });
+    expect(created.id).toBeGreaterThan(0);
+
+    await admin.admin.contests.archive(created.id);
+    const archived = await admin.admin.contests.list({ status: "archived" });
+    expect(archived.items.some((contest) => contest.id === created.id)).toBe(true);
+  });
+
+  it("filters audit events by object", async () => {
+    const admin = createMockAdapter({ currentUser: mockAdminUser });
+    const events = await admin.admin.audit.list({ objectType: "problem", objectId: 5 });
+    expect(events.items.length).toBeGreaterThan(0);
+    expect(events.items.every((event) => event.objectType === "problem" && event.objectId === 5)).toBe(true);
   });
 });

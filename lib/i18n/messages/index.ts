@@ -1,4 +1,5 @@
 import { authoringMessages } from "./authoring";
+import { adminMessages } from "./admin";
 import { authMessages } from "./auth";
 import { contestMessages } from "./contests";
 import { coreMessages } from "./core";
@@ -20,6 +21,7 @@ export const messages = {
   ...contestMessages,
   ...submissionMessages,
   ...authoringMessages,
+  ...adminMessages,
   ...rbacMessages,
   ...systemMessages,
 } as const;

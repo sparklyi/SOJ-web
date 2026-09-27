@@ -3,7 +3,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { UserRoundSearch } from "lucide-react";
 import { PermissionGate, roleMessageKey } from "@/components/auth/permission-gate";
-import { PageShell } from "@/components/layout/page-shell";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { StatusPill } from "@/components/soj/status-pill";
@@ -14,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createBrowserApiClient } from "@/lib/api/client";
 import type { AdminUser, AdminUserStatus } from "@/lib/api/types";
 import { globalRoles, type GlobalRole } from "@/lib/auth/permissions";
-import { grantGlobalRole, listAdminUsers, revokeGlobalRole } from "./api";
+import { grantGlobalRole, listAdminUsers, revokeGlobalRole, updateAdminUser } from "./api";
 
 type ListState =
   | { status: "loading" }
@@ -22,14 +21,10 @@ type ListState =
   | { status: "ready"; users: AdminUser[] };
 
 export function UserRoleManager() {
-  const { t } = useI18n();
-
   return (
-    <PageShell title={t("roles.title")} description={t("roles.description")}>
-      <PermissionGate anyOf={["user.manage"]}>
-        <UserRoleBoard />
-      </PermissionGate>
-    </PageShell>
+    <PermissionGate anyOf={["user.manage"]}>
+      <UserRoleBoard />
+    </PermissionGate>
   );
 }
 
@@ -123,6 +118,21 @@ function UserRoleBoard() {
     }
   }
 
+  async function handleStatus(next: AdminUserStatus) {
+    if (selectedId === null) return;
+    setPending(`status-${next}`);
+    setFeedback(null);
+    try {
+      await updateAdminUser(selectedId, { status: next }, createBrowserApiClient());
+      setFeedback({ tone: "success", message: next === "active" ? t("roles.enabled") : t("roles.disabled") });
+      await loadUsers(keyword);
+    } catch (cause) {
+      setFeedback({ tone: "danger", message: cause instanceof Error ? cause.message : t("roles.statusFailed") });
+    } finally {
+      setPending(null);
+    }
+  }
+
   const selected = state.status === "ready" ? (state.users.find((item) => item.id === selectedId) ?? null) : null;
   /* 后端 grant 和 revoke 用的是同一条守卫（`actor.UserID == userID` →
      `role.invalid_target`），所以两者都得挡在自己身上：只挡 grant 的话，
@@ -196,6 +206,19 @@ function UserRoleBoard() {
                 </p>
               </div>
               <StatusPill tone={selected.status === "active" ? "success" : "warning"}>{t(userStatusKey(selected.status))}</StatusPill>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant={selected.status === "active" ? "danger" : "solid"}
+                size="sm"
+                disabled={isSelf}
+                loading={pending === `status-${selected.status === "active" ? "disabled" : "active"}`}
+                onClick={() => void handleStatus(selected.status === "active" ? "disabled" : "active")}
+              >
+                {selected.status === "active" ? t("roles.disable") : t("roles.enable")}
+              </Button>
+              {isSelf ? <span className="text-xs text-soj-muted">{t("roles.selfDisableBlocked")}</span> : null}
             </div>
 
             <div className="mt-5 border-t border-soj-line/70 pt-5">
