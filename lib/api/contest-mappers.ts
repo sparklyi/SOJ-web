@@ -23,7 +23,7 @@ export function mapAdminContest(input: ContestResponse): AdminContest {
     startsAt: input.start_at,
     endsAt: input.end_at,
     freezeAt: input.freeze_at,
-    problems: [...input.problems]
+    problems: [...(input.problems ?? [])]
       .sort((a, b) => a.sort_order - b.sort_order || a.alias.localeCompare(b.alias))
       .map((problem) => ({
         problemId: problem.problem_id,
@@ -46,7 +46,7 @@ export function mapContestResponse(input: ContestResponse, now: Date = new Date(
     freezeAt: input.freeze_at,
     registered: input.registered,
     currentUserRoles: [...(input.current_user_roles ?? [])],
-    problems: [...input.problems]
+    problems: [...(input.problems ?? [])]
       .sort((a, b) => a.sort_order - b.sort_order || a.alias.localeCompare(b.alias))
       .map((problem) => ({
         problemId: problem.problem_id,

@@ -6,6 +6,7 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { StatusPill } from "@/components/soj/status-pill";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { Table, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
 import { createBrowserApiClient } from "@/lib/api/client";
@@ -15,7 +16,9 @@ import { listAdminLanguages, updateAdminLanguage } from "./api";
 type ListState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; languages: JudgeLanguage[] };
+  | { status: "ready"; languages: JudgeLanguage[]; total: number };
+
+const PAGE_SIZE = 20;
 
 export function LanguageAdmin() {
   const { t } = useI18n();
@@ -35,6 +38,7 @@ export function LanguageAdmin() {
 function LanguageTable() {
   const { t } = useI18n();
   const [state, setState] = useState<ListState>({ status: "loading" });
+  const [page, setPage] = useState(1);
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
@@ -43,8 +47,13 @@ function LanguageTable() {
 
     async function start() {
       try {
-        const result = await listAdminLanguages(createBrowserApiClient());
-        if (active) setState({ status: "ready", languages: result.items });
+        const result = await listAdminLanguages(page, PAGE_SIZE, createBrowserApiClient());
+        if (!active) return;
+        if (result.items.length === 0 && result.total > 0 && page > 1) {
+          setPage((current) => current - 1);
+          return;
+        }
+        setState({ status: "ready", languages: result.items, total: result.total });
       } catch (cause) {
         if (active) setState({ status: "error", message: cause instanceof Error ? cause.message : t("admin.failed") });
       }
@@ -54,7 +63,7 @@ function LanguageTable() {
     return () => {
       active = false;
     };
-  }, [t]);
+  }, [page, t]);
 
   async function toggle(language: JudgeLanguage) {
     setPendingId(language.id);
@@ -63,7 +72,7 @@ function LanguageTable() {
       const updated = await updateAdminLanguage(language.id, { enabled: !language.enabled }, createBrowserApiClient());
       setState((current) =>
         current.status === "ready"
-          ? { status: "ready", languages: current.languages.map((item) => (item.id === updated.id ? updated : item)) }
+          ? { status: "ready", total: current.total, languages: current.languages.map((item) => (item.id === updated.id ? updated : item)) }
           : current,
       );
       setFeedback({ tone: "success", message: t("admin.languages.updated") });
@@ -126,6 +135,7 @@ function LanguageTable() {
           ))}
         </tbody>
       </Table>
+      {state.total > 0 ? <Pagination page={page} pageSize={PAGE_SIZE} total={state.total} onPageChange={setPage} /> : null}
       {feedback ? (
         <p className={feedback.tone === "danger" ? "px-4 pb-4 text-sm text-soj-danger" : "px-4 pb-4 text-sm text-soj-success"}>
           {feedback.message}

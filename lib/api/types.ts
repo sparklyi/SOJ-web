@@ -571,7 +571,7 @@ export type ApiClient = {
     grantRole: (id: number, input: { role: GlobalRole; reason: string }) => Promise<GlobalRoleAssignment>;
     revokeRole: (id: number, input: { role: GlobalRole; reason: string }) => Promise<void>;
     languages: {
-      list: (filter?: { enabled?: boolean; engine?: string }) => Promise<PageResult<JudgeLanguage>>;
+      list: (filter?: { enabled?: boolean; engine?: string; page?: number; pageSize?: number }) => Promise<PageResult<JudgeLanguage>>;
       update: (id: number, input: AdminLanguageUpdateInput) => Promise<JudgeLanguage>;
     };
     problems: {

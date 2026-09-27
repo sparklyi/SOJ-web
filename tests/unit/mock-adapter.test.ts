@@ -115,4 +115,14 @@ describe("admin console adapter", () => {
     expect(events.items.length).toBeGreaterThan(0);
     expect(events.items.every((event) => event.objectType === "problem" && event.objectId === 5)).toBe(true);
   });
+
+  it("paginates admin lists and reports the unpaged total", async () => {
+    const admin = createMockAdapter({ currentUser: mockAdminUser });
+    const first = await admin.admin.problems.list({ page: 1, pageSize: 2 });
+    const second = await admin.admin.problems.list({ page: 2, pageSize: 2 });
+
+    expect(first.items).toHaveLength(2);
+    expect(first.total).toBeGreaterThan(2);
+    expect(second.items[0]?.id).not.toBe(first.items[0]?.id);
+  });
 });

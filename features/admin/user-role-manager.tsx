@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { UserRoundSearch } from "lucide-react";
 import { PermissionGate, roleMessageKey } from "@/components/auth/permission-gate";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -9,6 +9,7 @@ import { StatusPill } from "@/components/soj/status-pill";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createBrowserApiClient } from "@/lib/api/client";
 import type { AdminUser, AdminUserStatus } from "@/lib/api/types";
@@ -18,7 +19,9 @@ import { grantGlobalRole, listAdminUsers, revokeGlobalRole, updateAdminUser } fr
 type ListState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; users: AdminUser[] };
+  | { status: "ready"; users: AdminUser[]; total: number };
+
+const PAGE_SIZE = 20;
 
 export function UserRoleManager() {
   return (
@@ -33,6 +36,9 @@ function UserRoleBoard() {
   const { user: viewer, can } = useAuth();
   const [state, setState] = useState<ListState>({ status: "loading" });
   const [keyword, setKeyword] = useState("");
+  const [applied, setApplied] = useState({ keyword: "" });
+  const [page, setPage] = useState(1);
+  const [reloadToken, setReloadToken] = useState(0);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [roleToGrant, setRoleToGrant] = useState<GlobalRole>("author");
@@ -42,26 +48,22 @@ function UserRoleBoard() {
   const canGrant = can("role.grant");
   const canRevoke = can("role.revoke");
 
-  const loadUsers = useCallback(
-    async (search: string) => {
-      try {
-        const result = await listAdminUsers(search ? { keyword: search } : {}, createBrowserApiClient());
-        setState({ status: "ready", users: result.items });
-        setSelectedId((current) => (current && result.items.some((item) => item.id === current) ? current : null));
-      } catch (cause) {
-        setState({ status: "error", message: cause instanceof Error ? cause.message : t("roles.failed") });
-      }
-    },
-    [t],
-  );
-
   useEffect(() => {
     let active = true;
 
     async function start() {
       try {
-        const result = await listAdminUsers({}, createBrowserApiClient());
-        if (active) setState({ status: "ready", users: result.items });
+        const result = await listAdminUsers(
+          { keyword: applied.keyword || undefined, page, pageSize: PAGE_SIZE },
+          createBrowserApiClient(),
+        );
+        if (!active) return;
+        if (result.items.length === 0 && result.total > 0 && page > 1) {
+          setPage((current) => current - 1);
+          return;
+        }
+        setState({ status: "ready", users: result.items, total: result.total });
+        setSelectedId((current) => (current && result.items.some((item) => item.id === current) ? current : null));
       } catch (cause) {
         if (active) setState({ status: "error", message: cause instanceof Error ? cause.message : t("roles.failed") });
       }
@@ -72,7 +74,7 @@ function UserRoleBoard() {
     return () => {
       active = false;
     };
-  }, [t]);
+  }, [applied, page, reloadToken, t]);
 
   async function handleGrant(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -90,7 +92,7 @@ function UserRoleBoard() {
       await grantGlobalRole(selectedId, roleToGrant, reason.trim(), createBrowserApiClient());
       setReason("");
       setFeedback({ tone: "success", message: t("roles.granted") });
-      await loadUsers(keyword);
+      setReloadToken((token) => token + 1);
     } catch (cause) {
       setFeedback({ tone: "danger", message: cause instanceof Error ? cause.message : t("roles.failed") });
     } finally {
@@ -110,7 +112,7 @@ function UserRoleBoard() {
       await revokeGlobalRole(selectedId, role, reason.trim(), createBrowserApiClient());
       setReason("");
       setFeedback({ tone: "success", message: t("roles.revoked") });
-      await loadUsers(keyword);
+      setReloadToken((token) => token + 1);
     } catch (cause) {
       setFeedback({ tone: "danger", message: cause instanceof Error ? cause.message : t("roles.failed") });
     } finally {
@@ -125,7 +127,7 @@ function UserRoleBoard() {
     try {
       await updateAdminUser(selectedId, { status: next }, createBrowserApiClient());
       setFeedback({ tone: "success", message: next === "active" ? t("roles.enabled") : t("roles.disabled") });
-      await loadUsers(keyword);
+      setReloadToken((token) => token + 1);
     } catch (cause) {
       setFeedback({ tone: "danger", message: cause instanceof Error ? cause.message : t("roles.statusFailed") });
     } finally {
@@ -146,7 +148,8 @@ function UserRoleBoard() {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            void loadUsers(keyword.trim());
+            setPage(1);
+            setApplied({ keyword: keyword.trim() });
           }}
           className="grid gap-3"
         >
@@ -192,6 +195,9 @@ function UserRoleBoard() {
               </li>
             ))}
           </ul>
+        ) : null}
+        {state.status === "ready" ? (
+          <Pagination page={page} pageSize={PAGE_SIZE} total={state.total} onPageChange={setPage} className="-mx-4 -mb-4 mt-1" />
         ) : null}
       </section>
 

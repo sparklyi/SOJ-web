@@ -8,6 +8,7 @@ import { StatusPill } from "@/components/soj/status-pill";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
@@ -19,7 +20,9 @@ import { archiveAdminProblem, listAdminProblems, restoreAdminProblem } from "./a
 type ListState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; problems: AuthoringProblem[] };
+  | { status: "ready"; problems: AuthoringProblem[]; total: number };
+
+const PAGE_SIZE = 20;
 
 type FilterState = {
   keyword: string;
@@ -54,6 +57,7 @@ function ProblemBoard() {
   const [draft, setDraft] = useState<FilterState>(emptyFilter);
   const [applied, setApplied] = useState<FilterState>(emptyFilter);
   const [state, setState] = useState<ListState>({ status: "loading" });
+  const [page, setPage] = useState(1);
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -70,11 +74,17 @@ function ProblemBoard() {
             owner: applied.owner.trim() || undefined,
             visibility: applied.visibility === "all" ? undefined : applied.visibility,
             tag: applied.tag.trim() || undefined,
-            pageSize: 50,
+            page,
+            pageSize: PAGE_SIZE,
           },
           createBrowserApiClient(),
         );
-        if (active) setState({ status: "ready", problems: result.items });
+        if (!active) return;
+        if (result.items.length === 0 && result.total > 0 && page > 1) {
+          setPage((current) => current - 1);
+          return;
+        }
+        setState({ status: "ready", problems: result.items, total: result.total });
       } catch (cause) {
         if (active) setState({ status: "error", message: cause instanceof Error ? cause.message : t("admin.failed") });
       }
@@ -84,10 +94,11 @@ function ProblemBoard() {
     return () => {
       active = false;
     };
-  }, [applied, reloadToken, t]);
+  }, [applied, page, reloadToken, t]);
 
   function submitFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setPage(1);
     setApplied(draft);
   }
 
@@ -181,6 +192,7 @@ function ProblemBoard() {
             size="md"
             onClick={() => {
               setDraft(emptyFilter);
+              setPage(1);
               setApplied(emptyFilter);
               setReloadToken((token) => token + 1);
             }}
@@ -238,6 +250,7 @@ function ProblemBoard() {
           </tbody>
         </Table>
       ) : null}
+      {state.status === "ready" ? <Pagination page={page} pageSize={PAGE_SIZE} total={state.total} onPageChange={setPage} /> : null}
       {feedback ? (
         <p className={feedback.tone === "danger" ? "px-4 py-3 text-sm text-soj-danger" : "px-4 py-3 text-sm text-soj-success"}>
           {feedback.message}

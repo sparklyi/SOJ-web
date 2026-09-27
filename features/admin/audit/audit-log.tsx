@@ -6,6 +6,7 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
@@ -17,7 +18,9 @@ import { listAuditEvents } from "./api";
 type ListState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; events: AuditEvent[] };
+  | { status: "ready"; events: AuditEvent[]; total: number };
+
+const PAGE_SIZE = 20;
 
 type FilterState = {
   objectType: AuditObjectType | "all";
@@ -61,6 +64,7 @@ function AuditBoard() {
   const { t } = useI18n();
   const [draft, setDraft] = useState<FilterState>(emptyFilter);
   const [applied, setApplied] = useState<FilterState>(emptyFilter);
+  const [page, setPage] = useState(1);
   const [state, setState] = useState<ListState>({ status: "loading" });
 
   useEffect(() => {
@@ -74,11 +78,17 @@ function AuditBoard() {
             objectId: applied.objectId.trim() ? Number(applied.objectId) : undefined,
             actorId: applied.actorId.trim() ? Number(applied.actorId) : undefined,
             action: applied.action === "all" ? undefined : applied.action,
-            pageSize: 50,
+            page,
+            pageSize: PAGE_SIZE,
           },
           createBrowserApiClient(),
         );
-        if (active) setState({ status: "ready", events: result.items });
+        if (!active) return;
+        if (result.items.length === 0 && result.total > 0 && page > 1) {
+          setPage((current) => current - 1);
+          return;
+        }
+        setState({ status: "ready", events: result.items, total: result.total });
       } catch (cause) {
         if (active) setState({ status: "error", message: cause instanceof Error ? cause.message : t("admin.failed") });
       }
@@ -88,10 +98,11 @@ function AuditBoard() {
     return () => {
       active = false;
     };
-  }, [applied, t]);
+  }, [applied, page, t]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setPage(1);
     setApplied(draft);
   }
 
@@ -156,6 +167,7 @@ function AuditBoard() {
             variant="ghost"
             onClick={() => {
               setDraft(emptyFilter);
+              setPage(1);
               setApplied(emptyFilter);
             }}
           >
@@ -193,6 +205,7 @@ function AuditBoard() {
           </tbody>
         </Table>
       ) : null}
+      {state.status === "ready" ? <Pagination page={page} pageSize={PAGE_SIZE} total={state.total} onPageChange={setPage} /> : null}
     </div>
   );
 }

@@ -293,7 +293,9 @@ export type ContestResponse = {
   start_at: string;
   end_at: string;
   freeze_at: string;
-  problems: ContestProblem[];
+  // Go 的 nil slice 会序列化成 null（没有 omitempty）：没有题目的比赛拿到的
+  // 就是 null，不是 []。映射层必须容忍它，不能直接展开。
+  problems: ContestProblem[] | null;
   created_at: string;
   updated_at: string;
 };

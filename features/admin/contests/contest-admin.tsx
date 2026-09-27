@@ -7,6 +7,7 @@ import { StatusPill } from "@/components/soj/status-pill";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
@@ -18,7 +19,9 @@ import { archiveAdminContest, createAdminContest, listAdminContests, updateAdmin
 type ListState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; contests: AdminContest[] };
+  | { status: "ready"; contests: AdminContest[]; total: number };
+
+const PAGE_SIZE = 20;
 
 const statuses: AdminContestStatus[] = ["draft", "published", "running", "ended", "archived"];
 const visibilities: ContestVisibility[] = ["public", "private"];
@@ -43,6 +46,7 @@ function ContestBoard() {
   const [state, setState] = useState<ListState>({ status: "loading" });
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState<AdminContestStatus | "all">("all");
+  const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<AdminContest | "new" | null>(null);
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -58,11 +62,17 @@ function ContestBoard() {
           {
             keyword: keyword.trim() || undefined,
             status: status === "all" ? undefined : status,
-            pageSize: 50,
+            page,
+            pageSize: PAGE_SIZE,
           },
           createBrowserApiClient(),
         );
-        if (active) setState({ status: "ready", contests: result.items });
+        if (!active) return;
+        if (result.items.length === 0 && result.total > 0 && page > 1) {
+          setPage((current) => current - 1);
+          return;
+        }
+        setState({ status: "ready", contests: result.items, total: result.total });
       } catch (cause) {
         if (active) setState({ status: "error", message: cause instanceof Error ? cause.message : t("admin.failed") });
       }
@@ -72,7 +82,7 @@ function ContestBoard() {
     return () => {
       active = false;
     };
-  }, [keyword, status, reloadToken, t]);
+  }, [keyword, status, page, reloadToken, t]);
 
   async function save(input: AdminContestInput) {
     setSaving(true);
@@ -112,6 +122,7 @@ function ContestBoard() {
       <form
         onSubmit={(event) => {
           event.preventDefault();
+          setPage(1);
           setReloadToken((token) => token + 1);
         }}
         className="grid gap-3 border-b border-soj-line px-4 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,180px)_auto] sm:items-end"
@@ -208,6 +219,7 @@ function ContestBoard() {
           </tbody>
         </Table>
       ) : null}
+      {state.status === "ready" ? <Pagination page={page} pageSize={PAGE_SIZE} total={state.total} onPageChange={setPage} /> : null}
       {feedback ? (
         <p className={feedback.tone === "danger" ? "px-4 py-3 text-sm text-soj-danger" : "px-4 py-3 text-sm text-soj-success"}>
           {feedback.message}

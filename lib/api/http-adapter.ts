@@ -650,7 +650,7 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
         list: async (filter = {}): Promise<PageResult<JudgeLanguage>> => {
           const data = await request<PageResponse<LanguageResponse>>("/api/v1/admin/languages", {
             accessToken: options.accessToken,
-            query: { page: 1, page_size: 100, enabled: filter.enabled, engine: filter.engine },
+            query: { page: filter.page ?? 1, page_size: filter.pageSize ?? 20, enabled: filter.enabled, engine: filter.engine },
           });
           return { items: data.items.map(mapLanguage), total: data.total };
         },

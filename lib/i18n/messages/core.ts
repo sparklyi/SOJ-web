@@ -54,4 +54,9 @@ export const coreMessages = {
   },
   "footer.source": { en: "Source code", "zh-CN": "开源仓库" },
   "footer.issues": { en: "Issues", "zh-CN": "问题反馈" },
+  "pagination.previous": { en: "Previous", "zh-CN": "上一页" },
+  "pagination.next": { en: "Next", "zh-CN": "下一页" },
+  "pagination.go": { en: "Go", "zh-CN": "跳转" },
+  "pagination.jump": { en: "Jump to page", "zh-CN": "跳转到页码" },
+  "pagination.pageOf": { en: "Page {page} of {total}", "zh-CN": "第 {page} / {total} 页" },
 } satisfies MessageCatalog;

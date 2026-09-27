@@ -604,7 +604,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         if (filter.status) {
           items = items.filter((user) => user.status === filter.status);
         }
-        return { items, total: items.length };
+        return paginate(items, filter.page, filter.pageSize);
       },
       updateUser: async (id, input) => {
         const actor = requirePermission(currentUser, "user.manage");
@@ -658,7 +658,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
             if (filter.engine && language.engine !== filter.engine) return false;
             return true;
           });
-          return { items: items.map((language) => ({ ...language })), total: items.length };
+          return paginate(items.map((language) => ({ ...language })), filter.page, filter.pageSize);
         },
         update: async (id: number, input: AdminLanguageUpdateInput) => {
           const actor = requirePermission(currentUser, "system.manage");
@@ -689,7 +689,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
             const owner = filter.owner.toLowerCase();
             items = items.filter((problem) => userHandle(problem.ownerUserId)?.toLowerCase().includes(owner));
           }
-          return { items, total: items.length };
+          return paginate(items, filter.page, filter.pageSize);
         },
         archive: async (id: number) => {
           const actor = requirePermission(currentUser, "problem.manage_all");
@@ -725,7 +725,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
             items = items.filter((contest) => contest.title.toLowerCase().includes(keyword));
           }
           if (filter.status) items = items.filter((contest) => contest.status === filter.status);
-          return { items, total: items.length };
+          return paginate(items, filter.page, filter.pageSize);
         },
         create: async (input: AdminContestInput) => {
           const actor = requirePermission(currentUser, "contest.manage_all");
@@ -783,7 +783,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
               return true;
             })
             .map((event) => ({ ...event }));
-          return { items, total: items.length };
+          return paginate(items, filter.page, filter.pageSize);
         },
       },
     },
@@ -791,6 +791,12 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
 }
 
 const archivedFromStatus = new Map<number, AuthoringProblem["publicationStatus"]>();
+
+function paginate<T>(items: T[], page = 1, pageSize = 20) {
+  const current = Math.max(1, page);
+  const size = Math.max(1, pageSize);
+  return { items: items.slice((current - 1) * size, current * size), total: items.length };
+}
 
 function userStatusAction(status: AdminUser["status"]): AuditAction {
   switch (status) {
