@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppProviders } from "@/components/providers/app-providers";
 import { AdminOverview } from "@/features/admin/console/admin-overview";
 import { AdminShell } from "@/features/admin/console/admin-shell";
 import { LanguageAdmin } from "@/features/admin/languages/language-admin";
 import { ProblemAdmin } from "@/features/admin/problems/problem-admin";
+import { UserRoleManager } from "@/features/admin/user-role-manager";
 import { adminModulePermissions, adminModules, canOpenAdmin } from "@/features/admin/modules";
 import type { CurrentUser } from "@/lib/api/types";
 import { createMockSession, saveSession } from "@/lib/auth/session";
@@ -88,5 +89,37 @@ describe("language administration", () => {
     fireEvent.click(disableButtons[0]);
 
     await waitFor(() => expect(screen.getByText("Language updated.")).toBeVisible());
+  });
+});
+
+describe("user administration", () => {
+  beforeEach(() => window.localStorage.clear());
+  afterEach(() => window.localStorage.clear());
+
+  it("lists users in a table and only disables the status action on your own row", async () => {
+    renderWithSession(<UserRoleManager />, mockAdminUser);
+
+    await waitFor(() => expect(screen.getByText("lin.chen@soj.dev")).toBeVisible());
+    const selfRow = screen.getByText("lin.chen@soj.dev").closest("tr");
+    const otherRow = screen.getByText("aya.sato@soj.dev").closest("tr");
+    expect(selfRow).not.toBeNull();
+    expect(otherRow).not.toBeNull();
+    expect(within(selfRow!).getByRole("button", { name: "Disable" })).toBeDisabled();
+    expect(within(otherRow!).getByRole("button", { name: "Disable" })).toBeEnabled();
+  });
+
+  it("blocks role changes on your own account inside the dialog", async () => {
+    renderWithSession(<UserRoleManager />, mockAdminUser);
+
+    await waitFor(() => expect(screen.getByText("lin.chen@soj.dev")).toBeVisible());
+    const selfRow = screen.getByText("lin.chen@soj.dev").closest("tr");
+    fireEvent.click(within(selfRow!).getByRole("button", { name: "Manage roles" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("You cannot change your own global roles.")).toBeVisible();
+    expect(within(dialog).getByText("Fixed")).toBeVisible();
+    const grantButtons = within(dialog).getAllByRole("button", { name: "Grant" });
+    expect(grantButtons.length).toBeGreaterThan(0);
+    for (const button of grantButtons) expect(button).toBeDisabled();
   });
 });

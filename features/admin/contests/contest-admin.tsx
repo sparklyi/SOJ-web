@@ -21,7 +21,7 @@ type ListState =
   | { status: "error"; message: string }
   | { status: "ready"; contests: AdminContest[]; total: number };
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
 const statuses: AdminContestStatus[] = ["draft", "published", "running", "ended", "archived"];
 const visibilities: ContestVisibility[] = ["public", "private"];
@@ -47,6 +47,7 @@ function ContestBoard() {
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState<AdminContestStatus | "all">("all");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [editing, setEditing] = useState<AdminContest | "new" | null>(null);
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -63,7 +64,7 @@ function ContestBoard() {
             keyword: keyword.trim() || undefined,
             status: status === "all" ? undefined : status,
             page,
-            pageSize: PAGE_SIZE,
+            pageSize,
           },
           createBrowserApiClient(),
         );
@@ -82,7 +83,7 @@ function ContestBoard() {
     return () => {
       active = false;
     };
-  }, [keyword, status, page, reloadToken, t]);
+  }, [keyword, status, page, pageSize, reloadToken, t]);
 
   async function save(input: AdminContestInput) {
     setSaving(true);
@@ -219,7 +220,18 @@ function ContestBoard() {
           </tbody>
         </Table>
       ) : null}
-      {state.status === "ready" ? <Pagination page={page} pageSize={PAGE_SIZE} total={state.total} onPageChange={setPage} /> : null}
+      {state.status === "ready" ? (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={state.total}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPage(1);
+            setPageSize(size);
+          }}
+        />
+      ) : null}
       {feedback ? (
         <p className={feedback.tone === "danger" ? "px-4 py-3 text-sm text-soj-danger" : "px-4 py-3 text-sm text-soj-success"}>
           {feedback.message}

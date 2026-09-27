@@ -57,5 +57,6 @@ export const coreMessages = {
   "pagination.previous": { en: "Previous", "zh-CN": "上一页" },
   "pagination.next": { en: "Next", "zh-CN": "下一页" },
   "pagination.label": { en: "Pagination", "zh-CN": "分页" },
+  "pagination.pageSize": { en: "Per page", "zh-CN": "每页" },
   "pagination.total": { en: "{total} total", "zh-CN": "共 {total} 条" },
 } satisfies MessageCatalog;

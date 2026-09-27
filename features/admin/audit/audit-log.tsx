@@ -20,7 +20,7 @@ type ListState =
   | { status: "error"; message: string }
   | { status: "ready"; events: AuditEvent[]; total: number };
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
 type FilterState = {
   objectType: AuditObjectType | "all";
@@ -65,6 +65,7 @@ function AuditBoard() {
   const [draft, setDraft] = useState<FilterState>(emptyFilter);
   const [applied, setApplied] = useState<FilterState>(emptyFilter);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [state, setState] = useState<ListState>({ status: "loading" });
 
   useEffect(() => {
@@ -79,7 +80,7 @@ function AuditBoard() {
             actorId: applied.actorId.trim() ? Number(applied.actorId) : undefined,
             action: applied.action === "all" ? undefined : applied.action,
             page,
-            pageSize: PAGE_SIZE,
+            pageSize,
           },
           createBrowserApiClient(),
         );
@@ -98,7 +99,7 @@ function AuditBoard() {
     return () => {
       active = false;
     };
-  }, [applied, page, t]);
+  }, [applied, page, pageSize, t]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -205,7 +206,18 @@ function AuditBoard() {
           </tbody>
         </Table>
       ) : null}
-      {state.status === "ready" ? <Pagination page={page} pageSize={PAGE_SIZE} total={state.total} onPageChange={setPage} /> : null}
+      {state.status === "ready" ? (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={state.total}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPage(1);
+            setPageSize(size);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

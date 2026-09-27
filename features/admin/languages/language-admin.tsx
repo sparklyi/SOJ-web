@@ -18,7 +18,7 @@ type ListState =
   | { status: "error"; message: string }
   | { status: "ready"; languages: JudgeLanguage[]; total: number };
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
 export function LanguageAdmin() {
   const { t } = useI18n();
@@ -39,6 +39,7 @@ function LanguageTable() {
   const { t } = useI18n();
   const [state, setState] = useState<ListState>({ status: "loading" });
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
@@ -47,7 +48,7 @@ function LanguageTable() {
 
     async function start() {
       try {
-        const result = await listAdminLanguages(page, PAGE_SIZE, createBrowserApiClient());
+        const result = await listAdminLanguages(page, pageSize, createBrowserApiClient());
         if (!active) return;
         if (result.items.length === 0 && result.total > 0 && page > 1) {
           setPage((current) => current - 1);
@@ -63,7 +64,7 @@ function LanguageTable() {
     return () => {
       active = false;
     };
-  }, [page, t]);
+  }, [page, pageSize, t]);
 
   async function toggle(language: JudgeLanguage) {
     setPendingId(language.id);
@@ -135,7 +136,18 @@ function LanguageTable() {
           ))}
         </tbody>
       </Table>
-      {state.total > 0 ? <Pagination page={page} pageSize={PAGE_SIZE} total={state.total} onPageChange={setPage} /> : null}
+      {state.status === "ready" ? (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={state.total}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPage(1);
+            setPageSize(size);
+          }}
+        />
+      ) : null}
       {feedback ? (
         <p className={feedback.tone === "danger" ? "px-4 pb-4 text-sm text-soj-danger" : "px-4 pb-4 text-sm text-soj-success"}>
           {feedback.message}

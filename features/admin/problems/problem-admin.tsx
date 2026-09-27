@@ -22,7 +22,7 @@ type ListState =
   | { status: "error"; message: string }
   | { status: "ready"; problems: AuthoringProblem[]; total: number };
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
 type FilterState = {
   keyword: string;
@@ -58,6 +58,7 @@ function ProblemBoard() {
   const [applied, setApplied] = useState<FilterState>(emptyFilter);
   const [state, setState] = useState<ListState>({ status: "loading" });
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -75,7 +76,7 @@ function ProblemBoard() {
             visibility: applied.visibility === "all" ? undefined : applied.visibility,
             tag: applied.tag.trim() || undefined,
             page,
-            pageSize: PAGE_SIZE,
+            pageSize,
           },
           createBrowserApiClient(),
         );
@@ -94,7 +95,7 @@ function ProblemBoard() {
     return () => {
       active = false;
     };
-  }, [applied, page, reloadToken, t]);
+  }, [applied, page, pageSize, reloadToken, t]);
 
   function submitFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -250,7 +251,18 @@ function ProblemBoard() {
           </tbody>
         </Table>
       ) : null}
-      {state.status === "ready" ? <Pagination page={page} pageSize={PAGE_SIZE} total={state.total} onPageChange={setPage} /> : null}
+      {state.status === "ready" ? (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={state.total}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPage(1);
+            setPageSize(size);
+          }}
+        />
+      ) : null}
       {feedback ? (
         <p className={feedback.tone === "danger" ? "px-4 py-3 text-sm text-soj-danger" : "px-4 py-3 text-sm text-soj-success"}>
           {feedback.message}

@@ -70,12 +70,27 @@ test("admin disables and re-enables a user", async ({ page }) => {
   await page.goto("/admin/users");
   await expect(page.getByRole("heading", { name: "Administration" })).toBeVisible();
 
-  await page.getByRole("button", { name: /aya-sato/ }).click();
-  await page.getByRole("button", { name: "Disable", exact: true }).click();
+  const row = page.getByRole("row").filter({ hasText: "aya-sato" });
+  await row.getByRole("button", { name: "Disable", exact: true }).click();
   await expect(page.getByText("User disabled.")).toBeVisible();
 
-  await page.getByRole("button", { name: "Enable", exact: true }).click();
+  await row.getByRole("button", { name: "Enable", exact: true }).click();
   await expect(page.getByText("User enabled.")).toBeVisible();
+});
+
+test("admin grants a role through the dialog", async ({ page }) => {
+  await injectAdmin(page);
+  await page.goto("/admin/users");
+
+  const row = page.getByRole("row").filter({ hasText: "aya-sato" });
+  await row.getByRole("button", { name: "Manage roles" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+
+  await page.getByLabel("Reason for this change").fill("e2e operator grant");
+  await dialog.getByRole("button", { name: "Grant", exact: true }).first().click();
+  await expect(dialog.getByText("Role granted.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Revoke", exact: true }).last()).toBeVisible();
 });
 
 test("a plain account gets the 403 wall on an admin URL", async ({ page }) => {

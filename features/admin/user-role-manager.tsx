@@ -7,10 +7,13 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { StatusPill } from "@/components/soj/status-pill";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
+import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableCell, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
 import { createBrowserApiClient } from "@/lib/api/client";
 import type { AdminUser, AdminUserStatus } from "@/lib/api/types";
 import { globalRoles, type GlobalRole } from "@/lib/auth/permissions";
@@ -21,32 +24,32 @@ type ListState =
   | { status: "error"; message: string }
   | { status: "ready"; users: AdminUser[]; total: number };
 
-const PAGE_SIZE = 20;
+type FilterState = { keyword: string; status: AdminUserStatus | "all" };
+
+const DEFAULT_PAGE_SIZE = 20;
+const emptyFilter: FilterState = { keyword: "", status: "all" };
+const statuses: AdminUserStatus[] = ["active", "disabled", "deleted"];
 
 export function UserRoleManager() {
   return (
     <PermissionGate anyOf={["user.manage"]}>
-      <UserRoleBoard />
+      <UserBoard />
     </PermissionGate>
   );
 }
 
-function UserRoleBoard() {
+function UserBoard() {
   const { t } = useI18n();
-  const { user: viewer, can } = useAuth();
-  const [state, setState] = useState<ListState>({ status: "loading" });
-  const [keyword, setKeyword] = useState("");
-  const [applied, setApplied] = useState({ keyword: "" });
+  const { user: viewer } = useAuth();
+  const [draft, setDraft] = useState<FilterState>(emptyFilter);
+  const [applied, setApplied] = useState<FilterState>(emptyFilter);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [reloadToken, setReloadToken] = useState(0);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [reason, setReason] = useState("");
-  const [roleToGrant, setRoleToGrant] = useState<GlobalRole>("author");
-  const [pending, setPending] = useState<string | null>(null);
+  const [state, setState] = useState<ListState>({ status: "loading" });
+  const [managingId, setManagingId] = useState<number | null>(null);
+  const [pendingId, setPendingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
-
-  const canGrant = can("role.grant");
-  const canRevoke = can("role.revoke");
 
   useEffect(() => {
     let active = true;
@@ -54,7 +57,12 @@ function UserRoleBoard() {
     async function start() {
       try {
         const result = await listAdminUsers(
-          { keyword: applied.keyword || undefined, page, pageSize: PAGE_SIZE },
+          {
+            keyword: applied.keyword.trim() || undefined,
+            status: applied.status === "all" ? undefined : applied.status,
+            page,
+            pageSize,
+          },
           createBrowserApiClient(),
         );
         if (!active) return;
@@ -63,247 +71,301 @@ function UserRoleBoard() {
           return;
         }
         setState({ status: "ready", users: result.items, total: result.total });
-        setSelectedId((current) => (current && result.items.some((item) => item.id === current) ? current : null));
       } catch (cause) {
         if (active) setState({ status: "error", message: cause instanceof Error ? cause.message : t("roles.failed") });
       }
     }
 
     void start();
-
     return () => {
       active = false;
     };
-  }, [applied, page, reloadToken, t]);
+  }, [applied, page, pageSize, reloadToken, t]);
 
-  async function handleGrant(event: FormEvent<HTMLFormElement>) {
+  const managing = state.status === "ready" ? (state.users.find((item) => item.id === managingId) ?? null) : null;
+
+  function submitFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (selectedId === null) {
-      setFeedback({ tone: "danger", message: t("roles.needUser") });
-      return;
-    }
-    if (!reason.trim()) {
-      setFeedback({ tone: "danger", message: t("roles.needReason") });
-      return;
-    }
-    setPending(`grant-${roleToGrant}`);
-    setFeedback(null);
-    try {
-      await grantGlobalRole(selectedId, roleToGrant, reason.trim(), createBrowserApiClient());
-      setReason("");
-      setFeedback({ tone: "success", message: t("roles.granted") });
-      setReloadToken((token) => token + 1);
-    } catch (cause) {
-      setFeedback({ tone: "danger", message: cause instanceof Error ? cause.message : t("roles.failed") });
-    } finally {
-      setPending(null);
-    }
+    setPage(1);
+    setApplied(draft);
   }
 
-  async function handleRevoke(role: GlobalRole) {
-    if (selectedId === null) return;
-    if (!reason.trim()) {
-      setFeedback({ tone: "danger", message: t("roles.needReason") });
-      return;
-    }
-    setPending(`revoke-${role}`);
+  async function toggleStatus(user: AdminUser) {
+    setPendingId(user.id);
     setFeedback(null);
+    const next: AdminUserStatus = user.status === "active" ? "disabled" : "active";
     try {
-      await revokeGlobalRole(selectedId, role, reason.trim(), createBrowserApiClient());
-      setReason("");
-      setFeedback({ tone: "success", message: t("roles.revoked") });
-      setReloadToken((token) => token + 1);
-    } catch (cause) {
-      setFeedback({ tone: "danger", message: cause instanceof Error ? cause.message : t("roles.failed") });
-    } finally {
-      setPending(null);
-    }
-  }
-
-  async function handleStatus(next: AdminUserStatus) {
-    if (selectedId === null) return;
-    setPending(`status-${next}`);
-    setFeedback(null);
-    try {
-      await updateAdminUser(selectedId, { status: next }, createBrowserApiClient());
+      await updateAdminUser(user.id, { status: next }, createBrowserApiClient());
       setFeedback({ tone: "success", message: next === "active" ? t("roles.enabled") : t("roles.disabled") });
       setReloadToken((token) => token + 1);
     } catch (cause) {
       setFeedback({ tone: "danger", message: cause instanceof Error ? cause.message : t("roles.statusFailed") });
     } finally {
+      setPendingId(null);
+    }
+  }
+
+  return (
+    <Panel variant="flush" aria-label={t("roles.title")}>
+      <PanelHeader title={t("roles.title")} description={t("roles.description")} />
+      <PanelBody className="p-0">
+        <form
+          onSubmit={submitFilter}
+          className="grid gap-3 border-b border-soj-line px-4 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,180px)_auto] sm:items-end"
+        >
+          <Input
+            name="admin-user-keyword"
+            label={t("roles.search")}
+            placeholder={t("roles.searchPlaceholder")}
+            value={draft.keyword}
+            onChange={(event) => setDraft((current) => ({ ...current, keyword: event.target.value }))}
+          />
+          <div className="grid gap-2">
+            <span className="text-sm text-soj-text">{t("admin.status")}</span>
+            <Select
+              value={draft.status}
+              onValueChange={(value) => setDraft((current) => ({ ...current, status: value as FilterState["status"] }))}
+            >
+              <SelectTrigger className="w-full" aria-label={t("admin.status")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("roles.allStatuses")}</SelectItem>
+                {statuses.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {t(userStatusKey(status))}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button type="submit" variant="secondary">
+              {t("admin.filter")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setDraft(emptyFilter);
+                setPage(1);
+                setApplied(emptyFilter);
+                setReloadToken((token) => token + 1);
+              }}
+            >
+              {t("admin.reset")}
+            </Button>
+          </div>
+        </form>
+
+        {state.status === "loading" ? <p className="p-4 text-sm text-soj-muted">{t("admin.loading")}</p> : null}
+        {state.status === "error" ? <p className="p-4 text-sm text-soj-danger">{state.message}</p> : null}
+        {state.status === "ready" && state.users.length === 0 ? (
+          <EmptyState icon={UserRoundSearch} title={t("roles.usersEmpty")} compact />
+        ) : null}
+        {state.status === "ready" && state.users.length > 0 ? (
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>{t("roles.users")}</TableHeaderCell>
+                <TableHeaderCell>{t("admin.status")}</TableHeaderCell>
+                <TableHeaderCell>{t("roles.globalRoles")}</TableHeaderCell>
+                <TableHeaderCell className="text-right">{t("admin.actions")}</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <tbody>
+              {state.users.map((user) => {
+                const isSelf = user.id === viewer?.id;
+                return (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <span className="text-sm text-soj-text">{user.handle}</span>
+                      {isSelf ? <span className="ml-2 text-xs text-soj-faint">{t("roles.you")}</span> : null}
+                      <span className="mt-0.5 block font-mono text-xs text-soj-muted">{user.email}</span>
+                    </TableCell>
+                    <TableCell>
+                      <StatusPill tone={user.status === "active" ? "success" : "warning"}>{t(userStatusKey(user.status))}</StatusPill>
+                    </TableCell>
+                    <TableCell>
+                      <span className="flex flex-wrap gap-1.5">
+                        {user.roles.map((role) => (
+                          <span key={role} className="rounded-soj-sm border border-soj-line/70 bg-soj-bg-raised/60 px-2 py-0.5 text-xs text-soj-muted">
+                            {t(roleMessageKey(role))}
+                          </span>
+                        ))}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button type="button" variant="secondary" size="sm" onClick={() => setManagingId(user.id)}>
+                          {t("roles.manage")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={user.status === "active" ? "danger" : "solid"}
+                          size="sm"
+                          disabled={isSelf}
+                          title={isSelf ? t("roles.selfDisableBlocked") : undefined}
+                          loading={pendingId === user.id}
+                          onClick={() => void toggleStatus(user)}
+                        >
+                          {user.status === "active" ? t("roles.disable") : t("roles.enable")}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </tbody>
+          </Table>
+        ) : null}
+
+        {state.status === "ready" ? (
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={state.total}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPage(1);
+              setPageSize(size);
+            }}
+          />
+        ) : null}
+        {feedback ? (
+          <p className={feedback.tone === "danger" ? "px-4 py-3 text-sm text-soj-danger" : "px-4 py-3 text-sm text-soj-success"}>
+            {feedback.message}
+          </p>
+        ) : null}
+      </PanelBody>
+
+      {managing ? (
+        <RoleDialog
+          user={managing}
+          viewerId={viewer?.id ?? null}
+          onClose={() => setManagingId(null)}
+          onChanged={() => setReloadToken((token) => token + 1)}
+        />
+      ) : null}
+    </Panel>
+  );
+}
+
+type RoleDialogProps = {
+  user: AdminUser;
+  viewerId: number | null;
+  onClose: () => void;
+  onChanged: () => void;
+};
+
+/**
+ * 角色管理弹窗：列出全部全局角色，持有的角色可以撤销、未持有的可以授予。
+ * 授予与撤销共用同一个原因输入——后端两者都要求原因，逐次弹出输入框反而更难用。
+ */
+function RoleDialog({ user, viewerId, onClose, onChanged }: RoleDialogProps) {
+  const { t } = useI18n();
+  const { can } = useAuth();
+  const canGrant = can("role.grant");
+  const canRevoke = can("role.revoke");
+  const isSelf = user.id === viewerId;
+  const [reason, setReason] = useState("");
+  const [pending, setPending] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
+
+  async function changeRole(role: GlobalRole, action: "grant" | "revoke") {
+    if (!reason.trim()) {
+      setFeedback({ tone: "danger", message: t("roles.needReason") });
+      return;
+    }
+    setPending(`${action}-${role}`);
+    setFeedback(null);
+    try {
+      if (action === "grant") {
+        await grantGlobalRole(user.id, role, reason.trim(), createBrowserApiClient());
+        setFeedback({ tone: "success", message: t("roles.granted") });
+      } else {
+        await revokeGlobalRole(user.id, role, reason.trim(), createBrowserApiClient());
+        setFeedback({ tone: "success", message: t("roles.revoked") });
+      }
+      onChanged();
+    } catch (cause) {
+      setFeedback({ tone: "danger", message: cause instanceof Error ? cause.message : t("roles.failed") });
+    } finally {
       setPending(null);
     }
   }
 
-  const selected = state.status === "ready" ? (state.users.find((item) => item.id === selectedId) ?? null) : null;
-  /* 后端 grant 和 revoke 用的是同一条守卫（`actor.UserID == userID` →
-     `role.invalid_target`），所以两者都得挡在自己身上：只挡 grant 的话，
-     revoke 点下去拿到的是「没填理由」——而理由框正是被自己这条规则禁用的。 */
-  const isSelf = selected !== null && selected.id === viewer?.id;
-
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-      <section className="min-w-0 grid gap-4 rounded-soj-lg border border-soj-line/70 bg-soj-surface/50 p-4">
-        <h2 className="text-sm font-medium text-soj-text">{t("roles.users")}</h2>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            setPage(1);
-            setApplied({ keyword: keyword.trim() });
-          }}
-          className="grid gap-3"
-        >
-          <Input
-            name="admin-user-keyword"
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-            placeholder={t("roles.searchPlaceholder")}
-            aria-label={t("roles.searchPlaceholder")}
-          />
-          {/* 按钮此前复用了 placeholder 的文案（两者都是「搜索用户名或邮箱」），
-              于是同一句话在同一个表单里出现两遍：一次当提示，一次当动作。 */}
-          <Button type="submit" variant="secondary" size="sm">
-            {t("roles.searchAction")}
-          </Button>
-        </form>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent className="grid gap-5 p-5">
+        <header>
+          <DialogTitle>{t("roles.manageTitle", { name: user.handle })}</DialogTitle>
+          <DialogDescription>
+            #{user.id} · {user.email}
+          </DialogDescription>
+        </header>
 
-        {state.status === "loading" ? <p className="text-sm text-soj-muted">{t("status.pending")}</p> : null}
-        {state.status === "error" ? <p className="text-sm text-soj-danger">{state.message}</p> : null}
-        {state.status === "ready" && state.users.length === 0 ? <p className="text-sm text-soj-muted">{t("roles.usersEmpty")}</p> : null}
-        {state.status === "ready" && state.users.length > 0 ? (
+        <section className="grid gap-2">
+          <h3 className="text-sm font-medium text-soj-text">{t("roles.globalRoles")}</h3>
           <ul className="grid gap-2">
-            {state.users.map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedId(item.id);
-                    setFeedback(null);
-                  }}
-                  className={
-                    item.id === selectedId
-                      ? "w-full rounded-soj-md border border-soj-accent/60 bg-soj-accent/10 px-3 py-2 text-left"
-                      : "w-full rounded-soj-md border border-soj-line/70 bg-soj-bg-raised/60 px-3 py-2 text-left transition hover:border-soj-accent/40"
-                  }
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm text-soj-text">{item.handle}</span>
-                    <StatusPill tone={item.status === "active" ? "success" : "warning"}>{t(userStatusKey(item.status))}</StatusPill>
-                  </span>
-                  <span className="mt-1 block truncate font-mono text-xs text-soj-muted">{item.email}</span>
-                </button>
-              </li>
-            ))}
+            {globalRoles.map((role) => {
+              const held = user.roles.includes(role);
+              const fixed = role === "user";
+              return (
+                <li key={role} className="flex items-center justify-between gap-3 rounded-soj-md border border-soj-line/70 bg-soj-bg-raised/50 px-3 py-2">
+                  <span className="text-sm text-soj-text">{t(roleMessageKey(role))}</span>
+                  {fixed ? (
+                    <span className="text-xs text-soj-faint">{t("roles.fixedRole")}</span>
+                  ) : held && canRevoke ? (
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="xs"
+                      disabled={isSelf}
+                      loading={pending === `revoke-${role}`}
+                      onClick={() => void changeRole(role, "revoke")}
+                    >
+                      {t("roles.revoke")}
+                    </Button>
+                  ) : !held && canGrant ? (
+                    <Button
+                      type="button"
+                      variant="solid"
+                      size="xs"
+                      disabled={isSelf}
+                      loading={pending === `grant-${role}`}
+                      onClick={() => void changeRole(role, "grant")}
+                    >
+                      {t("roles.grant")}
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-soj-faint">{held ? t("roles.current") : "—"}</span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
+        </section>
+
+        <Input
+          name="role-reason"
+          label={t("roles.reasonPlaceholder")}
+          value={reason}
+          disabled={isSelf}
+          onChange={(event) => setReason(event.target.value)}
+        />
+        {/* 说明针对整块面板（grant + revoke），所以放在表单外面而不是某个字段的 helper。 */}
+        {isSelf ? <p className="text-sm text-soj-muted">{t("roles.selfGrantBlocked")}</p> : null}
+        {feedback ? (
+          <p className={feedback.tone === "danger" ? "text-sm text-soj-danger" : "text-sm text-soj-success"}>{feedback.message}</p>
         ) : null}
-        {state.status === "ready" ? (
-          <Pagination page={page} pageSize={PAGE_SIZE} total={state.total} onPageChange={setPage} className="-mx-4 -mb-4 mt-1" />
-        ) : null}
-      </section>
-
-      <section className="min-w-0 grid gap-4">
-        {selected ? (
-          <div className="rounded-soj-lg border border-soj-line/70 bg-soj-surface/50 p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="truncate text-lg font-medium text-soj-text">{selected.handle}</h2>
-                <p className="mt-1 font-mono text-xs text-soj-muted">
-                  #{selected.id} · {selected.email}
-                </p>
-              </div>
-              <StatusPill tone={selected.status === "active" ? "success" : "warning"}>{t(userStatusKey(selected.status))}</StatusPill>
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant={selected.status === "active" ? "danger" : "solid"}
-                size="sm"
-                disabled={isSelf}
-                loading={pending === `status-${selected.status === "active" ? "disabled" : "active"}`}
-                onClick={() => void handleStatus(selected.status === "active" ? "disabled" : "active")}
-              >
-                {selected.status === "active" ? t("roles.disable") : t("roles.enable")}
-              </Button>
-              {isSelf ? <span className="text-xs text-soj-muted">{t("roles.selfDisableBlocked")}</span> : null}
-            </div>
-
-            <div className="mt-5 border-t border-soj-line/70 pt-5">
-              <h3 className="mb-3 text-sm font-medium text-soj-text">{t("roles.globalRoles")}</h3>
-              <div className="flex flex-wrap gap-2">
-                {selected.roles.length === 0 ? (
-                  <p className="text-sm text-soj-muted">—</p>
-                ) : (
-                  selected.roles.map((role) => (
-                    <span key={role} className="inline-flex items-center gap-2 rounded-soj-sm border border-soj-line/70 bg-soj-bg-raised/60 px-2 py-1">
-                      <span className="text-xs text-soj-text">{t(roleMessageKey(role))}</span>
-                      {canRevoke ? (
-                        <button
-                          type="button"
-                          onClick={() => void handleRevoke(role)}
-                          disabled={isSelf || pending === `revoke-${role}`}
-                          className="font-mono text-xs text-soj-muted transition hover:text-soj-danger disabled:opacity-45"
-                        >
-                          {t("roles.revoke")}
-                        </button>
-                      ) : null}
-                    </span>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {canGrant ? (
-              <form onSubmit={handleGrant} className="mt-5 grid gap-3 border-t border-soj-line/70 pt-5 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)_auto] sm:items-end">
-                <div className="grid gap-2">
-                  <span className="text-sm text-soj-text">{t("roles.role")}</span>
-                  {/* 原生 <select> 的选项面板由系统渲染，在深色页面上会弹出一块白底。
-                      全站下拉一律走共享 Select（Radix，position="popper" 已在其 Content 里给出）。 */}
-                  <Select value={roleToGrant} onValueChange={(value) => setRoleToGrant(value as GlobalRole)}>
-                    <SelectTrigger className="w-full" aria-label={t("roles.role")}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {globalRoles.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {t(roleMessageKey(role))}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Input
-                  name="role-reason"
-                  label={t("roles.reasonPlaceholder")}
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  disabled={isSelf}
-                />
-                <Button type="submit" loading={pending === `grant-${roleToGrant}`} disabled={isSelf}>
-                  {t("roles.grant")}
-                </Button>
-              </form>
-            ) : null}
-
-            {/* 这条说明放在表单外面，而不是理由框的 `helperText`：helper 长在
-                理由框那一格里面，会把整行撑高，而表单是 `items-end` 底部对齐的，
-                多出来的一行会把 Role 下拉和 Grant 按钮一起往下推 24px——
-                选到自己时右侧就“漂”一下。说明本身也是针对整块面板（grant +
-                revoke）的，不是某一个字段的注解。 */}
-            {isSelf ? <p className="mt-4 text-sm text-soj-muted">{t("roles.selfGrantBlocked")}</p> : null}
-
-            {feedback ? (
-              <p className={feedback.tone === "danger" ? "mt-4 text-sm text-soj-danger" : "mt-4 text-sm text-soj-success"}>{feedback.message}</p>
-            ) : null}
-          </div>
-        ) : (
-          /* 未选中用户时，这里此前渲染的是左栏那个卡片标题本身（「用户」）——
-             一块 700×360 的空面板里只有一个词，等于没有空态。 */
-          <div className="rounded-soj-lg border border-soj-line/70 bg-soj-surface/50">
-            <EmptyState icon={UserRoundSearch} title={t("roles.selectEmptyTitle")} description={t("roles.selectEmptyDescription")} />
-          </div>
-        )}
-      </section>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
