@@ -55,9 +55,13 @@ jobs:
         run: npm run build
 
   e2e:
-    name: E2E
+    name: E2E (${{ matrix.shard }}/2)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -83,4 +87,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: E2E tests
-        run: npm run test:e2e
+        # The dev server already saturates the runner's cores, so raising
+        # --workers just splits the same CPU (measured: no gain in CI). Split
+        # the suite across runners instead.
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/2
