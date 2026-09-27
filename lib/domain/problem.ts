@@ -1,4 +1,4 @@
-import type { ProblemDetail, ProblemDifficulty, ProblemSummary } from "@/lib/api/types";
+import type { ProblemDifficulty, ProblemSummary } from "@/lib/api/types";
 
 export type ProblemFilter = {
   query?: string;
@@ -53,17 +53,4 @@ export function matchesProblemFilter(problem: ProblemSummary, filter: ProblemFil
   const matchesTag = filter.tag ? problem.tags.includes(filter.tag) : true;
 
   return matchesQuery && matchesDifficulty && matchesTag;
-}
-
-export function summarizeProblem(problem: ProblemDetail): ProblemSummary {
-  return {
-    id: problem.id,
-    slug: problem.slug,
-    title: problem.title,
-    difficulty: problem.difficulty,
-    tags: problem.tags,
-    status: problem.status,
-    acceptedCount: problem.acceptedCount,
-    submissionCount: problem.submissionCount,
-  };
 }

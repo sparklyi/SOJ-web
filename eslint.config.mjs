@@ -7,7 +7,6 @@ const eslintConfig = [
   {
     ignores: [
       ".next/**",
-      "archive/v1-vue/**",
       "node_modules/**",
       "playwright-report/**",
       "test-results/**",

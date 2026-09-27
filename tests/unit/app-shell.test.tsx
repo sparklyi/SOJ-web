@@ -3,7 +3,6 @@ import { waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppProviders } from "@/components/providers/app-providers";
 import { PageShell } from "@/components/layout/page-shell";
-import { SplitWorkspace } from "@/components/layout/split-workspace";
 import { createMockSession, saveSession } from "@/lib/auth/session";
 import { mockAuthorUser, mockUser } from "@/lib/mock/fixtures";
 
@@ -75,12 +74,5 @@ describe("app shell", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Open account menu for Lin Chen" })).toBeVisible());
     expect(screen.getByRole("link", { name: "Author" })).toHaveAttribute("href", "/en/manage/problems");
-  });
-
-  it("renders split workspace regions", () => {
-    render(<SplitWorkspace primary={<div>Statement</div>} secondary={<div>Judge feedback</div>} />);
-
-    expect(screen.getByText("Statement")).toBeVisible();
-    expect(screen.getByText("Judge feedback")).toBeVisible();
   });
 });

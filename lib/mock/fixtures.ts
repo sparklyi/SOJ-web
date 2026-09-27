@@ -47,12 +47,6 @@ export const mockAdminUser: CurrentUser = {
   permissions: permissionsForRoles("user", "admin"),
 };
 
-export const mockRootUser: CurrentUser = {
-  ...mockUser,
-  roles: ["user", "root"],
-  permissions: permissionsForRoles("user", "root"),
-};
-
 export const mockContestManagerUser: CurrentUser = {
   ...mockUser,
   roles: ["user", "contest_manager"],

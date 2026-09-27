@@ -7,24 +7,6 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import type { Permission } from "@/lib/auth/permissions";
 import type { MessageKey } from "@/lib/i18n/messages";
 
-/**
- * Capability helpers for a signed-in session. `can` only reads the permission
- * list the backend resolved for the current user; contest-scoped roles are read
- * from `ContestSummary.currentUserRoles` instead, because they do not appear in
- * the global permission set.
- */
-export function usePermissions() {
-  const { status, user, can } = useAuth();
-
-  return {
-    status,
-    user,
-    can,
-    canAny: (permissions: readonly Permission[]) => permissions.some((permission) => can(permission)),
-    canAll: (permissions: readonly Permission[]) => permissions.every((permission) => can(permission)),
-  };
-}
-
 type PermissionGateProps = {
   anyOf: readonly Permission[];
   /**
