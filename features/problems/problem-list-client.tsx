@@ -28,11 +28,39 @@ const difficulties: ProblemDifficulty[] = ["easy", "medium", "hard"];
  * 而不是换一个标签继续展示没有来源的数字。
  *
  * 只取一次全量列表，筛选在内存里做：换筛选只改 searchParams，不再重新拉数据。
+ *
+ * `useSearchParams` 属于动态数据，Next 要求读它的组件外面必须有一层 Suspense。
+ * 静态预渲染时没有 URL 查询串，`ProblemListClient` 的 fallback 就渲染无筛选的
+ * 完整目录——正好是要随 HTML 一起输出、给访客和搜索引擎看的那版。
  */
 export function ProblemListClient({ initialProblems }: { initialProblems: PageResult<ProblemSummary> }) {
-  const { t } = useI18n();
+  return (
+    <Suspense fallback={<ProblemCatalog initialProblems={initialProblems} filter={noFilter} showControls={false} />}>
+      <FilteredProblemCatalog initialProblems={initialProblems} />
+    </Suspense>
+  );
+}
+
+const noFilter: ProblemFilter = {};
+
+function FilteredProblemCatalog({ initialProblems }: { initialProblems: PageResult<ProblemSummary> }) {
   const searchParams = useSearchParams();
   const filter = parseFilter(Object.fromEntries(searchParams.entries()));
+
+  return <ProblemCatalog initialProblems={initialProblems} filter={filter} showControls />;
+}
+
+function ProblemCatalog({
+  initialProblems,
+  filter,
+  showControls,
+}: {
+  initialProblems: PageResult<ProblemSummary>;
+  filter: ProblemFilter;
+  /** 工具栏也读 searchParams，所以它不能出现在 Suspense 的 fallback 里。 */
+  showControls: boolean;
+}) {
+  const { t } = useI18n();
 
   const filteredItems = initialProblems.items.filter((problem) => matchesProblemFilter(problem, filter));
   const tags = Array.from(new Set(initialProblems.items.flatMap((problem) => problem.tags))).sort();
@@ -60,7 +88,7 @@ export function ProblemListClient({ initialProblems }: { initialProblems: PageRe
       />
 
       <Panel variant="flush">
-        <Suspense>
+        {showControls && (
           <ProblemFilterBar
             query={filter.query}
             difficulty={filter.difficulty}
@@ -68,7 +96,7 @@ export function ProblemListClient({ initialProblems }: { initialProblems: PageRe
             tags={tags}
             difficultyCounts={difficultyCounts}
           />
-        </Suspense>
+        )}
         <ProblemList problems={filteredItems} totalCount={initialProblems.total} />
       </Panel>
     </div>

@@ -58,6 +58,10 @@ jobs:
     name: E2E (${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # e2e 跑真实的生产产物，但数据仍走 mock 适配器。这个变量是构建期内联，
+      # 所以 Build 与随后的 `next start` 必须都看得到它。
+      NEXT_PUBLIC_SOJ_API_MODE: mock
     strategy:
       fail-fast: false
       matrix:
@@ -86,10 +90,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Build
+        run: npm run build
+
       - name: E2E tests
-        # The dev server already saturates the runner's cores, so raising
-        # --workers just splits the same CPU (measured: no gain in CI). Split
-        # the suite across runners instead. Two, not three: Playwright keeps a
-        # file on one shard, so the heavy problem-authoring spec sets a floor
-        # that a third runner does not lower.
+        # Split across runners rather than raising --workers: a runner's cores
+        # are the bottleneck, so more workers only split the same CPU.
         run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
