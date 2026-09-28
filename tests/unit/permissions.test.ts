@@ -8,9 +8,9 @@ import {
   isPermission,
   isRole,
   permissions,
-  permissionsForRoles,
   roles,
 } from "@/lib/auth/permissions";
+import { permissionsForRoles } from "@/lib/mock/role-permissions";
 
 describe("role and permission catalog", () => {
   it("mirrors the backend role split", () => {
@@ -19,11 +19,17 @@ describe("role and permission catalog", () => {
     expect(roles).toEqual([...globalRoles, ...contestRoles]);
   });
 
-  it("publishes the full permission catalog", () => {
-    expect(permissions).toHaveLength(22);
+  it("publishes the phase-one permission catalog", () => {
+    expect(permissions).toHaveLength(19);
     expect(new Set(permissions).size).toBe(permissions.length);
-    expect(permissions).toContain("problem.read");
     expect(permissions).toContain("system.manage");
+    expect(permissions).toContain("contest.create");
+    expect(permissions).toContain("audit.read");
+    expect(permissions).toContain("role.permission.manage");
+    // The six removed phase-one permissions must not survive as aliases.
+    expect(permissions).not.toContain("problem.read");
+    expect(permissions).not.toContain("submission.create");
+    expect(permissions).not.toContain("contest.join");
   });
 
   it("grants every permission to full access roles", () => {
@@ -38,21 +44,12 @@ describe("role and permission catalog", () => {
     expect(permissionsForRoles("contest_judge")).toEqual(["contest.read", "contest.judge"]);
   });
 
-  it("keeps the remaining role mappings aligned with the backend", () => {
-    expect(permissionsForRoles("user")).toEqual(["problem.read", "submission.create", "submission.read_own", "contest.join"]);
+  it("keeps the mock role mappings aligned with the phase-one defaults", () => {
+    expect(permissionsForRoles("user")).toEqual([]);
+    expect(permissionsForRoles("author")).toEqual(["problem.create", "problem.edit_own", "problem.submit_review"]);
     expect(permissionsForRoles("reviewer")).toEqual(["problem.review", "problem.publish"]);
     expect(permissionsForRoles("operator")).toEqual(["submission.rejudge", "judge.inspect"]);
-    expect(permissionsForRoles("user", "author")).toEqual([
-      "problem.read",
-      "problem.create",
-      "problem.edit_own",
-      "problem.testcase.manage_own",
-      "problem.check_own",
-      "problem.submit_review",
-      "submission.create",
-      "submission.read_own",
-      "contest.join",
-    ]);
+    expect(permissionsForRoles("user", "author")).toEqual(["problem.create", "problem.edit_own", "problem.submit_review"]);
   });
 
   it("separates global roles from contest roles", () => {
@@ -62,7 +59,7 @@ describe("role and permission catalog", () => {
     expect(isContestRole("admin")).toBe(false);
     expect(isRole("contest_judge")).toBe(true);
     expect(isRole("intruder")).toBe(false);
-    expect(isPermission("problem.read")).toBe(true);
+    expect(isPermission("contest.create")).toBe(true);
     expect(isPermission("problem.solve")).toBe(false);
   });
 });

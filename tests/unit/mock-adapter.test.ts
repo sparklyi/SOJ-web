@@ -126,3 +126,82 @@ describe("admin console adapter", () => {
     expect(second.items[0]?.id).not.toBe(first.items[0]?.id);
   });
 });
+
+describe("role permission matrix adapter", () => {
+  it("serves the full directory and one column per role", async () => {
+    const admin = createMockAdapter({ currentUser: mockAdminUser });
+    const matrix = await admin.admin.rolePermissions();
+
+    expect(matrix.permissions).toHaveLength(19);
+    expect(matrix.permissions.find((entry) => entry.code === "role.permission.manage")).toMatchObject({
+      scope: "global",
+      delegable: false,
+      consumer: "user.RolePermissionService.Matrix/Replace",
+    });
+    expect(matrix.roles).toHaveLength(9);
+    for (const role of matrix.roles) {
+      if (role.locked) {
+        expect(role.permissions).toHaveLength(matrix.permissions.length);
+      }
+    }
+    expect(matrix.roles.find((role) => role.code === "admin")).toMatchObject({ scope: "global", locked: true });
+    expect(matrix.roles.find((role) => role.code === "contest_judge")).toMatchObject({ scope: "contest", locked: false });
+  });
+
+  it("denies a session without role.permission.manage", async () => {
+    const client = createMockAdapter({ currentUser: mockUser });
+    await expect(client.admin.rolePermissions()).rejects.toMatchObject({ code: "auth.forbidden", status: 403 });
+    await expect(client.admin.updateRolePermissions("author", { permissions: [], reason: "x" })).rejects.toMatchObject({
+      code: "auth.forbidden",
+      status: 403,
+    });
+  });
+
+  it("replaces one role's permission set and audits the change", async () => {
+    const admin = createMockAdapter({ currentUser: mockAdminUser });
+    const updated = await admin.admin.updateRolePermissions("reviewer", {
+      permissions: ["problem.review", "problem.publish", "problem.manage_all"],
+      reason: "cover the review queue end to end",
+    });
+
+    expect(updated).toMatchObject({ code: "reviewer", scope: "global", locked: false });
+    expect(updated.permissions).toEqual(expect.arrayContaining(["problem.review", "problem.publish", "problem.manage_all"]));
+
+    const events = await admin.admin.audit.list({ action: "role.permissions.updated" });
+    const event = events.items.find((item) => item.metadata?.role === "reviewer");
+    expect(event).toBeDefined();
+    expect(event?.objectType).toBe("role");
+    expect(event?.reason).toBe("cover the review queue end to end");
+    expect(JSON.parse(String(event?.metadata?.before))).toEqual(["problem.review", "problem.publish"]);
+    expect(JSON.parse(String(event?.metadata?.after))).toEqual(
+      expect.arrayContaining(["problem.review", "problem.publish", "problem.manage_all"]),
+    );
+  });
+
+  it("allows an empty set so a role can be cleared", async () => {
+    const admin = createMockAdapter({ currentUser: mockAdminUser });
+    const updated = await admin.admin.updateRolePermissions("user", { permissions: [], reason: "reset the default role" });
+    expect(updated.permissions).toEqual([]);
+  });
+
+  it("rejects edits that break the directory contract", async () => {
+    const admin = createMockAdapter({ currentUser: mockAdminUser });
+
+    await expect(admin.admin.updateRolePermissions("admin", { permissions: [], reason: "locked" })).rejects.toMatchObject({
+      code: "role.locked",
+      status: 409,
+    });
+    await expect(
+      admin.admin.updateRolePermissions("user", { permissions: ["system.manage"], reason: "too much" }),
+    ).rejects.toMatchObject({ code: "role.permission_not_delegable", status: 400 });
+    await expect(
+      admin.admin.updateRolePermissions("user", { permissions: ["contest.read"], reason: "wrong scope" }),
+    ).rejects.toMatchObject({ code: "role.permission_scope_mismatch", status: 400 });
+    await expect(
+      admin.admin.updateRolePermissions("user", { permissions: ["problem.create"], reason: "   " }),
+    ).rejects.toMatchObject({ code: "role.permission_reason_required", status: 400 });
+    await expect(
+      admin.admin.updateRolePermissions("user", { permissions: ["problem.create", "nope" as never], reason: "unknown" }),
+    ).rejects.toMatchObject({ code: "role.permission_invalid", status: 400 });
+  });
+});

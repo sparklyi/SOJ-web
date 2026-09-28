@@ -30,8 +30,12 @@ import type {
   RejudgeBatchItemResponse,
   RejudgeBatchPageResponse,
   RejudgeBatchResponse,
+  PermissionSpecResponse,
   RoleAssignmentResponse,
   RoleGrantRequest,
+  RolePermissionMatrixResponse,
+  RolePermissionResponse,
+  RolePermissionUpdateRequest,
   RoleRevokeRequest,
   UploadedTestcaseSetResponse,
   RefreshRequest,
@@ -62,10 +66,13 @@ import type {
   GlobalRoleAssignment,
   JudgeLanguage,
   PageResult,
+  PermissionCatalogEntry,
   ProblemReviewEvent,
   RejudgeBatch,
   RejudgeBatchDetail,
   RejudgeBatchItem,
+  RolePermissionEntry,
+  RolePermissionMatrix,
   SiteFacts,
 } from "./types";
 import { mapAdminContest, mapContestRegistration, mapContestResponse, mapContestRoleAssignment, mapContestScoreboard } from "./contest-mappers";
@@ -147,6 +154,31 @@ function mapGlobalRoleAssignment(input: RoleAssignmentResponse): GlobalRoleAssig
   };
   if (input.granted_by != null) assignment.grantedBy = input.granted_by;
   return assignment;
+}
+
+function mapPermissionCatalogEntry(input: PermissionSpecResponse): PermissionCatalogEntry {
+  return {
+    code: input.code,
+    scope: input.scope,
+    delegable: input.delegable,
+    consumer: input.consumer,
+  };
+}
+
+function mapRolePermissionEntry(input: RolePermissionResponse): RolePermissionEntry {
+  return {
+    code: input.code,
+    scope: input.scope,
+    locked: input.locked,
+    permissions: [...input.permissions],
+  };
+}
+
+function mapRolePermissionMatrix(input: RolePermissionMatrixResponse): RolePermissionMatrix {
+  return {
+    permissions: input.permissions.map(mapPermissionCatalogEntry),
+    roles: input.roles.map(mapRolePermissionEntry),
+  };
 }
 
 function mapReviewEvent(input: ProblemReviewEventResponse): ProblemReviewEvent {
@@ -751,6 +783,22 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
           });
           return { items: data.items.map(mapAuditEvent), total: data.total };
         },
+      },
+      rolePermissions: async (): Promise<RolePermissionMatrix> => {
+        const data = await request<RolePermissionMatrixResponse>("/api/v1/admin/roles", {
+          accessToken: options.accessToken,
+        });
+        return mapRolePermissionMatrix(data);
+      },
+      updateRolePermissions: async (role, input): Promise<RolePermissionEntry> => {
+        const body: RolePermissionUpdateRequest = { permissions: input.permissions, reason: input.reason };
+        const data = await request<RolePermissionResponse>(`/api/v1/admin/roles/${role}/permissions`, {
+          accessToken: options.accessToken,
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        return mapRolePermissionEntry(data);
       },
     },
   };

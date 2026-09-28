@@ -450,6 +450,37 @@ export type GlobalRoleAssignment = {
   grantedAt: string;
 };
 
+/** `global` permissions may only be held by global roles, `contest` ones by contest roles. */
+export type PermissionScope = "global" | "contest";
+
+/** One row of the server-exported permission directory. */
+export type PermissionCatalogEntry = {
+  code: Permission;
+  scope: PermissionScope;
+  /** false = admin/root only; the matrix cannot hand it to a scoped role. */
+  delegable: boolean;
+  consumer: string;
+};
+
+/** One role column of the permission matrix. */
+export type RolePermissionEntry = {
+  code: Role;
+  scope: PermissionScope;
+  /** admin/root always hold every permission and are not editable. */
+  locked: boolean;
+  permissions: Permission[];
+};
+
+export type RolePermissionMatrix = {
+  permissions: PermissionCatalogEntry[];
+  roles: RolePermissionEntry[];
+};
+
+export type UpdateRolePermissionsInput = {
+  permissions: Permission[];
+  reason: string;
+};
+
 export type AdminUserStatus = "active" | "disabled" | "deleted";
 
 export type AdminUser = {
@@ -472,9 +503,10 @@ export type AuditAction =
   | "language.disabled"
   | "problem.archived"
   | "problem.restored"
-  | "contest.archived";
+  | "contest.archived"
+  | "role.permissions.updated";
 
-export type AuditObjectType = "user" | "language" | "problem" | "contest";
+export type AuditObjectType = "user" | "language" | "problem" | "contest" | "role";
 
 export type AuditEvent = {
   id: number;
@@ -482,7 +514,8 @@ export type AuditEvent = {
   actorUsername?: string;
   action: AuditAction;
   objectType: AuditObjectType;
-  objectId: number;
+  /** A role has no numeric id: role events carry null and put the code in metadata. */
+  objectId: number | null;
   reason?: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
@@ -588,5 +621,7 @@ export type ApiClient = {
     audit: {
       list: (filter?: AuditEventFilter) => Promise<PageResult<AuditEvent>>;
     };
+    rolePermissions: () => Promise<RolePermissionMatrix>;
+    updateRolePermissions: (role: Role, input: UpdateRolePermissionsInput) => Promise<RolePermissionEntry>;
   };
 };

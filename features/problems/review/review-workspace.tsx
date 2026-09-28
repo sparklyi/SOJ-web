@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createBrowserApiClient } from "@/lib/api/client";
 import type { AuthoringProblem, ProblemReviewEvent, ReviewDecision } from "@/lib/api/types";
+import { canDecideReview, gatePermissions } from "@/lib/auth/gates";
 import { problemDifficultyLabelKey, problemVisibilityLabelKey } from "@/lib/domain/problem";
 import type { MessageKey } from "@/lib/i18n/messages";
 import type { Translator } from "@/lib/i18n/translate";
@@ -27,7 +28,7 @@ export function ReviewWorkspace() {
 
   return (
     <PageShell title={t("review.title")} description={t("review.description")}>
-      <PermissionGate anyOf={["problem.review", "problem.manage_all"]}>
+      <PermissionGate anyOf={gatePermissions["problem.review.queue"]}>
         <ReviewQueue />
       </PermissionGate>
     </PageShell>
@@ -36,7 +37,7 @@ export function ReviewWorkspace() {
 
 function ReviewQueue() {
   const { t } = useI18n();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const [state, setState] = useState<QueueState>({ status: "loading" });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [eventState, setEventState] = useState<{ problemId: number; events: ProblemReviewEvent[] } | null>(null);
@@ -128,6 +129,10 @@ function ReviewQueue() {
 
   const selected = state.problems.find((problem) => problem.id === selectedId) ?? null;
   const isOwnProblem = Boolean(selected && user && selected.ownerUserId === user.id);
+  // The backend's `CanDecideReview` needs `review` and `publish` together (and
+  // forbids self-review). A session holding only `review` may read the queue but
+  // must never see a clickable decision.
+  const canDecide = canDecideReview((permission) => can(permission));
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
@@ -190,7 +195,7 @@ function ReviewQueue() {
               <div className="mt-5 grid gap-3 border-t border-soj-line/70 pt-5">
                 {isOwnProblem ? (
                   <p className="text-sm text-soj-warning">{t("review.selfReviewBlocked")}</p>
-                ) : (
+                ) : canDecide ? (
                   <>
                     <Textarea
                       name="review-comment"
@@ -209,7 +214,7 @@ function ReviewQueue() {
                       </Button>
                     </div>
                   </>
-                )}
+                ) : null}
                 {feedback ? (
                   <p className={feedback.tone === "danger" ? "text-sm text-soj-danger" : "text-sm text-soj-success"}>{feedback.message}</p>
                 ) : null}

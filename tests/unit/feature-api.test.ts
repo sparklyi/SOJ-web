@@ -32,7 +32,7 @@ describe("feature api modules", () => {
           avatar_url: null,
           bio: null,
           roles: ["user"],
-          permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
+          permissions: [],
           status: "active",
           created_at: "2026-07-07T10:00:00Z",
           updated_at: "2026-07-07T10:00:00Z",

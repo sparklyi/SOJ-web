@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { canOpenAdmin } from "@/features/admin/modules";
+import { canAccessAuthoring, canViewReviewQueue } from "@/lib/auth/gates";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -44,12 +45,14 @@ export function TopNav() {
   const { localize, t } = useI18n();
   const authenticatedUser = status === "authenticated" ? user : null;
   const isAuthenticated = authenticatedUser !== null;
-  const canOpenAuthoring = can("problem.create") || can("problem.review") || can("problem.manage_all");
-  const canOpenReview = can("problem.review") || can("problem.manage_all");
+  const canOpenAuthoring = canAccessAuthoring((permission) => can(permission));
+  const canOpenReview = canViewReviewQueue((permission) => can(permission));
   // Only the globally held capabilities appear here. A contest-scoped judge or
   // manager reaches rejudge from the contest page instead, because the session
-  // cannot enumerate contest assignments.
-  const canOpenRejudge = can("submission.rejudge") || can("problem.manage_all");
+  // cannot enumerate contest assignments. The global rejudge console is gated
+  // on `submission.rejudge` alone; problem-target rejudge no longer accepts the
+  // authoring `problem.manage_all` combination.
+  const canOpenRejudge = can("submission.rejudge");
   const canOpenAdminConsole = canOpenAdmin((permission) => can(permission));
   const visibleItems = [
     ...navItems,

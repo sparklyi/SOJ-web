@@ -960,7 +960,7 @@ describe("http adapter", () => {
         handle: "ada",
         displayName: "ada",
         roles: ["user"],
-        permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
+        permissions: [],
       },
     });
     expect(Date.parse(session.expiresAt)).toBeGreaterThan(Date.now());
@@ -988,7 +988,7 @@ describe("http adapter", () => {
       handle: "grace",
       displayName: "grace",
       roles: ["user"],
-        permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
+        permissions: [],
     });
   });
 
@@ -1029,7 +1029,7 @@ describe("http adapter", () => {
       handle: "lin",
       displayName: "lin",
       roles: ["user"],
-        permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
+        permissions: [],
     });
   });
 
@@ -1062,6 +1062,57 @@ describe("http adapter", () => {
       body: JSON.stringify({ refresh_token: "refresh-token" }),
     });
   });
+
+  it("loads and updates the role permission matrix", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const path = String(url).replace("http://localhost:8080", "");
+      const body = typeof init?.body === "string" ? JSON.parse(init.body) : null;
+      if (path === "/api/v1/admin/roles" && (init?.method ?? "GET") === "GET") {
+        return Response.json({
+          data: {
+            permissions: [
+              { code: "problem.create", scope: "global", delegable: true, consumer: "problem.RBACProblemPolicy.CanCreate" },
+              { code: "contest.read", scope: "contest", delegable: true, consumer: "contest.ContestReader" },
+            ],
+            roles: [
+              { code: "author", scope: "global", locked: false, permissions: ["problem.create"] },
+              { code: "admin", scope: "global", locked: true, permissions: ["problem.create", "contest.read"] },
+            ],
+          },
+          error: null,
+        });
+      }
+      if (path === "/api/v1/admin/roles/author/permissions" && init?.method === "PUT") {
+        expect(body).toEqual({ permissions: ["problem.create"], reason: "cleanup" });
+        return Response.json({ data: { code: "author", scope: "global", locked: false, permissions: body.permissions }, error: null });
+      }
+      return Response.json({ data: null, error: { code: "not_found", message: "missing mock" } }, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createHttpAdapter({ accessToken: "admin-token" });
+
+    const matrix = await client.admin.rolePermissions();
+    const updated = await client.admin.updateRolePermissions("author", { permissions: ["problem.create"], reason: "cleanup" });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "http://localhost:8080/api/v1/admin/roles", {
+      cache: "no-store",
+      headers: { Authorization: "Bearer admin-token" },
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "http://localhost:8080/api/v1/admin/roles/author/permissions", {
+      cache: "no-store",
+      method: "PUT",
+      headers: { Authorization: "Bearer admin-token", "content-type": "application/json" },
+      body: JSON.stringify({ permissions: ["problem.create"], reason: "cleanup" }),
+    });
+    expect(matrix.permissions[0]).toEqual({
+      code: "problem.create",
+      scope: "global",
+      delegable: true,
+      consumer: "problem.RBACProblemPolicy.CanCreate",
+    });
+    expect(matrix.roles[1]).toMatchObject({ code: "admin", locked: true });
+    expect(updated.permissions).toEqual(["problem.create"]);
+  });
 });
 
 function authResponse(overrides: { id: number; username: string }) {
@@ -1081,7 +1132,7 @@ function userResponse(overrides: { id: number; username: string }) {
     avatar_url: null,
     bio: null,
     roles: ["user"],
-        permissions: ["problem.read", "submission.create", "submission.read_own", "contest.join"],
+        permissions: [],
     status: "active",
     created_at: "2026-07-07T10:00:00Z",
     updated_at: "2026-07-07T10:00:00Z",

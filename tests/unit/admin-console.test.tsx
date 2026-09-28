@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppProviders } from "@/components/providers/app-providers";
 import { AdminOverview } from "@/features/admin/console/admin-overview";
 import { AdminShell } from "@/features/admin/console/admin-shell";
+import { AuditLog } from "@/features/admin/audit/audit-log";
 import { LanguageAdmin } from "@/features/admin/languages/language-admin";
 import { ProblemAdmin } from "@/features/admin/problems/problem-admin";
 import { UserRoleManager } from "@/features/admin/user-role-manager";
@@ -121,5 +122,18 @@ describe("user administration", () => {
     const grantButtons = within(dialog).getAllByRole("button", { name: "Grant" });
     expect(grantButtons.length).toBeGreaterThan(0);
     for (const button of grantButtons) expect(button).toBeDisabled();
+  });
+});
+
+describe("audit trail", () => {
+  beforeEach(() => window.localStorage.clear());
+  afterEach(() => window.localStorage.clear());
+
+  it("renders a role permission update with the role code and its diff", async () => {
+    renderWithSession(<AuditLog />, mockAdminUser);
+
+    await waitFor(() => expect(screen.getByText("Role permissions updated")).toBeVisible());
+    expect(screen.getByText("Role · author")).toBeVisible();
+    expect(screen.getByText(/problem\.edit_own/)).toBeVisible();
   });
 });

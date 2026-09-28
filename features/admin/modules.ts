@@ -1,7 +1,7 @@
 import type { Permission } from "@/lib/auth/permissions";
 import type { MessageKey } from "@/lib/i18n/messages";
 
-export type AdminModuleKey = "languages" | "problems" | "contests" | "users" | "audit";
+export type AdminModuleKey = "languages" | "problems" | "contests" | "users" | "roles" | "audit";
 
 export type AdminModule = {
   key: AdminModuleKey;
@@ -48,9 +48,16 @@ export const adminModules: readonly AdminModule[] = [
     descriptionKey: "admin.overview.users",
   },
   {
+    key: "roles",
+    path: "/admin/roles",
+    permission: "role.permission.manage",
+    labelKey: "admin.tab.roles",
+    descriptionKey: "admin.overview.roles",
+  },
+  {
     key: "audit",
     path: "/admin/audit",
-    permission: "system.manage",
+    permission: "audit.read",
     labelKey: "admin.tab.audit",
     descriptionKey: "admin.overview.audit",
   },

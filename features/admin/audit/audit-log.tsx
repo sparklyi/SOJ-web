@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { PermissionGate } from "@/components/auth/permission-gate";
 import { useI18n } from "@/components/providers/i18n-provider";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { Table, TableCell, TableHead, TableHeaderCell, TableRow } from "@/compon
 import { createBrowserApiClient } from "@/lib/api/client";
 import type { AuditAction, AuditEvent, AuditObjectType } from "@/lib/api/types";
 import type { MessageKey } from "@/lib/i18n/messages";
+import type { Translator } from "@/lib/i18n/translate";
 import { listAuditEvents } from "./api";
 
 type ListState =
@@ -31,7 +33,7 @@ type FilterState = {
 
 const emptyFilter: FilterState = { objectType: "all", objectId: "", actorId: "", action: "all" };
 
-const objectTypes: AuditObjectType[] = ["user", "language", "problem", "contest"];
+const objectTypes: AuditObjectType[] = ["user", "language", "problem", "contest", "role"];
 const actions: AuditAction[] = [
   "user.role.granted",
   "user.role.revoked",
@@ -43,13 +45,14 @@ const actions: AuditAction[] = [
   "problem.archived",
   "problem.restored",
   "contest.archived",
+  "role.permissions.updated",
 ];
 
 export function AuditLog() {
   const { t } = useI18n();
 
   return (
-    <PermissionGate anyOf={["system.manage"]}>
+    <PermissionGate anyOf={["audit.read"]}>
       <Panel variant="flush" aria-label={t("admin.audit.title")}>
         <PanelHeader title={t("admin.audit.title")} description={t("admin.audit.description")} />
         <PanelBody className="p-0">
@@ -199,7 +202,10 @@ function AuditBoard() {
                   {event.actorUsername ?? (event.actorUserId != null ? `#${event.actorUserId}` : "—")}
                 </TableCell>
                 <TableCell className="text-xs text-soj-text">{t(actionKey(event.action))}</TableCell>
-                <TableCell className="font-mono text-xs text-soj-muted">{objectLabel(event, t)}</TableCell>
+                <TableCell className="font-mono text-xs text-soj-muted">
+                  {objectLabel(event, t)}
+                  <PermissionDiff event={event} t={t} />
+                </TableCell>
                 <TableCell className="max-w-[280px] truncate text-xs text-soj-muted">{event.reason ?? "—"}</TableCell>
               </TableRow>
             ))}
@@ -230,10 +236,59 @@ function actionKey(action: AuditAction): MessageKey {
   return `admin.action.${action}` as MessageKey;
 }
 
-function objectLabel(event: AuditEvent, t: (key: MessageKey) => string): string {
+function objectLabel(event: AuditEvent, t: Translator): string {
   const type = t(objectTypeKey(event.objectType));
-  const role = event.metadata?.role;
-  return typeof role === "string" ? `${type} #${event.objectId} · ${role}` : `${type} #${event.objectId}`;
+  const role = typeof event.metadata?.role === "string" ? event.metadata.role : undefined;
+  if (event.objectType === "role") {
+    return role ? `${type} · ${role}` : type;
+  }
+  const id = event.objectId != null ? `#${event.objectId}` : "";
+  return role ? `${type} ${id} · ${role}` : `${type} ${id}`;
+}
+
+/**
+ * `role.permissions.updated` carries the full before/after sets in metadata as
+ * JSON-encoded string arrays; the row renders the added and removed entries.
+ */
+function PermissionDiff({ event, t }: { event: AuditEvent; t: Translator }) {
+  if (event.action !== "role.permissions.updated") return null;
+  const { added, removed } = permissionDiff(event);
+  if (added.length === 0 && removed.length === 0) return null;
+
+  return (
+    <span className="mt-1 flex flex-wrap gap-1">
+      {added.map((permission) => (
+        <Badge key={`added-${permission}`} tone="success" size="sm" title={t("admin.audit.added")}>
+          +{permission}
+        </Badge>
+      ))}
+      {removed.map((permission) => (
+        <Badge key={`removed-${permission}`} tone="danger" size="sm" title={t("admin.audit.removed")}>
+          −{permission}
+        </Badge>
+      ))}
+    </span>
+  );
+}
+
+function parseStringArray(value: unknown): string[] {
+  if (typeof value !== "string" || value.length === 0) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/** The backend writes the change as JSON-encoded `before`/`after` string arrays. */
+function permissionDiff(event: AuditEvent): { added: string[]; removed: string[] } {
+  const before = parseStringArray(event.metadata?.before);
+  const after = parseStringArray(event.metadata?.after);
+  return {
+    added: after.filter((permission) => !before.includes(permission)),
+    removed: before.filter((permission) => !after.includes(permission)),
+  };
 }
 
 function formatTime(iso: string): string {
