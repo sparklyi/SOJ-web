@@ -4,6 +4,7 @@ import { authMessages } from "./auth";
 import { contestMessages } from "./contests";
 import { coreMessages } from "./core";
 import { homeMessages } from "./home";
+import { manageMessages } from "./manage";
 import { playgroundMessages } from "./playground";
 import { problemMessages } from "./problems";
 import { rbacMessages } from "./rbac";
@@ -22,6 +23,7 @@ export const messages = {
   ...submissionMessages,
   ...authoringMessages,
   ...adminMessages,
+  ...manageMessages,
   ...rbacMessages,
   ...systemMessages,
 } as const;

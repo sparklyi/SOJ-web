@@ -127,27 +127,29 @@ describe("navigation permissions", () => {
     );
   }
 
-  it("keeps every management entry hidden from a plain account", async () => {
+  it("keeps the workbench and admin entries hidden from a plain account", async () => {
     renderNav(mockUser);
 
     await waitFor(() => expect(screen.getByRole("navigation", { name: "Primary navigation" })).toBeVisible());
-    expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Rejudge" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Workbench" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Admin" })).not.toBeInTheDocument();
   });
 
-  it("shows review but not rejudge to a reviewer", async () => {
+  it("shows a single workbench entry to a reviewer", async () => {
     renderNav(mockReviewerUser);
 
-    await waitFor(() => expect(screen.getByRole("link", { name: "Review" })).toBeVisible());
+    await waitFor(() => expect(screen.getByRole("link", { name: "Workbench" })).toBeVisible());
+    // 审核 / 重测不再是独立导航项；入口都收进工作台落地页的卡片。
+    expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Rejudge" })).not.toBeInTheDocument();
   });
 
-  it("shows the rejudge console to an operator", async () => {
+  it("shows a single workbench entry to an operator", async () => {
     renderNav(mockOperatorUser);
 
-    await waitFor(() => expect(screen.getByRole("link", { name: "Rejudge" })).toBeVisible());
+    await waitFor(() => expect(screen.getByRole("link", { name: "Workbench" })).toBeVisible());
     expect(screen.queryByRole("link", { name: "Review" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Rejudge" })).not.toBeInTheDocument();
   });
 });
 

@@ -132,8 +132,9 @@ describe("audit trail", () => {
   it("renders a role permission update with the role code and its diff", async () => {
     renderWithSession(<AuditLog />, mockAdminUser);
 
-    await waitFor(() => expect(screen.getByText("Role permissions updated")).toBeVisible());
-    expect(screen.getByText("Role · author")).toBeVisible();
+    // 等待行内独有的文本：筛选下拉的 <option> 在数据加载前就带着同一个动作
+    // 标签，用动作标签当加载信号会让断言与异步列表加载赛跑。
+    await waitFor(() => expect(screen.getByText("Role · author")).toBeVisible());
     expect(screen.getByText(/problem\.edit_own/)).toBeVisible();
   });
 });

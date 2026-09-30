@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { canOpenAdmin } from "@/features/admin/modules";
-import { canAccessAuthoring, canViewReviewQueue } from "@/lib/auth/gates";
+import { canOpenManage } from "@/features/manage/modules";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { LocalizedLink } from "@/components/i18n/localized-link";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -45,20 +45,13 @@ export function TopNav() {
   const { localize, t } = useI18n();
   const authenticatedUser = status === "authenticated" ? user : null;
   const isAuthenticated = authenticatedUser !== null;
-  const canOpenAuthoring = canAccessAuthoring((permission) => can(permission));
-  const canOpenReview = canViewReviewQueue((permission) => can(permission));
-  // Only the globally held capabilities appear here. A contest-scoped judge or
-  // manager reaches rejudge from the contest page instead, because the session
-  // cannot enumerate contest assignments. The global rejudge console is gated
-  // on `submission.rejudge` alone; problem-target rejudge no longer accepts the
-  // authoring `problem.manage_all` combination.
-  const canOpenRejudge = can("submission.rejudge");
+  const canOpenWorkbench = canOpenManage((permission) => can(permission));
   const canOpenAdminConsole = canOpenAdmin((permission) => can(permission));
+  // 出题 / 审核 / 重测收敛为一条工作台入口：三张卡片由 /manage 按注册表权限过滤。
+  // 比赛内裁决与管理仍留在比赛页——contest-scoped 角色无法在全局导航里枚举。
   const visibleItems = [
     ...navItems,
-    ...(canOpenAuthoring ? [{ href: "/manage/problems", labelKey: "nav.author" as const }] : []),
-    ...(canOpenReview ? [{ href: "/manage/reviews", labelKey: "nav.reviews" as const }] : []),
-    ...(canOpenRejudge ? [{ href: "/manage/rejudge", labelKey: "nav.rejudge" as const }] : []),
+    ...(canOpenWorkbench ? [{ href: "/manage", labelKey: "nav.workbench" as const }] : []),
     ...(canOpenAdminConsole ? [{ href: "/admin", labelKey: "nav.admin" as const }] : []),
   ];
   const currentPathname = unlocalizePath(pathname);
@@ -166,8 +159,7 @@ export function TopNav() {
                 <LocalizedLink className="rounded-soj-sm px-3 py-2 text-sm text-soj-muted transition hover:bg-soj-surface hover:text-soj-text" href="/settings">
                   {t("nav.account.settings")}
                 </LocalizedLink>
-                {/* 管理入口不再在这里重复一遍：出题 / 审核 / 重测 / 用户管理
-                    已经在主导航里，而且那边的命名与这里还不一致（「出题」对「管理题目」）。
+                {/* 工作台与后台入口不再在这里重复一遍：主导航已经收敛出「工作台 / 后台」。
                     账号菜单只放「我的东西」——我的账户、我的提交、设置、退出。 */}
                 <button
                   type="button"

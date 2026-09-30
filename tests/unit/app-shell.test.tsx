@@ -43,7 +43,7 @@ describe("app shell", () => {
     expect(screen.getByRole("link", { name: "Login" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Register" })).toBeVisible();
     expect(screen.queryByText("Lin Chen")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Author" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Workbench" })).not.toBeInTheDocument();
   });
 
   it("keeps author navigation hidden for a saved user session without the capability", async () => {
@@ -58,10 +58,10 @@ describe("app shell", () => {
     );
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Open account menu for Lin Chen" })).toBeVisible());
-    expect(screen.queryByRole("link", { name: "Author" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Workbench" })).not.toBeInTheDocument();
   });
 
-  it("exposes author navigation for a validated session with problem.create", async () => {
+  it("exposes the workbench navigation for a validated session with problem.create", async () => {
     saveSession(window.localStorage, createMockSession(mockAuthorUser));
 
     render(
@@ -73,6 +73,6 @@ describe("app shell", () => {
     );
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Open account menu for Lin Chen" })).toBeVisible());
-    expect(screen.getByRole("link", { name: "Author" })).toHaveAttribute("href", "/en/manage/problems");
+    expect(screen.getByRole("link", { name: "Workbench" })).toHaveAttribute("href", "/en/manage");
   });
 });

@@ -12,8 +12,6 @@ export const rbacMessages = {
   "gate.goHome": { en: "Back to home", "zh-CN": "返回首页" },
   "gate.signIn": { en: "Sign in", "zh-CN": "去登录" },
 
-  "nav.reviews": { en: "Review", "zh-CN": "审核" },
-  "nav.rejudge": { en: "Rejudge", "zh-CN": "重测" },
   "nav.adminUsers": { en: "Users", "zh-CN": "用户管理" },
   "nav.contestRoles": { en: "Contest roles", "zh-CN": "赛事角色" },
   "nav.contestRejudge": { en: "Rejudge contest", "zh-CN": "重测本场比赛" },
