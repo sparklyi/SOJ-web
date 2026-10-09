@@ -1,5 +1,5 @@
 import { ApiError } from "./errors";
-import { request } from "./http-client";
+import { request, type RequestOptions } from "./http-client";
 import type {
   AdminUserUpdateRequest,
   AuditEventPageResponse,
@@ -240,6 +240,27 @@ function mapAuthSession(input: AuthResponse, now: Date = new Date()): AuthSessio
   };
 }
 
+// The catalog and authoring views filter/count a complete list locally.
+// ponytail: O(n) loading; move those views to server filtering/pagination if the catalog outgrows this model.
+async function listProblemPages(accessToken?: RequestOptions["accessToken"], mine = false) {
+  const items: ProblemResponse[] = [];
+  let total = 0;
+  let page = 1;
+  do {
+    const data = await request<PageResponse<ProblemResponse>>("/api/v1/problems", {
+      accessToken,
+      query: { page, page_size: 100, ...(mine ? { mine: true } : {}) },
+    });
+    total = data.total;
+    if (data.items.length === 0 && items.length < total) {
+      throw new ApiError("The problem list ended before all problems were loaded.", "api.incomplete_problem_list", 502);
+    }
+    items.push(...data.items);
+    page += 1;
+  } while (items.length < total);
+  return { items, total };
+}
+
 export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
   return {
     auth: {
@@ -294,13 +315,7 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
     },
     problems: {
       list: async () => {
-        const data = await request<PageResponse<ProblemResponse>>("/api/v1/problems", {
-          accessToken: options.accessToken,
-          query: {
-            page: 1,
-            page_size: 100,
-          },
-        });
+        const data = await listProblemPages(options.accessToken);
         const items = data.items.map(mapProblemSummary);
         return { items, total: data.total };
       },
@@ -316,10 +331,7 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
         return mapProblemDetail(problem, statement);
       },
       listMine: async () => {
-        const data = await request<PageResponse<ProblemResponse>>("/api/v1/problems", {
-          accessToken: options.accessToken,
-          query: { page: 1, page_size: 100, mine: true },
-        });
+        const data = await listProblemPages(options.accessToken, true);
         return { items: data.items.map(mapAuthoringProblem), total: data.total };
       },
       create: async (input) => {
