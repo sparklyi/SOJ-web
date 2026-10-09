@@ -240,27 +240,6 @@ function mapAuthSession(input: AuthResponse, now: Date = new Date()): AuthSessio
   };
 }
 
-// The catalog and authoring views filter/count a complete list locally.
-// ponytail: O(n) loading; move those views to server filtering/pagination if the catalog outgrows this model.
-async function listProblemPages(accessToken?: RequestOptions["accessToken"], mine = false) {
-  const items: ProblemResponse[] = [];
-  let total = 0;
-  let page = 1;
-  do {
-    const data = await request<PageResponse<ProblemResponse>>("/api/v1/problems", {
-      accessToken,
-      query: { page, page_size: 100, ...(mine ? { mine: true } : {}) },
-    });
-    total = data.total;
-    if (data.items.length === 0 && items.length < total) {
-      throw new ApiError("The problem list ended before all problems were loaded.", "api.incomplete_problem_list", 502);
-    }
-    items.push(...data.items);
-    page += 1;
-  } while (items.length < total);
-  return { items, total };
-}
-
 export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
   return {
     auth: {
@@ -831,4 +810,25 @@ function contestWriteRequest(input: AdminContestInput): ContestWriteRequest {
     body.problems = input.problems.map((problem) => ({ problem_id: problem.problemId, alias: problem.alias }));
   }
   return body;
+}
+
+// The catalog and authoring views filter/count a complete list locally.
+// ponytail: O(n) loading; move those views to server filtering/pagination if the catalog outgrows this model.
+async function listProblemPages(accessToken?: RequestOptions["accessToken"], mine = false) {
+  const items: ProblemResponse[] = [];
+  let total = 0;
+  let page = 1;
+  do {
+    const data = await request<PageResponse<ProblemResponse>>("/api/v1/problems", {
+      accessToken,
+      query: { page, page_size: 100, ...(mine ? { mine: true } : {}) },
+    });
+    total = data.total;
+    if (data.items.length === 0 && items.length < total) {
+      throw new ApiError("The problem list ended before all problems were loaded.", "api.incomplete_problem_list", 502);
+    }
+    items.push(...data.items);
+    page += 1;
+  } while (items.length < total);
+  return { items, total };
 }
