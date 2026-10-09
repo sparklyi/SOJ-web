@@ -73,44 +73,12 @@ describe("feature api modules", () => {
     await expect(getProblem(404, client)).rejects.toMatchObject({ code: "not_found", status: 404 });
   });
 
-  it("filters problems by tag", async () => {
-    const apiClient = {
-      ...client,
-      problems: {
-        ...client.problems,
-        list: vi.fn(async () => ({
-          items: [
-            {
-              id: 1,
-              slug: "alpha",
-              title: "Alpha",
-              difficulty: "easy" as const,
-              tags: ["math"],
-              status: "todo" as const,
-              acceptedCount: 0,
-              submissionCount: 0,
-            },
-            {
-              id: 2,
-              slug: "beta",
-              title: "Beta",
-              difficulty: "medium" as const,
-              tags: ["dp"],
-              status: "accepted" as const,
-              acceptedCount: 4,
-              submissionCount: 5,
-            },
-          ],
-          total: 2,
-        })),
-      },
-    };
-
-    const problems = await listProblems({ tag: "math" }, apiClient);
-
-    expect(problems.items).toHaveLength(1);
-    expect(problems.items[0]?.slug).toBe("alpha");
-    expect(problems.total).toBe(1);
+  it("passes filters and pagination to the adapter without replacing its total", async () => {
+    const list = vi.fn(async () => ({ items: [], total: 150 }));
+    const apiClient = { ...client, problems: { ...client.problems, list } };
+    const result = await listProblems({ tag: "math", page: 2, pageSize: 20 }, apiClient);
+    expect(list).toHaveBeenCalledWith(expect.objectContaining({ tag: "math", page: 2, pageSize: 20 }));
+    expect(result).toEqual({ items: [], total: 150 });
   });
 
   it("returns submissions with display state", async () => {

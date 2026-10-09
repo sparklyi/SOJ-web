@@ -64,7 +64,7 @@ describe("http adapter", () => {
   it("maps a backend problem page to problem summaries with inline counts", async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request) => {
       const path = String(url).replace("http://localhost:8080", "");
-      if (path === "/api/v1/problems?page=1&page_size=100") {
+      if (path === "/api/v1/problems?page=1&page_size=20") {
         return Response.json({
           data: {
             items: [
@@ -104,7 +104,7 @@ describe("http adapter", () => {
 
     const problems = await createHttpAdapter().problems.list();
 
-    expect(requestedUrls(fetchMock)).toEqual(["http://localhost:8080/api/v1/problems?page=1&page_size=100"]);
+    expect(requestedUrls(fetchMock)).toEqual(["http://localhost:8080/api/v1/problems?page=1&page_size=20"]);
     expect(problems).toEqual({
       items: [
         {
@@ -159,7 +159,7 @@ describe("http adapter", () => {
       "fetch",
       vi.fn(async (url: string | URL | Request) => {
         const path = String(url).replace("http://localhost:8080", "");
-        if (path === "/api/v1/problems?page=1&page_size=100") {
+        if (path === "/api/v1/problems?page=1&page_size=20") {
           return Response.json({
             data: {
               items: [
@@ -185,7 +185,7 @@ describe("http adapter", () => {
   it("maps the authenticated problem authoring workflow", async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
       const path = String(url).replace("http://localhost:8080", "");
-      if (path === "/api/v1/problems?page=1&page_size=100&mine=true") {
+      if (path === "/api/v1/problems?page=1&page_size=20&mine=true") {
         return Response.json({
           data: { items: [problemResponse({ id: 201, slug: "author-problem", title: "Author Problem", difficulty: "medium", status: "draft" })], total: 1, page: 1, page_size: 100 },
           error: null,

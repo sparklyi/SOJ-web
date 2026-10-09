@@ -85,6 +85,7 @@ import {
 } from "./problem-mappers";
 import { mapRunSummary, mapSubmissionSummary } from "./submission-mappers";
 import { mapAuthSession, mapUser } from "./auth-mappers";
+import { normalizeProblemFilter } from "@/lib/domain/problem";
 
 const LANGUAGE_LIST_PATH = "/api/v1/languages";
 
@@ -273,8 +274,12 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
       },
     },
     problems: {
-      list: async () => {
-        const data = await listProblemPages(options.accessToken);
+      list: async (input) => {
+        const filter = normalizeProblemFilter(input);
+        const data = await request<PageResponse<ProblemResponse>>("/api/v1/problems", {
+          accessToken: options.accessToken,
+          query: { page: filter.page, page_size: filter.pageSize, keyword: filter.query, difficulty: filter.difficulty, tag: filter.tag },
+        });
         const items = data.items.map(mapProblemSummary);
         return { items, total: data.total };
       },
@@ -289,8 +294,12 @@ export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {
         ]);
         return mapProblemDetail(problem, statement);
       },
-      listMine: async () => {
-        const data = await listProblemPages(options.accessToken, true);
+      listMine: async (input) => {
+        const filter = normalizeProblemFilter(input);
+        const data = await request<PageResponse<ProblemResponse>>("/api/v1/problems", {
+          accessToken: options.accessToken,
+          query: { page: filter.page, page_size: filter.pageSize, mine: true },
+        });
         return { items: data.items.map(mapAuthoringProblem), total: data.total };
       },
       create: async (input) => {
@@ -790,25 +799,4 @@ function contestWriteRequest(input: AdminContestInput): ContestWriteRequest {
     body.problems = input.problems.map((problem) => ({ problem_id: problem.problemId, alias: problem.alias }));
   }
   return body;
-}
-
-// The catalog and authoring views filter/count a complete list locally.
-// ponytail: O(n) loading; move those views to server filtering/pagination if the catalog outgrows this model.
-async function listProblemPages(accessToken?: RequestOptions["accessToken"], mine = false) {
-  const items: ProblemResponse[] = [];
-  let total = 0;
-  let page = 1;
-  do {
-    const data = await request<PageResponse<ProblemResponse>>("/api/v1/problems", {
-      accessToken,
-      query: { page, page_size: 100, ...(mine ? { mine: true } : {}) },
-    });
-    total = data.total;
-    if (data.items.length === 0 && items.length < total) {
-      throw new ApiError("The problem list ended before all problems were loaded.", "api.incomplete_problem_list", 502);
-    }
-    items.push(...data.items);
-    page += 1;
-  } while (items.length < total);
-  return { items, total };
 }

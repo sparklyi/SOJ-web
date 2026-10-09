@@ -5,12 +5,10 @@ import type { ProblemSummary } from "@/lib/api/types";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { Table, TableHead, TableHeaderCell, TableRow } from "@/components/ui/table";
-import { formatNumber } from "@/lib/ui/number";
 import { ProblemRow } from "./problem-row";
 
 type ProblemListProps = {
   problems: ProblemSummary[];
-  totalCount: number;
 };
 
 /**
@@ -22,11 +20,9 @@ type ProblemListProps = {
  * 只有四列，而且在 1280 宽度下也不需要横向滚动——列数本身就是一种设计决定：
  * 能放进一屏、并且每一列都参与「要不要做这道题」这个判断的，才留下。
  *
- * 页脚只有一个数字：「筛选后还剩 x / 总数」。
- * 曾经左边还有一个「N 道题目可供练习」——它把同一个数字复述了一遍，
- * 而且读起来像运营文案，删掉之后页脚回到它该有的样子：一行坐标，不是一句话。
+ * 总数及翻页由外层分页组件展示。
  */
-export function ProblemList({ problems, totalCount }: ProblemListProps) {
+export function ProblemList({ problems }: ProblemListProps) {
   const { t, locale } = useI18n();
 
   if (problems.length === 0) {
@@ -50,11 +46,6 @@ export function ProblemList({ problems, totalCount }: ProblemListProps) {
             ))}
           </tbody>
         </Table>
-      </div>
-      <div className="flex items-center justify-end border-t border-soj-line px-4 py-2.5">
-        <span className="font-mono text-xs text-soj-muted">
-          {formatNumber(problems.length, { locale })}/{formatNumber(totalCount, { locale })}
-        </span>
       </div>
     </>
   );

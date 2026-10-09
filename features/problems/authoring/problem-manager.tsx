@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { AuthWall } from "@/components/auth/auth-wall";
 import { LocalizedLink } from "@/components/i18n/localized-link";
@@ -14,18 +15,28 @@ import { createBrowserApiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { AuthoringProblem } from "@/lib/api/types";
 import { publicationStatusMessageKey } from "./publication-status";
+import { parseProblemFilter } from "@/lib/domain/problem";
+import { ProblemPagination } from "../problem-pagination";
 
 type ManagerState =
   | { status: "loading" }
   | { status: "auth" }
   | { status: "forbidden" }
   | { status: "error"; message: string }
-  | { status: "ready"; problems: AuthoringProblem[] };
+  | { status: "ready"; problems: AuthoringProblem[]; total: number };
 
 /** 出题列表：只负责「我拥有哪些题」与入口，建题流程全部在向导里。 */
 export function ProblemManager() {
+  return <Suspense><ProblemManagerContent /></Suspense>;
+}
+
+function ProblemManagerContent() {
   const { status: authStatus } = useAuth();
-  const { t } = useI18n();
+  const { t, localize } = useI18n();
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { page, pageSize } = parseProblemFilter(Object.fromEntries(params.entries()));
   const [state, setState] = useState<ManagerState>({ status: "loading" });
   const viewState: ManagerState = authStatus === "loading" ? { status: "loading" } : authStatus === "anonymous" ? { status: "auth" } : state;
 
@@ -35,8 +46,16 @@ export function ProblemManager() {
 
     async function start() {
       try {
-        const result = await createBrowserApiClient().problems.listMine();
-        if (active) setState({ status: "ready", problems: result.items });
+        setState({ status: "loading" });
+        const result = await createBrowserApiClient().problems.listMine({ page, pageSize });
+        const lastPage = Math.max(1, Math.ceil(result.total / pageSize));
+        if (active && page > lastPage) {
+          const next = new URLSearchParams(params.toString());
+          next.set("page", String(lastPage));
+          router.replace(localize(`${pathname}?${next.toString()}`));
+          return;
+        }
+        if (active) setState({ status: "ready", problems: result.items, total: result.total });
       } catch (cause) {
         if (!active) return;
         if (cause instanceof ApiError && cause.status === 403) {
@@ -51,7 +70,7 @@ export function ProblemManager() {
     return () => {
       active = false;
     };
-  }, [authStatus, t]);
+  }, [authStatus, page, pageSize, params, router, pathname, localize, t]);
 
   return (
     <PageShell>
@@ -83,7 +102,7 @@ export function ProblemManager() {
           <section className="soj-account-panel overflow-hidden" aria-label={t("authoring.ownedProblems")}>
             <div className="flex items-center justify-between border-b border-soj-line/60 px-5 py-4">
               <h2 className="text-xl font-semibold text-soj-text">{t("authoring.ownedProblems")}</h2>
-              <span className="font-mono text-xs text-soj-muted">{viewState.problems.length}</span>
+              <span className="font-mono text-xs text-soj-muted">{viewState.total}</span>
             </div>
             {viewState.problems.length > 0 ? (
               <div className="divide-y divide-soj-line/50">
@@ -103,6 +122,7 @@ export function ProblemManager() {
             ) : (
               <p className="px-5 py-8 text-sm text-soj-muted">{t("authoring.noAuthoredProblems")}</p>
             )}
+            <ProblemPagination page={page} pageSize={pageSize} total={viewState.total} />
           </section>
         ) : null}
       </div>
@@ -111,7 +131,7 @@ export function ProblemManager() {
 }
 
 function managerStatusLabel(t: ReturnType<typeof useI18n>["t"], state: ManagerState) {
-  if (state.status === "ready") return t("authoring.ownedCount", { count: state.problems.length });
+  if (state.status === "ready") return t("authoring.ownedCount", { count: state.total });
   if (state.status === "loading") return t("authoring.loading");
   if (state.status === "auth") return t("authoring.authRequired");
   if (state.status === "forbidden") return t("authoring.accessRequired");

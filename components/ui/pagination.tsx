@@ -41,7 +41,7 @@ export function Pagination({
   const items = totalPages > 1 ? pageItems(page, totalPages) : [];
 
   return (
-    <div className={cn("grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-t border-soj-line px-4 py-3", className)}>
+    <div className={cn("grid grid-cols-2 items-center gap-2 border-t border-soj-line px-4 py-3 sm:grid-cols-[1fr_auto_1fr]", className)}>
       <div className="flex items-center">
         {onPageSizeChange ? (
           <label className="flex items-center gap-2 text-xs text-soj-muted">
@@ -61,7 +61,7 @@ export function Pagination({
           </label>
         ) : null}
       </div>
-      <nav aria-label={t("pagination.label")} className="flex min-w-0 items-center justify-center gap-1 overflow-x-auto">
+      <nav aria-label={t("pagination.label")} className="col-span-2 row-start-2 flex min-w-0 items-center justify-center gap-1 overflow-x-auto sm:col-span-1 sm:row-auto">
         {totalPages > 1 ? (
           <>
             <Button
@@ -108,7 +108,7 @@ export function Pagination({
           </>
         ) : null}
       </nav>
-      <span className="justify-self-end text-xs text-soj-muted">{t("pagination.total", { total })}</span>
+      <span className="col-start-2 row-start-1 justify-self-end text-xs text-soj-muted sm:col-auto sm:row-auto">{t("pagination.total", { total })}</span>
     </div>
   );
 }
