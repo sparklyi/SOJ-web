@@ -1,4 +1,5 @@
 import { ApiError, notFound } from "./errors";
+import { matchesProblemFilter, normalizeProblemFilter } from "@/lib/domain/problem";
 import { createMockSession } from "@/lib/auth/session";
 import { buildAcmScoreboard } from "@/lib/domain/scoreboard";
 import {
@@ -216,18 +217,20 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
     },
     problems: {
       // 站点策略与后端 SOJ 一致：publish 的公开题对匿名可读；私有/草稿只有作者与管理员可见（由 mock 数据本身表达）。
-      list: async () => {
-        return { items: mockProblems, total: mockProblems.length };
+      list: async (input) => {
+        const filter = normalizeProblemFilter(input);
+        return paginate(mockProblems.filter((problem) => matchesProblemFilter(problem, filter)), filter.page, filter.pageSize);
       },
       get: async (id) => {
         const problem = mockProblems.find((item) => item.id === id);
         if (!problem) throw notFound("Problem", id);
         return problem;
       },
-      listMine: async () => {
+      listMine: async (input) => {
         const actor = requireAuthoringAccess(currentUser);
         const items = authoredProblems.filter((problem) => problem.ownerUserId === actor.id);
-        return { items, total: items.length };
+        const filter = normalizeProblemFilter(input);
+        return paginate(items, filter.page, filter.pageSize);
       },
       create: async (input) => {
         const actor = requireProblemAuthorAccess(currentUser);

@@ -69,6 +69,7 @@ export const authMessages = {
   "auth.me.locked": { en: "Locked", "zh-CN": "锁定" },
   "auth.me.role": { en: "Role", "zh-CN": "角色" },
   "auth.me.progress": { en: "Progress", "zh-CN": "练习进度" },
+  "auth.me.progressScope": { en: "Showing {count} recent problems out of {total} in the catalog.", "zh-CN": "展示最近 {count} 道题目的进度，题库共 {total} 道题。" },
   "auth.me.progressSummary": { en: "Problem progress", "zh-CN": "题目进度" },
   "auth.me.openProblemSet": { en: "Browse problems", "zh-CN": "查看题目集" },
   "auth.me.progressEmptyTitle": { en: "No practice records yet", "zh-CN": "还没有练习记录" },

@@ -6,8 +6,7 @@ test("problem list is public and renders filters and data rows", async ({ page }
 
   await expect(page.getByRole("heading", { name: "Problem set" })).toBeVisible();
   await expect(page.getByLabel("Search problems")).toBeVisible();
-  // 难度筛选从下拉框改成了带计数的按钮组：按钮上的数字就是难度分布，
-  // 点它即筛选。契约因此从 combobox 换成 group + button，这里跟着改。
+  // 难度按钮驱动服务端筛选，标签支持输入与当前页建议。
   await expect(page.getByRole("group", { name: "Difficulty" }).getByRole("button", { name: /Easy/ })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Tag" })).toBeVisible();
 

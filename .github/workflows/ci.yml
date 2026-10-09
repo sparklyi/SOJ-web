@@ -100,3 +100,8 @@ jobs:
       - name: HTTP session renewal tests
         if: matrix.shard == 1
         run: npx playwright test -c playwright.http.config.ts tests/http/session-renewal-http.spec.ts
+      - name: HTTP problem pagination tests
+        if: matrix.shard == 1
+        env:
+          SOJ_HTTP_API_PORT: 3199
+        run: npx playwright test -c playwright.http.config.ts tests/http/problem-pagination-http.spec.ts

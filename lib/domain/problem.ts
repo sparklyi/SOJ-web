@@ -4,7 +4,23 @@ export type ProblemFilter = {
   query?: string;
   difficulty?: ProblemDifficulty;
   tag?: string;
+  page?: number;
+  pageSize?: number;
 };
+
+export function normalizeProblemFilter(filter: ProblemFilter = {}) {
+  const requestedSize = filter.pageSize ?? 20;
+  const pageSize = Number.isInteger(requestedSize) && requestedSize > 0 && requestedSize <= 100 ? requestedSize : 20;
+  const requestedPage = filter.page ?? 1;
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 && requestedPage <= Math.floor(2_147_483_647 / pageSize) ? requestedPage : 1;
+  const difficulty = filter.difficulty && (["easy", "medium", "hard"] as const).includes(filter.difficulty) ? filter.difficulty : undefined;
+  return { query: filter.query?.trim() || undefined, difficulty, tag: filter.tag?.trim() || undefined, page, pageSize };
+}
+
+export function parseProblemFilter(params: Record<string, string | string[] | undefined>) {
+  const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
+  return normalizeProblemFilter({ query: first(params.q ?? params.query), tag: first(params.tag), difficulty: first(params.difficulty) as ProblemDifficulty, page: Number(first(params.page)), pageSize: Number(first(params.page_size)) });
+}
 
 export function getAcceptanceRate(problem: Pick<ProblemSummary, "acceptedCount" | "submissionCount">) {
   if (problem.submissionCount <= 0) return 0;
@@ -48,7 +64,7 @@ export const problemVisibilityLabelKey = {
 
 export function matchesProblemFilter(problem: ProblemSummary, filter: ProblemFilter) {
   const query = filter.query?.trim().toLowerCase();
-  const matchesQuery = query ? `${problem.title} ${problem.slug} ${problem.tags.join(" ")}`.toLowerCase().includes(query) : true;
+  const matchesQuery = query ? `${problem.title} ${problem.slug}`.toLowerCase().includes(query) : true;
   const matchesDifficulty = filter.difficulty ? problem.difficulty === filter.difficulty : true;
   const matchesTag = filter.tag ? problem.tags.includes(filter.tag) : true;
 

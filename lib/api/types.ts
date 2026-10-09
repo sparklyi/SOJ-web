@@ -1,4 +1,5 @@
 import type { AuthSession } from "@/lib/auth/session";
+import type { ProblemFilter } from "@/lib/domain/problem";
 import type { ScoreboardModel } from "@/lib/domain/scoreboard";
 import type { ContestRole, GlobalRole, Permission, Role } from "@/lib/auth/permissions";
 
@@ -552,9 +553,9 @@ export type ApiClient = {
     me: () => Promise<CurrentUser | null>;
   };
   problems: {
-    list: () => Promise<PageResult<ProblemSummary>>;
+    list: (filter?: ProblemFilter) => Promise<PageResult<ProblemSummary>>;
     get: (id: number) => Promise<ProblemDetail>;
-    listMine: () => Promise<PageResult<AuthoringProblem>>;
+    listMine: (filter?: Pick<ProblemFilter, "page" | "pageSize">) => Promise<PageResult<AuthoringProblem>>;
     create: (input: ProblemCreateInput) => Promise<AuthoringProblem>;
     update: (id: number, input: ProblemUpdateInput) => Promise<AuthoringProblem>;
     saveStatement: (id: number, input: ProblemStatementInput) => Promise<AuthoringStatement>;

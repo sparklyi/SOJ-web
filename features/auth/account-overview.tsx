@@ -18,7 +18,7 @@ import { formatNumber } from "@/lib/ui/number";
 type ProgressState =
   | { status: "loading" }
   | { status: "error" }
-  | { status: "ready"; problems: ProblemSummary[] };
+  | { status: "ready"; problems: ProblemSummary[]; total: number };
 
 /** 引用同一份词条表，顺序即「练得最深 → 最浅」。 */
 const progressOrder: ProblemStatusValue[] = ["accepted", "attempted", "todo"];
@@ -86,7 +86,7 @@ function ProgressSection() {
     async function start() {
       try {
         const result = await createBrowserApiClient().problems.list();
-        if (active) setState({ status: "ready", problems: result.items });
+        if (active) setState({ status: "ready", problems: result.items, total: result.total });
       } catch {
         if (active) setState({ status: "error" });
       }
@@ -121,6 +121,7 @@ function ProgressSection() {
           </div>
         ))}
       </dl>
+      {state.status === "ready" ? <p className="text-xs text-soj-muted">{t("auth.me.progressScope", { count: state.problems.length, total: state.total })}</p> : null}
 
       {state.status === "error" ? <p className="text-sm text-soj-muted">{t("auth.me.progressFailed")}</p> : null}
 

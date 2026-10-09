@@ -4,11 +4,10 @@ import { FormEvent, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import type { ProblemDifficulty } from "@/lib/api/types";
-import { DifficultyScale, type DifficultyCount } from "@/components/soj/difficulty-composition";
+import { DifficultyScale } from "@/components/soj/difficulty-composition";
 import { problemDifficultyLabelKey } from "@/lib/domain/problem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/ui/cn";
 
@@ -17,39 +16,17 @@ type ProblemFilterBarProps = {
   difficulty?: ProblemDifficulty;
   tag?: string;
   tags: string[];
-  /** 各难度档位的题量。它同时是分布信息，也是这一排按钮上的计数。 */
-  difficultyCounts: DifficultyCount[];
 };
 
-/**
- * 题库筛选工具栏。
- *
- * 三处刻意的删减：
- *
- * 1. **难度从下拉框改成带计数的按钮组。**
- *    原先难度分布在页头单画一条堆叠条，难度筛选在下拉框里，同一个概念占两个地方，
- *    而且两处都要读者自己换算。现在合并成一个东西：按钮上的数字就是分布，
- *    点它就是筛选。数据图形出现在它能被**使用**的位置，而不是只被观看的位置。
- *
- * 2. **删掉「应用」按钮。** 三个下拉框本来就是 onChange 立即生效的，
- *    真正需要点「应用」的只有搜索框里那行字。为一个输入框养一个全宽的按钮，
- *    既误导（看起来像所有条件都要点它）又占掉了工具栏三分之一的高度。
- *    现在搜索回车即生效——这是搜索框的通用预期。
- *
- * 3. **难度不再进「已应用筛选」胶囊行。** 按钮组自己已经把选中态画出来了，
- *    再列一个可删的胶囊，同一件事在一屏里说了两遍。
- *
- * 工具栏用比面板更暗的一层底（bg-soj-bg/35），读起来像表格上沿的一条控制带，
- * 而不是又一张卡片——所以它只有下边界，没有圆角与描边。
- */
-export function ProblemFilterBar({ query = "", difficulty, tag, tags, difficultyCounts }: ProblemFilterBarProps) {
+/** URL-based server filters. Tag suggestions are optional; any tag can be entered. */
+export function ProblemFilterBar({ query = "", difficulty, tag = "", tags }: ProblemFilterBarProps) {
   const { t, localize } = useI18n();
   const [search, setSearch] = useState(query);
+  const [tagSearch, setTagSearch] = useState(tag);
   const [isPending, startTransition] = useTransition();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const difficultyTotal = difficultyCounts.reduce((sum, item) => sum + item.count, 0);
   const hasFilters = Boolean(query || difficulty || tag);
 
   const activeFilters: Array<{ key: string; label: string }> = [];
@@ -57,12 +34,17 @@ export function ProblemFilterBar({ query = "", difficulty, tag, tags, difficulty
   if (tag) activeFilters.push({ key: "tag", label: tag });
 
   function replaceFilter(key: string, value: string) {
+    applyFilters({ [key]: value });
+  }
+
+  function applyFilters(patch: Record<string, string>) {
     const next = new URLSearchParams(searchParams.toString());
-    if (value === "all" || value.trim() === "") {
-      next.delete(key);
-    } else {
-      next.set(key, value);
+    for (const [key, value] of Object.entries(patch)) {
+      if ((key === "difficulty" && value === "all") || value.trim() === "") next.delete(key);
+      else next.set(key, value.trim());
+      if (key === "q") next.delete("query");
     }
+    next.delete("page");
     startTransition(() => {
       router.replace(localize(next.size ? `${pathname}?${next.toString()}` : pathname));
     });
@@ -70,25 +52,25 @@ export function ProblemFilterBar({ query = "", difficulty, tag, tags, difficulty
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    replaceFilter("q", search);
+    applyFilters({ q: search, tag: tagSearch });
   }
 
   function clearFilter(key: string) {
     if (key === "q") setSearch("");
+    if (key === "tag") setTagSearch("");
     replaceFilter(key, "");
   }
 
   function resetFilters() {
     setSearch("");
-    startTransition(() => {
-      router.replace(localize(pathname));
-    });
+    setTagSearch("");
+    applyFilters({ q: "", difficulty: "", tag: "" });
   }
 
   return (
     <div className="grid gap-3 border-b border-soj-line bg-soj-bg/35 px-4 py-3.5" aria-busy={isPending}>
       <form className="grid gap-3" onSubmit={submitSearch} aria-label={t("problems.findNext")} role="search">
-        <div className={cn("grid gap-3 transition-opacity lg:grid-cols-[minmax(200px,1fr)_auto_minmax(140px,168px)] lg:items-end", isPending && "pointer-events-none opacity-60")}>
+        <div className={cn("grid gap-3 transition-opacity lg:grid-cols-[minmax(200px,1fr)_auto_minmax(140px,168px)_auto] lg:items-end", isPending && "pointer-events-none opacity-60")}>
           <Input
             id="problem-search"
             label={t("problems.search")}
@@ -102,37 +84,24 @@ export function ProblemFilterBar({ query = "", difficulty, tag, tags, difficulty
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t("problems.difficulty")}>
               <FilterChip active={!difficulty} onClick={() => replaceFilter("difficulty", "")}>
                 {t("problems.allDifficulties")}
-                <ChipCount>{difficultyTotal}</ChipCount>
               </FilterChip>
-              {difficultyCounts.map((item) => (
+              {(["easy", "medium", "hard"] as const).map((value) => (
                 <FilterChip
-                  key={item.difficulty}
-                  active={difficulty === item.difficulty}
-                  onClick={() => replaceFilter("difficulty", difficulty === item.difficulty ? "" : item.difficulty)}
+                  key={value}
+                  active={difficulty === value}
+                  onClick={() => replaceFilter("difficulty", difficulty === value ? "" : value)}
                 >
-                  <DifficultyScale difficulty={item.difficulty} />
-                  {t(problemDifficultyLabelKey[item.difficulty])}
-                  <ChipCount>{item.count}</ChipCount>
+                  <DifficultyScale difficulty={value} />
+                  {t(problemDifficultyLabelKey[value])}
                 </FilterChip>
               ))}
             </div>
           </div>
           <div className="grid gap-1.5">
-            <span className="text-xs text-soj-muted">{t("problems.tag")}</span>
-            <Select value={tag ?? "all"} onValueChange={(value) => replaceFilter("tag", value)}>
-              <SelectTrigger className="w-full" aria-label={t("problems.tag")}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("problems.allTags")}</SelectItem>
-                {tags.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input id="problem-tag" label={t("problems.tag")} list="problem-tag-suggestions" value={tagSearch} onChange={(event) => setTagSearch(event.target.value)} placeholder={t("problems.allTags")} />
+            <datalist id="problem-tag-suggestions">{tags.map((item) => <option key={item} value={item} />)}</datalist>
           </div>
+          <Button type="submit" variant="secondary" loading={isPending}>{t("problems.applyFilters")}</Button>
         </div>
       </form>
 
@@ -197,8 +166,4 @@ function FilterChip({
       {children}
     </button>
   );
-}
-
-function ChipCount({ children }: { children: React.ReactNode }) {
-  return <span className="font-mono text-xs tabular-nums text-soj-muted">{children}</span>;
 }
