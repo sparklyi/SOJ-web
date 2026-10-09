@@ -1,11 +1,13 @@
 import { ApiError, type ApiErrorDetails } from "./errors";
-import type { BackendError, Envelope } from "./backend-types";
+import type { AuthResponse, BackendError, Envelope } from "./backend-types";
+import { mapAuthSession } from "./auth-mappers";
+import { clearSession, readBrowserSession, saveSession, type AuthSession } from "@/lib/auth/session";
 import type { TestcaseFinding } from "./types";
 
 type QueryValue = string | number | boolean | null | undefined;
 
 export type RequestOptions = Omit<RequestInit, "cache"> & {
-  accessToken?: string;
+  accessToken?: string | (() => string | undefined);
   query?: Record<string, QueryValue | QueryValue[]>;
 };
 
@@ -42,6 +44,32 @@ export function buildQuery(params: Record<string, QueryValue | QueryValue[]> = {
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const token = options.accessToken;
+  const managed = typeof token === "function";
+  let accessToken = typeof token === "function" ? token() : token;
+  let session = managed ? readBrowserSession() : null;
+  if (session && Date.parse(session.expiresAt) <= Date.now()) {
+    session = await renewBrowserSession(session);
+    accessToken = session.accessToken;
+  }
+  try {
+    return await sendRequest<T>(path, { ...options, accessToken });
+  } catch (error) {
+    if (!session || !(error instanceof ApiError) || error.status !== 401 || path.startsWith("/api/v1/auth/")) throw error;
+    const current = readBrowserSession();
+    if (!current || current.user.id !== session.user.id) throw error;
+    // Another request/tab may already have rotated the rejected token.
+    const renewed = current.accessToken !== accessToken ? current : await renewBrowserSession(current);
+    try {
+      return await sendRequest<T>(path, { ...options, accessToken: renewed.accessToken });
+    } catch (retryError) {
+      if (retryError instanceof ApiError && retryError.status === 401) clearMatchingSession(renewed);
+      throw retryError;
+    }
+  }
+}
+
+async function sendRequest<T>(path: string, options: Omit<RequestOptions, "accessToken"> & { accessToken?: string }): Promise<T> {
   const { accessToken, headers, query, ...init } = options;
   const requestHeaders: Record<string, string> = {};
   new Headers(headers).forEach((value, key) => {
@@ -66,6 +94,46 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   return envelope.data as T;
+}
+
+let renewal: { token: string; promise: Promise<AuthSession> } | null = null;
+
+function renewBrowserSession(session: AuthSession): Promise<AuthSession> {
+  if (renewal?.token === session.refreshToken) return renewal.promise;
+  const operation = async () => {
+    const current = readBrowserSession();
+    if (!current || current.user.id !== session.user.id) throw new ApiError("Session changed.", "auth.session_changed", 401);
+    if (current.refreshToken !== session.refreshToken) return current;
+    try {
+      const data = await sendRequest<AuthResponse>("/api/v1/auth/refresh", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ refresh_token: session.refreshToken }),
+      });
+      const latest = readBrowserSession();
+      // A late refresh must never undo logout or overwrite a different login.
+      if (!latest || latest.refreshToken !== session.refreshToken) throw new ApiError("Session changed.", "auth.session_changed", 401);
+      const renewed = mapAuthSession(data);
+      saveSession(window.localStorage, renewed);
+      return renewed;
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) clearMatchingSession(session);
+      throw error;
+    }
+  };
+  // Web Locks serialize refresh-token rotation across tabs when available.
+  const promise = (async () => {
+    if (typeof navigator !== "undefined" && navigator.locks) return await navigator.locks.request("soj.session.refresh", operation);
+    return operation();
+  })().finally(() => {
+    if (renewal?.promise === promise) renewal = null;
+  });
+  renewal = { token: session.refreshToken, promise };
+  return promise;
+}
+
+function clearMatchingSession(session: AuthSession) {
+  if (readBrowserSession()?.refreshToken === session.refreshToken) clearSession(window.localStorage);
 }
 
 async function parseEnvelope<T>(response: Response): Promise<Envelope<T>> {
