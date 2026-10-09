@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { restoreSession, sessionChangeEvent } from "@/lib/auth/session";
+import { readBrowserSession, restoreSession, sessionChangeEvent } from "@/lib/auth/session";
+import { getApiMode } from "@/lib/api/mode";
 
 /**
  * 「这个浏览器现在能不能执行需要登录的动作」。
@@ -41,5 +42,5 @@ export function useBrowserSessionAvailable() {
 
 function browserHasSession() {
   if (typeof window === "undefined") return false;
-  return Boolean(restoreSession(window.localStorage));
+  return Boolean(getApiMode() === "http" ? readBrowserSession() : restoreSession(window.localStorage));
 }

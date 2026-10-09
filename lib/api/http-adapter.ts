@@ -1,5 +1,6 @@
 import { ApiError } from "./errors";
-import { request } from "./http-client";
+import { request, type RequestOptions } from "./http-client";
+import { mapAuthSession, mapUser } from "./auth-mappers";
 import type {
   AdminUserUpdateRequest,
   AuditEventPageResponse,
@@ -49,7 +50,6 @@ import type {
   UserPageResponse,
   UserResponse,
 } from "./backend-types";
-import type { AuthSession } from "@/lib/auth/session";
 import { isGlobalRole } from "@/lib/auth/permissions";
 import type {
   AdminContest,
@@ -62,7 +62,6 @@ import type {
   AuditEvent,
   AuditEventFilter,
   AuthoringProblem,
-  CurrentUser,
   GlobalRoleAssignment,
   JudgeLanguage,
   PageResult,
@@ -90,7 +89,7 @@ import { mapRunSummary, mapSubmissionSummary } from "./submission-mappers";
 const LANGUAGE_LIST_PATH = "/api/v1/languages";
 
 type HttpAdapterOptions = {
-  accessToken?: string;
+  accessToken?: RequestOptions["accessToken"];
 };
 
 function mapLanguage(input: LanguageResponse): JudgeLanguage {
@@ -105,16 +104,6 @@ function mapLanguage(input: LanguageResponse): JudgeLanguage {
     defaultTimeLimitMs: input.default_time_limit_ms,
     defaultMemoryLimitKb: input.default_memory_limit_kb,
     enabled: input.enabled,
-  };
-}
-
-function mapUser(input: UserResponse): CurrentUser {
-  return {
-    id: input.id,
-    handle: input.username,
-    displayName: input.username,
-    roles: input.roles,
-    permissions: input.permissions,
   };
 }
 
@@ -229,15 +218,6 @@ function mapRejudgeBatchItem(input: RejudgeBatchItemResponse): RejudgeBatchItem 
   if (input.started_at) item.startedAt = input.started_at;
   if (input.finished_at) item.finishedAt = input.finished_at;
   return item;
-}
-
-function mapAuthSession(input: AuthResponse, now: Date = new Date()): AuthSession {
-  return {
-    accessToken: input.access_token,
-    refreshToken: input.refresh_token,
-    user: mapUser(input.user),
-    expiresAt: new Date(now.getTime() + input.expires_in * 1000).toISOString(),
-  };
 }
 
 export function createHttpAdapter(options: HttpAdapterOptions = {}): ApiClient {

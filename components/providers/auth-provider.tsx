@@ -3,9 +3,10 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createBrowserApiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
+import { getApiMode } from "@/lib/api/mode";
 import type { Permission } from "@/lib/auth/permissions";
 import type { CurrentUser } from "@/lib/api/types";
-import { clearSession, restoreSession, sessionChangeEvent, sessionKey, type AuthSession } from "@/lib/auth/session";
+import { clearSession, readBrowserSession, restoreSession, sessionChangeEvent, sessionKey, type AuthSession } from "@/lib/auth/session";
 
 type AuthStatus = "loading" | "authenticated" | "anonymous";
 
@@ -38,22 +39,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!mountedRef.current) return;
 
     const requestId = ++requestRef.current;
-    setState({ status: "loading", user: null, session: null });
 
     let candidate: AuthSession | null = null;
     try {
-      candidate = restoreSession(window.localStorage);
+      candidate = getApiMode() === "http" ? readBrowserSession() : restoreSession(window.localStorage);
     } catch {
       candidate = null;
     }
 
     if (!candidate) {
+      if (getApiMode() === "mock" && readBrowserSession()) clearSession(window.localStorage);
       if (mountedRef.current && requestId === requestRef.current) setState(anonymousState);
       return;
     }
 
+    // Renewing the same account must keep authenticated workspaces mounted,
+    // otherwise a routine token rotation can discard an unsaved editor draft.
+    const candidateUserID = candidate.user.id;
+    setState((current) => current.status === "authenticated" && current.user?.id === candidateUserID
+      ? current
+      : { status: "loading", user: null, session: null });
+
     try {
-      const user = await createBrowserApiClient({ accessToken: candidate.accessToken }).auth.me();
+      const user = await createBrowserApiClient().auth.me();
       if (!mountedRef.current || requestId !== requestRef.current) return;
 
       if (!user) {
@@ -62,10 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setState({ status: "authenticated", user, session: { ...candidate, user } });
+      const current = readBrowserSession();
+      if (!current || current.user.id !== candidate.user.id) return;
+      setState({ status: "authenticated", user, session: { ...current, user } });
     } catch (error) {
       // Do not expose a locally restored candidate until the server validates it.
-      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+      if (requestId === requestRef.current && readBrowserSession()?.refreshToken === candidate.refreshToken && error instanceof ApiError && (error.status === 401 || error.status === 403)) {
         clearSession(window.localStorage);
       }
       if (mountedRef.current && requestId === requestRef.current) setState(anonymousState);
@@ -85,6 +95,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [state.session]);
 
   const can = useCallback((permission: Permission) => state.user?.permissions.includes(permission) ?? false, [state.user]);
+
+  useEffect(() => {
+    if (!state.session || getApiMode() !== "http") return;
+    const timer = window.setTimeout(() => void refresh(), Math.max(0, Math.min(Date.parse(state.session.expiresAt) - Date.now(), 2_147_483_647)));
+    return () => window.clearTimeout(timer);
+  }, [state.session, refresh]);
 
   useEffect(() => {
     mountedRef.current = true;

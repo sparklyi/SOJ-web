@@ -97,3 +97,6 @@ jobs:
         # Split across runners rather than raising --workers: a runner's cores
         # are the bottleneck, so more workers only split the same CPU.
         run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+      - name: HTTP session renewal tests
+        if: matrix.shard == 1
+        run: npx playwright test -c playwright.http.config.ts tests/http/session-renewal-http.spec.ts

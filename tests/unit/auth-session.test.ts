@@ -23,13 +23,13 @@ describe("auth session boundary", () => {
     expect(restoreSession(createMemorySessionStore())).toBeNull();
   });
 
-  it("clears expired or invalid sessions", () => {
+  it("keeps the refresh credential when an access session expires", () => {
     const now = new Date("2026-07-07T10:00:00Z");
     const session = createMockSession(mockUser, new Date("2026-07-06T10:00:00Z"));
     const store = createMemorySessionStore(session);
 
     expect(restoreSession(store, now)).toBeNull();
-    expect(store.getItem("soj.session")).toBeNull();
+    expect(JSON.parse(store.getItem("soj.session")!).refreshToken).toBe(session.refreshToken);
   });
 
   it("clears sessions missing token fields", () => {

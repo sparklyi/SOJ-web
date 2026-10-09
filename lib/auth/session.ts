@@ -18,18 +18,34 @@ export const sessionKey = "soj.session";
 export const sessionChangeEvent = "soj:session-change";
 
 export function restoreSession(store: SessionStore, now: Date = new Date()) {
+  const session = readSession(store);
+  return session && Date.parse(session.expiresAt) > now.getTime() ? session : null;
+}
+
+// Expired access tokens still carry the refresh credential needed to renew.
+// Only malformed sessions are removed here; the server decides refresh validity.
+export function readSession(store: SessionStore) {
   const value = store.getItem(sessionKey);
   if (!value) return null;
 
   try {
     const session: unknown = JSON.parse(value);
-    if (!isAuthSession(session, now)) {
+    if (!isAuthSession(session)) {
       clearSession(store);
       return null;
     }
     return session;
   } catch {
     clearSession(store);
+    return null;
+  }
+}
+
+export function readBrowserSession() {
+  if (typeof window === "undefined") return null;
+  try {
+    return readSession(window.localStorage);
+  } catch {
     return null;
   }
 }
@@ -64,7 +80,7 @@ export function createMemorySessionStore(initial?: AuthSession): SessionStore {
   };
 }
 
-function isAuthSession(value: unknown, now: Date): value is AuthSession {
+function isAuthSession(value: unknown): value is AuthSession {
   if (!value || typeof value !== "object") return false;
 
   const session = value as Partial<AuthSession>;
@@ -75,8 +91,7 @@ function isAuthSession(value: unknown, now: Date): value is AuthSession {
     session.refreshToken.length > 0 &&
     isCurrentUser(session.user) &&
     typeof session.expiresAt === "string" &&
-    Number.isFinite(Date.parse(session.expiresAt)) &&
-    Date.parse(session.expiresAt) > now.getTime()
+    Number.isFinite(Date.parse(session.expiresAt))
   );
 }
 
