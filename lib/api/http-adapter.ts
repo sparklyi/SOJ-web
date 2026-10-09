@@ -1,6 +1,5 @@
 import { ApiError } from "./errors";
 import { request, type RequestOptions } from "./http-client";
-import { mapAuthSession, mapUser } from "./auth-mappers";
 import type {
   AdminUserUpdateRequest,
   AuditEventPageResponse,
@@ -85,6 +84,7 @@ import {
   mapUploadedTestcaseSet,
 } from "./problem-mappers";
 import { mapRunSummary, mapSubmissionSummary } from "./submission-mappers";
+import { mapAuthSession, mapUser } from "./auth-mappers";
 
 const LANGUAGE_LIST_PATH = "/api/v1/languages";
 
