@@ -105,3 +105,6 @@ jobs:
         env:
           SOJ_HTTP_API_PORT: 3199
         run: npx playwright test -c playwright.http.config.ts tests/http/problem-pagination-http.spec.ts
+      - name: HTTP user management tests
+        if: matrix.shard == 1
+        run: npx playwright test -c playwright.http.config.ts tests/http/user-management-http.spec.ts

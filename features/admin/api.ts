@@ -11,7 +11,7 @@ export async function listAdminUsers(
 
 export async function updateAdminUser(
   id: number,
-  input: { username?: string; status?: AdminUserStatus },
+  input: { username?: string; bio?: string; status?: AdminUserStatus },
   client: ApiClient = createApiClient(),
 ) {
   return client.admin.updateUser(id, input);

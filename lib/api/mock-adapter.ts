@@ -213,7 +213,13 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
       register: async (input) => createMockSession(mockAuthUser(input)),
       refresh: async () => createMockSession(requireMockUser(currentUser)),
       logout: async () => undefined,
-      me: async () => currentUser,
+      me: async () => {
+        if (!currentUser) return null;
+        // Custom login identities can reuse fixture IDs; only refresh seeded profiles.
+        const original = mockAdminUsers.find((user) => user.id === currentUser.id && user.handle === currentUser.handle);
+        const updated = original && adminUsers.find((user) => user.id === original.id);
+        return updated && updated.handle !== original.handle ? { ...currentUser, handle: updated.handle, displayName: updated.handle } : currentUser;
+      },
     },
     problems: {
       // 站点策略与后端 SOJ 一致：publish 的公开题对匿名可读；私有/草稿只有作者与管理员可见（由 mock 数据本身表达）。
@@ -629,6 +635,7 @@ export function createMockAdapter(options: MockAdapterOptions = {}): ApiClient {
         const previousStatus = adminUsers[index].status;
         const next: AdminUser = { ...adminUsers[index], roles: [...adminUsers[index].roles], updatedAt: new Date().toISOString() };
         if (input.username !== undefined) next.handle = input.username;
+        if (typeof input.bio === "string") next.bio = input.bio;
         if (input.status !== undefined) next.status = input.status;
         adminUsers[index] = next;
         if (input.status !== undefined && input.status !== previousStatus) {

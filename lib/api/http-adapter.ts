@@ -113,6 +113,7 @@ function mapAdminUser(input: UserResponse): AdminUser {
     id: input.id,
     email: input.email,
     handle: input.username,
+    bio: input.bio ?? "",
     status: input.status,
     roles: (input.roles ?? []).filter(isGlobalRole),
     createdAt: input.created_at,

@@ -488,6 +488,7 @@ export type AdminUser = {
   id: number;
   email: string;
   handle: string;
+  bio: string;
   status: AdminUserStatus;
   roles: GlobalRole[];
   createdAt: string;

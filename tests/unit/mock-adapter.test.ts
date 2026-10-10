@@ -60,6 +60,21 @@ describe("api mode", () => {
 });
 
 describe("admin console adapter", () => {
+  it("refreshes a renamed seeded account without replacing custom login identities", async () => {
+    const admin = createMockAdapter({ currentUser: mockAdminUser });
+    const originalBio = (await admin.admin.listUsers()).items.find((user) => user.id === mockAdminUser.id)!.bio;
+    try {
+      await admin.admin.updateUser(mockAdminUser.id, { username: "renamed-admin", bio: "New biography" });
+      expect((await admin.admin.updateUser(mockAdminUser.id, { bio: null })).bio).toBe("New biography");
+      expect((await admin.admin.updateUser(mockAdminUser.id, { bio: "" })).bio).toBe("");
+      expect((await createMockAdapter({ currentUser: mockAdminUser }).auth.me())?.handle).toBe("renamed-admin");
+      const customUser = { ...mockAdminUser, handle: "custom-login", displayName: "Custom Login" };
+      expect(await createMockAdapter({ currentUser: customUser }).auth.me()).toEqual(customUser);
+    } finally {
+      await admin.admin.updateUser(mockAdminUser.id, { username: mockAdminUser.handle, bio: originalBio });
+    }
+  });
+
   it("gates language administration behind system.manage and audits the toggle", async () => {
     const admin = createMockAdapter({ currentUser: mockAdminUser });
     const listed = await admin.admin.languages.list();
