@@ -93,6 +93,59 @@ test("an existing problem never opens an empty create step", async ({ page }) =>
   await expect(page.getByLabel("Title")).toHaveCount(0);
 });
 
+test("statement previews unsaved LaTeX, reports errors and preserves saved source", async ({ page }) => {
+  await injectAuthor(page);
+  await page.goto("/en/manage/problems/1?step=statement");
+  const preview = page.getByRole("complementary", { name: "Live preview" });
+  const source = String.raw`For $n < 10$ return **the sum**.
+
+$$\begin{pmatrix}1 & 2 \\ 3 & 4\end{pmatrix}$$`;
+  await page.getByLabel("Description", { exact: true }).fill(source);
+  await page.getByLabel("Input description").fill("One integer $n$.");
+  await page.getByLabel("Output description").fill("Print $n + 1$.");
+  await page.getByLabel("Sample 1 input").fill("$literal$\n<img src=x>");
+  await page.getByLabel("Sample 1 output").fill("2");
+  await page.getByLabel("Sample 1 explanation").fill("Because $1 + 1 = 2$.");
+  await expect(preview.locator(".katex")).toHaveCount(5);
+  await expect(preview.locator(".katex-display")).toHaveCount(1);
+  await expect(preview.locator(".katex-error")).toHaveCount(0);
+  await expect(preview.locator("pre").first()).toHaveText("$literal$\n<img src=x>");
+  await expect(preview.locator("img")).toHaveCount(0);
+  const editorBox = await page.getByLabel("Description", { exact: true }).boundingBox();
+  const previewBox = await preview.boundingBox();
+  expect(editorBox!.x + editorBox!.width).toBeLessThanOrEqual(previewBox!.x);
+  await page.evaluate(() => window.scrollTo({ top: 400, behavior: "instant" }));
+  const pinnedBox = await preview.boundingBox();
+  expect(pinnedBox!.y).toBeGreaterThanOrEqual(68);
+  expect(pinnedBox!.y).toBeLessThanOrEqual(100);
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await page.screenshot({ path: test.info().outputPath("statement-preview-desktop.png") });
+
+  await page.getByLabel("Description", { exact: true }).fill(String.raw`$\frac{1}{$`);
+  await expect(preview.getByText(/Formula error:/)).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("statement-preview-error.png") });
+  await page.getByLabel("Description", { exact: true }).fill(source);
+  await expect(preview.getByText(/Formula error:/)).toHaveCount(0);
+  await page.getByRole("button", { name: "Save statement" }).click();
+  await expect(page.getByText("Statement version saved.")).toBeVisible();
+  await expect(page.getByLabel("Description", { exact: true })).toHaveValue(source);
+});
+
+test("Chinese statement preview stacks on mobile without horizontal overflow", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await injectAuthor(page);
+  await page.goto("/zh-CN/manage/problems/1?step=statement");
+  const preview = page.getByRole("complementary", { name: "实时预览" });
+  await page.getByLabel("描述", { exact: true }).fill(String.raw`当 $n < 10$ 时，计算 $\frac{n(n+1)}{2}$。`);
+  await expect(preview.locator(".katex")).toHaveCount(2);
+  const editorBox = await page.getByLabel("描述", { exact: true }).boundingBox();
+  const previewBox = await preview.boundingBox();
+  expect(previewBox!.y).toBeGreaterThan(editorBox!.y + editorBox!.height);
+  await preview.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: test.info().outputPath("statement-preview-mobile.png") });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
 async function injectAuthor(page: import("@playwright/test").Page) {
   await page.addInitScript((session) => {
     window.localStorage.setItem("soj.session", JSON.stringify(session));
