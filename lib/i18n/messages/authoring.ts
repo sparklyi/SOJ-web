@@ -52,6 +52,10 @@ export const authoringMessages = {
   "authoring.memoryLimit": { en: "Memory limit (KB)", "zh-CN": "内存限制（KB）" },
 
   /* ② 题面 */
+  "authoring.preview": { en: "Live preview", "zh-CN": "实时预览" },
+  "authoring.previewHint": { en: "Use $...$ for inline math and $$...$$ for display math.", "zh-CN": "行内公式使用 $...$，独立公式使用 $$...$$。" },
+  "authoring.previewEmpty": { en: "Enter content to see its preview.", "zh-CN": "输入内容后即可查看预览。" },
+  "authoring.formulaError": { en: "Formula error", "zh-CN": "公式错误" },
   "authoring.statement.heading": { en: "Write the statement", "zh-CN": "撰写题面" },
   "authoring.description": { en: "Description", "zh-CN": "描述" },
   "authoring.inputDescription": { en: "Input description", "zh-CN": "输入描述" },
