@@ -18,6 +18,7 @@ import { createBrowserApiClient } from "@/lib/api/client";
 import type { AdminUser, AdminUserStatus } from "@/lib/api/types";
 import { globalRoles, type GlobalRole } from "@/lib/auth/permissions";
 import { grantGlobalRole, listAdminUsers, revokeGlobalRole, updateAdminUser } from "./api";
+import { UserProfileForm } from "./user-profile-form";
 
 type ListState =
   | { status: "loading" }
@@ -40,7 +41,7 @@ export function UserRoleManager() {
 
 function UserBoard() {
   const { t } = useI18n();
-  const { user: viewer } = useAuth();
+  const { user: viewer, refresh } = useAuth();
   const [draft, setDraft] = useState<FilterState>(emptyFilter);
   const [applied, setApplied] = useState<FilterState>(emptyFilter);
   const [page, setPage] = useState(1);
@@ -71,6 +72,7 @@ function UserBoard() {
           return;
         }
         setState({ status: "ready", users: result.items, total: result.total });
+        setManagingId((current) => result.items.some((user) => user.id === current) ? current : null);
       } catch (cause) {
         if (active) setState({ status: "error", message: cause instanceof Error ? cause.message : t("roles.failed") });
       }
@@ -103,6 +105,16 @@ function UserBoard() {
     } finally {
       setPendingId(null);
     }
+  }
+
+  function profileUpdated(updated: AdminUser) {
+    setState((current) => current.status === "ready" ? {
+      ...current,
+      users: current.users.map((user) => user.id === updated.id ? { ...user, handle: updated.handle, bio: updated.bio, updatedAt: updated.updatedAt } : user),
+    } : current);
+    setFeedback({ tone: "success", message: t("roles.profileSaved") });
+    setReloadToken((token) => token + 1);
+    if (updated.id === viewer?.id) void refresh();
   }
 
   return (
@@ -164,60 +176,62 @@ function UserBoard() {
           <EmptyState icon={UserRoundSearch} title={t("roles.usersEmpty")} compact />
         ) : null}
         {state.status === "ready" && state.users.length > 0 ? (
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>{t("roles.users")}</TableHeaderCell>
-                <TableHeaderCell>{t("admin.status")}</TableHeaderCell>
-                <TableHeaderCell>{t("roles.globalRoles")}</TableHeaderCell>
-                <TableHeaderCell className="text-right">{t("admin.actions")}</TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            <tbody>
-              {state.users.map((user) => {
-                const isSelf = user.id === viewer?.id;
-                return (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <span className="text-sm text-soj-text">{user.handle}</span>
-                      {isSelf ? <span className="ml-2 text-xs text-soj-faint">{t("roles.you")}</span> : null}
-                      <span className="mt-0.5 block font-mono text-xs text-soj-muted">{user.email}</span>
-                    </TableCell>
-                    <TableCell>
-                      <StatusPill tone={user.status === "active" ? "success" : "warning"}>{t(userStatusKey(user.status))}</StatusPill>
-                    </TableCell>
-                    <TableCell>
-                      <span className="flex flex-wrap gap-1.5">
-                        {user.roles.map((role) => (
-                          <span key={role} className="rounded-soj-sm border border-soj-line/70 bg-soj-bg-raised/60 px-2 py-0.5 text-xs text-soj-muted">
-                            {t(roleMessageKey(role))}
-                          </span>
-                        ))}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button type="button" variant="secondary" size="sm" onClick={() => setManagingId(user.id)}>
-                          {t("roles.manage")}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={user.status === "active" ? "danger" : "solid"}
-                          size="sm"
-                          disabled={isSelf}
-                          title={isSelf ? t("roles.selfDisableBlocked") : undefined}
-                          loading={pendingId === user.id}
-                          onClick={() => void toggleStatus(user)}
-                        >
-                          {user.status === "active" ? t("roles.disable") : t("roles.enable")}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </tbody>
-          </Table>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>{t("roles.users")}</TableHeaderCell>
+                  <TableHeaderCell>{t("admin.status")}</TableHeaderCell>
+                  <TableHeaderCell>{t("roles.globalRoles")}</TableHeaderCell>
+                  <TableHeaderCell className="text-right">{t("admin.actions")}</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <tbody>
+                {state.users.map((user) => {
+                  const isSelf = user.id === viewer?.id;
+                  return (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <span className="text-sm text-soj-text">{user.handle}</span>
+                        {isSelf ? <span className="ml-2 text-xs text-soj-faint">{t("roles.you")}</span> : null}
+                        <span className="mt-0.5 block font-mono text-xs text-soj-muted">{user.email}</span>
+                      </TableCell>
+                      <TableCell>
+                        <StatusPill tone={user.status === "active" ? "success" : "warning"}>{t(userStatusKey(user.status))}</StatusPill>
+                      </TableCell>
+                      <TableCell>
+                        <span className="flex flex-wrap gap-1.5">
+                          {user.roles.map((role) => (
+                            <span key={role} className="rounded-soj-sm border border-soj-line/70 bg-soj-bg-raised/60 px-2 py-0.5 text-xs text-soj-muted">
+                              {t(roleMessageKey(role))}
+                            </span>
+                          ))}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button type="button" variant="secondary" size="sm" onClick={() => setManagingId(user.id)}>
+                            {t("roles.manage")}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={user.status === "active" ? "danger" : "solid"}
+                            size="sm"
+                            disabled={isSelf}
+                            title={isSelf ? t("roles.selfDisableBlocked") : undefined}
+                            loading={pendingId === user.id}
+                            onClick={() => void toggleStatus(user)}
+                          >
+                            {user.status === "active" ? t("roles.disable") : t("roles.enable")}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </tbody>
+            </Table>
+          </div>
         ) : null}
 
         {state.status === "ready" ? (
@@ -240,29 +254,32 @@ function UserBoard() {
       </PanelBody>
 
       {managing ? (
-        <RoleDialog
+        <UserDialog
+          key={managing.id}
           user={managing}
           viewerId={viewer?.id ?? null}
           onClose={() => setManagingId(null)}
           onChanged={() => setReloadToken((token) => token + 1)}
+          onProfileUpdated={profileUpdated}
         />
       ) : null}
     </Panel>
   );
 }
 
-type RoleDialogProps = {
+type UserDialogProps = {
   user: AdminUser;
   viewerId: number | null;
   onClose: () => void;
   onChanged: () => void;
+  onProfileUpdated: (user: AdminUser) => void;
 };
 
 /**
- * 角色管理弹窗：列出全部全局角色，持有的角色可以撤销、未持有的可以授予。
+ * 用户管理弹窗：编辑资料并管理全局角色。
  * 授予与撤销共用同一个原因输入——后端两者都要求原因，逐次弹出输入框反而更难用。
  */
-function RoleDialog({ user, viewerId, onClose, onChanged }: RoleDialogProps) {
+function UserDialog({ user, viewerId, onClose, onChanged, onProfileUpdated }: UserDialogProps) {
   const { t } = useI18n();
   const { can } = useAuth();
   const canGrant = can("role.grant");
@@ -303,14 +320,16 @@ function RoleDialog({ user, viewerId, onClose, onChanged }: RoleDialogProps) {
       }}
     >
       <DialogContent className="grid gap-5 p-5">
-        <header>
-          <DialogTitle>{t("roles.manageTitle", { name: user.handle })}</DialogTitle>
-          <DialogDescription>
+        <header className="min-w-0 pr-8">
+          <DialogTitle className="break-words">{t("roles.manageTitle", { name: user.handle })}</DialogTitle>
+          <DialogDescription className="break-words">
             #{user.id} · {user.email}
           </DialogDescription>
         </header>
 
-        <section className="grid gap-2">
+        <UserProfileForm user={user} onSaved={onProfileUpdated} />
+
+        <section className="grid gap-2 border-t border-soj-line/55 pt-4">
           <h3 className="text-sm font-medium text-soj-text">{t("roles.globalRoles")}</h3>
           <ul className="grid gap-2">
             {globalRoles.map((role) => {
@@ -352,15 +371,18 @@ function RoleDialog({ user, viewerId, onClose, onChanged }: RoleDialogProps) {
           </ul>
         </section>
 
-        <Input
-          name="role-reason"
-          label={t("roles.reasonPlaceholder")}
-          value={reason}
-          disabled={isSelf}
-          onChange={(event) => setReason(event.target.value)}
-        />
-        {/* 说明针对整块面板（grant + revoke），所以放在表单外面而不是某个字段的 helper。 */}
-        {isSelf ? <p className="text-sm text-soj-muted">{t("roles.selfGrantBlocked")}</p> : null}
+        {canGrant || canRevoke ? (
+          <>
+            <Input
+              name="role-reason"
+              label={t("roles.reasonPlaceholder")}
+              value={reason}
+              disabled={isSelf}
+              onChange={(event) => setReason(event.target.value)}
+            />
+            {isSelf ? <p className="text-sm text-soj-muted">{t("roles.selfGrantBlocked")}</p> : null}
+          </>
+        ) : null}
         {feedback ? (
           <p className={feedback.tone === "danger" ? "text-sm text-soj-danger" : "text-sm text-soj-success"}>{feedback.message}</p>
         ) : null}

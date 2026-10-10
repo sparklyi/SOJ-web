@@ -61,6 +61,19 @@ describe("http adapter", () => {
     });
   });
 
+  it("keeps admin bios across listing and profile updates, including clearing", async () => {
+    const profile = { ...userResponse({ id: 12, username: "aya" }), bio: "Existing biography" };
+    const fetchMock = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      if (init?.method === "PATCH") return Response.json({ data: { ...profile, bio: "" }, error: null });
+      return Response.json({ data: { items: [profile], total: 1 }, error: null });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createHttpAdapter({ accessToken: "admin-token" });
+    expect((await client.admin.listUsers()).items[0].bio).toBe("Existing biography");
+    expect((await client.admin.updateUser(profile.id, { bio: "" })).bio).toBe("");
+    expect(fetchMock).toHaveBeenLastCalledWith(`http://localhost:8080/api/v1/admin/users/${profile.id}`, { cache: "no-store", method: "PATCH", headers: { Authorization: "Bearer admin-token", "content-type": "application/json" }, body: JSON.stringify({ bio: "" }) });
+  });
+
   it("maps a backend problem page to problem summaries with inline counts", async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request) => {
       const path = String(url).replace("http://localhost:8080", "");

@@ -85,7 +85,7 @@ test("admin grants a role through the dialog", async ({ page }) => {
   await page.goto("/admin/users");
 
   const row = page.getByRole("row").filter({ hasText: "aya-sato" });
-  await row.getByRole("button", { name: "Manage roles" }).click();
+  await row.getByRole("button", { name: "Manage user" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
 

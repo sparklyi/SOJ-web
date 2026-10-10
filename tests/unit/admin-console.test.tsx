@@ -109,12 +109,29 @@ describe("user administration", () => {
     expect(within(otherRow!).getByRole("button", { name: "Disable" })).toBeEnabled();
   });
 
+  it("lets a user manager edit profiles without role grant permissions", async () => {
+    renderWithSession(<UserRoleManager />, { ...mockAdminUser, permissions: ["user.manage"] });
+    const row = (await screen.findByText("aya.sato@soj.dev")).closest("tr")!;
+    fireEvent.click(within(row).getByRole("button", { name: "Manage user" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByRole("button", { name: "Grant" })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Revoke" })).not.toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText("Username"), { target: { value: "renamed-author" } });
+    fireEvent.change(within(dialog).getByLabelText("Bio"), { target: { value: "" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save profile" }));
+    await waitFor(() => expect(within(dialog).getByRole("status")).toHaveTextContent("User profile saved."));
+    expect(within(row).getByText("renamed-author")).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    fireEvent.click(within(row).getByRole("button", { name: "Manage user" }));
+    expect(within(screen.getByRole("dialog")).getByLabelText("Bio")).toHaveValue("");
+  });
+
   it("blocks role changes on your own account inside the dialog", async () => {
     renderWithSession(<UserRoleManager />, mockAdminUser);
 
     await waitFor(() => expect(screen.getByText("lin.chen@soj.dev")).toBeVisible());
     const selfRow = screen.getByText("lin.chen@soj.dev").closest("tr");
-    fireEvent.click(within(selfRow!).getByRole("button", { name: "Manage roles" }));
+    fireEvent.click(within(selfRow!).getByRole("button", { name: "Manage user" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("You cannot change your own global roles.")).toBeVisible();

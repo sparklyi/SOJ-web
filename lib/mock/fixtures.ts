@@ -339,10 +339,10 @@ export const mockContestRoleAssignments: ContestRoleAssignment[] = [
 ];
 
 export const mockAdminUsers: AdminUser[] = [
-  { id: 7, email: "lin.chen@soj.dev", handle: "lin-chen", status: "active", roles: ["user"], createdAt: "2026-06-01T09:00:00Z", updatedAt: "2026-06-01T09:00:00Z" },
-  { id: 12, email: "aya.sato@soj.dev", handle: "aya-sato", status: "active", roles: ["user", "author"], createdAt: "2026-06-02T09:00:00Z", updatedAt: "2026-06-20T09:00:00Z" },
-  { id: 21, email: "noa.weiss@soj.dev", handle: "noa-weiss", status: "active", roles: ["user", "reviewer"], createdAt: "2026-06-03T09:00:00Z", updatedAt: "2026-06-21T09:00:00Z" },
-  { id: 33, email: "ravi.menon@soj.dev", handle: "ravi-menon", status: "disabled", roles: ["user", "admin"], createdAt: "2026-06-04T09:00:00Z", updatedAt: "2026-07-01T09:00:00Z" },
+  { id: 7, email: "lin.chen@soj.dev", handle: "lin-chen", bio: "", status: "active", roles: ["user"], createdAt: "2026-06-01T09:00:00Z", updatedAt: "2026-06-01T09:00:00Z" },
+  { id: 12, email: "aya.sato@soj.dev", handle: "aya-sato", bio: "Writes contest problems.", status: "active", roles: ["user", "author"], createdAt: "2026-06-02T09:00:00Z", updatedAt: "2026-06-20T09:00:00Z" },
+  { id: 21, email: "noa.weiss@soj.dev", handle: "noa-weiss", bio: "", status: "active", roles: ["user", "reviewer"], createdAt: "2026-06-03T09:00:00Z", updatedAt: "2026-06-21T09:00:00Z" },
+  { id: 33, email: "ravi.menon@soj.dev", handle: "ravi-menon", bio: "", status: "disabled", roles: ["user", "admin"], createdAt: "2026-06-04T09:00:00Z", updatedAt: "2026-07-01T09:00:00Z" },
 ];
 
 /**
